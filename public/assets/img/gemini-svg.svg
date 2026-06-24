@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 105" width="100%" height="100%">
+  <defs>
+    <!-- Máscara para crear el espacio transparente en el cruce de la X -->
+    <mask id="x-gap">
+      <rect x="0" y="0" width="260" height="105" fill="white" />
+      <line x1="179" y1="35" x2="239" y2="70" stroke="black" stroke-width="12" stroke-linecap="round" />
+    </mask>
+  </defs>
+
+  <g fill="#0066FF">
+    <!-- Letra E -->
+    <path d="M 10 35 H 50 V 43 H 18 V 48.5 H 46 V 56.5 H 18 V 62 H 50 V 70 H 10 Z" />
+
+    <!-- Letra N -->
+    <path d="M 62 35 V 70 H 70 V 47 L 92 70 H 100 V 35 H 92 V 58 L 70 35 H 62 Z" />
+
+    <!-- Letra L -->
+    <path d="M 112 35 H 120 V 62 H 147 V 70 H 112 Z" />
+
+    <!-- Letra I -->
+    <path d="M 159 35 H 167 V 70 H 159 Z" />
+  </g>
+
+  <!-- Letra X (Trazos diagonales) -->
+  <g stroke="#0066FF" stroke-width="3.5">
+    <!-- Línea Inferior-Izquierda a Superior-Derecha con máscara para el espacio hueco -->
+    <line x1="179" y1="70" x2="239" y2="35" mask="url(#x-gap)" />
+    <!-- Línea Superior-Izquierda a Inferior-Derecha (Línea frontal) -->
+    <line x1="179" y1="35" x2="239" y2="70" />
+  </g>
+
+  <!-- Puntos en los extremos de la X -->
+  <g fill="#0066FF">
+    <circle cx="179" cy="35" r="4.5" />
+    <circle cx="239" cy="70" r="4.5" />
+    <circle cx="179" cy="70" r="4.5" />
+    <circle cx="239" cy="35" r="4.5" />
+  </g>
+</svg>
