@@ -45,6 +45,9 @@
           </ul>
         </li>
         <li class="nav-item">
+          <a class="nav-link {{ $current === 'productos' ? 'active' : '' }}" href="{{ route('productos') }}">Productos</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {{ $current === 'contacto' ? 'active' : '' }}" href="{{ route('contacto') }}">Contacto</a>
         </li>
         <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
