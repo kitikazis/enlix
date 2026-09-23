@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Registro de un pago realizado con Culqi.
+ * Registro de un pago realizado con Izipay.
  *
- * Se guarda tras un cargo exitoso. Requiere haber corrido la migración
- * create_pagos_table (php artisan migrate). Si aún no hay base de datos,
- * el pago igual se procesa; solo no se persiste (ver CheckoutController).
+ * La fila se crea en estado 'pendiente' al generar el formToken
+ * (IzipayController::formToken) y solo IzipayService/PagoService la
+ * actualizan (validar/IPN); nunca crean filas nuevas.
  */
 class Pago extends Model
 {
@@ -20,7 +20,10 @@ class Pago extends Model
         'email',
         'monto',
         'moneda',
-        'culqi_charge_id',
+        'izipay_order_id',
+        'transaction_uuid',
+        'card_brand',
+        'card_masked_pan',
         'estado',
         'respuesta',
     ];

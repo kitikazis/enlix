@@ -81,13 +81,13 @@
     </div>
 
     <p class="text-center mt-4" style="color: var(--enlix-muted); font-size: 13px;">
-      Pagos procesados de forma segura por Culqi. No almacenamos los datos de tu tarjeta.
+      Pagos procesados de forma segura por Izipay. No almacenamos los datos de tu tarjeta.
     </p>
 
   </div>
 </section>
 
-{{-- Modal: datos del comprador (requeridos por la Orders API de Culqi) --}}
+{{-- Modal: datos del comprador (requeridos por Izipay para crear el formToken) --}}
 <div class="modal fade" id="modalDatos" tabindex="-1" aria-labelledby="modalDatosLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -124,32 +124,35 @@
   </div>
 </div>
 
+{{-- Contenedor del PopIn de Izipay (cliente Krypton). El formToken se asigna
+     dinámicamente con KR.setFormToken() tras crearlo en el backend. --}}
+<div id="izipay-popin-wrapper" style="display:none;">
+  <div class="kr-embedded" kr-popin id="izipay-popin"></div>
+</div>
+
+@if ($izipay_public_key)
+<script
+  src="{{ $izipay_js_client_url }}"
+  kr-public-key="{{ $izipay_public_key }}"
+  nonce="{{ $cspNonce }}"></script>
+<link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic-reset.css">
+<script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.js" nonce="{{ $cspNonce }}"></script>
+@endif
+
 @push('scripts')
-{{-- Culqi Checkout V4 --}}
-<script src="https://checkout.culqi.com/js/v4"></script>
-<script>
-  const CULQI_PUBLIC_KEY = @json($culqi_pk);
-  const CSRF_TOKEN       = @json(csrf_token());
+<script nonce="{{ $cspNonce }}">
+  const CSRF_TOKEN = @json(csrf_token());
   const URLS = {
-    orden:     @json(route('checkout.orden')),
-    verificar: @json(route('checkout.verificar')),
-    pagar:     @json(route('checkout.pagar')),
+    formToken: @json(route('izipay.form-token')),
+    validar:   @json(route('izipay.validar')),
   };
 
   let productoActual = null;
   const modalDatos = new bootstrap.Modal(document.getElementById('modalDatos'));
 
-  if (CULQI_PUBLIC_KEY) {
-    Culqi.publicKey = CULQI_PUBLIC_KEY;
-  }
-
   // 1) Click en "Comprar" -> abrir el modal de datos.
   document.querySelectorAll('.btn-comprar').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      if (!CULQI_PUBLIC_KEY) {
-        mostrarResultado('error', 'Falta configurar la llave pública de Culqi (CULQI_PUBLIC_KEY).');
-        return;
-      }
       productoActual = {
         slug:   btn.dataset.slug,
         nombre: btn.dataset.nombre,
@@ -162,7 +165,7 @@
     });
   });
 
-  // 2) Continuar -> crear la orden en el backend y abrir el checkout.
+  // 2) Continuar -> pedir el formToken al backend (el monto SIEMPRE lo calcula el servidor) y abrir el PopIn.
   document.getElementById('btnContinuar').addEventListener('click', function () {
     const first_name = document.getElementById('f_first_name').value.trim();
     const last_name  = document.getElementById('f_last_name').value.trim();
@@ -173,9 +176,7 @@
       return mostrarErrorModal('Completa todos los campos para continuar.');
     }
 
-    Object.assign(productoActual, { first_name, last_name, email, phone_number: phone });
-
-    postJson(URLS.orden, {
+    postJson(URLS.formToken, {
       producto:     productoActual.slug,
       first_name:   first_name,
       last_name:    last_name,
@@ -186,59 +187,51 @@
         return mostrarErrorModal(data.mensaje || 'No se pudo iniciar el pago.');
       }
       modalDatos.hide();
-      abrirCheckout(data.order_id);
+      abrirPopin(data.form_token);
     }).catch(function () {
       mostrarErrorModal('Error de conexión. Intenta nuevamente.');
     });
   });
 
-  function abrirCheckout(orderId) {
-    Culqi.settings({
-      title:    'Enlix',
-      currency: 'PEN',
-      amount:   productoActual.monto,
-      order:    orderId,
-    });
+  // 3) Asigna el formToken al PopIn y lo abre.
+  function abrirPopin(formToken) {
+    if (typeof KR === 'undefined') {
+      return mostrarResultado('error', 'No se pudo cargar la pasarela de pago. Recarga la página.');
+    }
 
-    Culqi.options({
-      lang: 'auto',
-      installments: false,
-      paymentMethods: {
-        tarjeta:    true,
-        yape:       true,
-        bancaMovil: true,
-        billetera:  true,
-        cuotealo:   true,
-        agente:     true,   // Agentes y bodegas (PagoEfectivo): confirmado por webhook
-      },
+    // Callback (no Promise) por compatibilidad con la version del cliente Krypton
+    // servida por micuentaweb.pe; ver nota de verificacion manual pendiente.
+    KR.setFormToken(formToken, function () {
+      const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
+      if (btnPago) {
+        btnPago.click();
+      }
     });
-
-    Culqi.open();
   }
 
-  // 3) Callback global que Culqi invoca tras el pago.
-  function culqi() {
-    if (Culqi.token) {
-      // Tarjeta / Yape -> cargo con token.
-      postJson(URLS.pagar, {
-        token:    Culqi.token.id,
-        producto: productoActual.slug,
-        email:    productoActual.email,
+  // 4) Callback que Izipay invoca tras el intento de pago (KR.onSubmit).
+  //    Se retorna false para evitar la redirección/POST por defecto del formulario:
+  //    el resultado se envía por fetch() a /izipay/validar, igual que el resto del flujo.
+  if (typeof KR !== 'undefined') {
+    KR.onSubmit(function (paymentResponse) {
+      postJson(URLS.validar, {
+        'kr-answer':        paymentResponse.rawClientAnswer,
+        'kr-hash':           paymentResponse.hash,
+        'kr-hash-algorithm': paymentResponse.hashAlgorithm,
+        'kr-hash-key':       paymentResponse.hashKey,
       }).then(resolverResultado).catch(errorConexion);
-    } else if (Culqi.order) {
-      // Billetera / banca móvil / Cuotéalo -> verificar la orden.
-      postJson(URLS.verificar, {
-        order_id: Culqi.order.id,
-        producto: productoActual.slug,
-      }).then(resolverResultado).catch(errorConexion);
-    } else if (Culqi.error) {
-      mostrarResultado('error', Culqi.error.user_message || 'No se pudo procesar el pago.');
-    }
+
+      return false;
+    });
+
+    KR.onError(function () {
+      mostrarResultado('error', 'No se pudo procesar el pago. Intenta con otra tarjeta.');
+    });
   }
 
   function resolverResultado(data) {
     if (data.ok) {
-      mostrarResultado('ok', data.mensaje + (data.charge_id ? ' (ID: ' + data.charge_id + ')' : ''));
+      mostrarResultado('ok', data.mensaje);
     } else if (data.pendiente) {
       mostrarResultado('info', data.mensaje);
     } else {

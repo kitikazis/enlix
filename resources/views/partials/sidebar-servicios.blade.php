@@ -31,7 +31,7 @@
     <a href="{{ route('contacto') }}" class="btn btn-primary-enlix w-100">Solicitar cotización</a>
   </div>
 </aside>
-<script>
+<script nonce="{{ $cspNonce }}">
 (function () {
   var groups = document.querySelectorAll('.svc-sidebar .svc-group-nav');
   groups.forEach(function (group) {

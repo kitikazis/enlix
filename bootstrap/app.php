@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -11,9 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // El webhook de Culqi es llamado por Culqi (sin sesión/CSRF).
+        $middleware->web(append: [
+            SecurityHeaders::class,
+        ]);
+
+        // El IPN de Izipay es llamado por Izipay (sin sesión/CSRF); la firma
+        // HMAC (kr-hash) es lo que garantiza la integridad de esta ruta.
         $middleware->validateCsrfTokens(except: [
-            'culqi/webhook',
+            'izipay/ipn',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
