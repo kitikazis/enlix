@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
 
 // Recupera los pagos cuya IPN no llegó, preguntándole a Izipay.
 Schedule::command('izipay:conciliar-pendientes')
-    ->everyTenMinutes()
+    ->everyMinute()
     ->withoutOverlapping();
 
 // Cierra los que ya pasaron las 24h y Izipay confirma que nunca existieron.

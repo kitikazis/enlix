@@ -21,10 +21,12 @@ use Illuminate\Support\Facades\Log;
  * 'en_verificacion' para siempre. Este comando le pregunta a Izipay por
  * esos casos y aplica el mismo mapeo de estados que el IPN.
  *
- * Ventanas: se espera 20 minutos antes de tocar un pago (el comprador puede
+ * Ventanas: se espera 2 minutos antes de tocar un pago (el comprador puede
  * estar todavía en el formulario). 'pendiente' se revisa hasta las 24h, que
  * es cuando izipay:expirar-pendientes se encarga; 'en_verificacion' hasta
  * las 72h, porque ahí ya hubo un intento real y puede tardar en resolverse.
+ * El comando corre cada minuto (routes/console.php), así que en la
+ * practica un pago tarda como maximo ~3 minutos en reflejar su estado real.
  */
 class IzipayConciliarPendientes extends Command
 {
@@ -32,7 +34,7 @@ class IzipayConciliarPendientes extends Command
 
     protected $description = 'Consulta en Izipay los pagos sin estado final y los actualiza (cubre IPN perdidas)';
 
-    private const ESPERA_MINUTOS = 20;
+    private const ESPERA_MINUTOS = 2;
 
     private const LIMITE_PENDIENTE_HORAS = 24;
 

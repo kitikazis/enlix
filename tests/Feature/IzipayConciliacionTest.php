@@ -119,7 +119,7 @@ class IzipayConciliacionTest extends TestCase
 
     public function test_no_revisa_pagos_demasiado_recientes(): void
     {
-        $pago = $this->crearPago(EstadoPago::Pendiente, 5);
+        $pago = $this->crearPago(EstadoPago::Pendiente, 1);
         $this->fakeOrderGet($pago, 'PAID', 'CAPTURED');
 
         $this->artisan('izipay:conciliar-pendientes')->assertSuccessful();
