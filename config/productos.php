@@ -23,7 +23,8 @@ return [
         'plan-web-basico' => [
             'nombre'          => 'Plan Web Básico',
             'descripcion'     => 'Sitio web institucional listo para tu empresa, con diseño responsive y formulario de contacto.',
-            'precio_centimos' => 9900,   // S/ 99.00
+            // TEMPORAL: recordar volver a 9900 (S/ 99.00) despues de probar.
+            'precio_centimos' => 100,   // S/ 1.00 (temporal)
             'features'        => [
                 'Hasta 5 secciones',
                 'Diseño responsive',
