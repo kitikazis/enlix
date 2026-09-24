@@ -73,7 +73,7 @@
         </div>
         <div class="col-md-6 text-md-end mt-2 mt-md-0">
           Soluciones tecnológicas para empresas en el Perú.
-          <a href="{{ route('admin.pagos.index') }}" style="color: inherit; opacity: .5; margin-left: 12px;">Admin</a>
+          <a href="{{ route('admin.dashboard') }}" style="color: inherit; opacity: .5; margin-left: 12px;">Admin</a>
         </div>
       </div>
     </div>

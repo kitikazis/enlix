@@ -95,4 +95,18 @@ class AdminDashboardTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertSee('2 activos de 3 en total');
     }
+
+    public function test_filtro_por_estado_solo_muestra_esos_pagos(): void
+    {
+        $user = User::factory()->create();
+        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'pagado@example.com']);
+        $this->crearPago(EstadoPago::Rechazado, 9900)->update(['email' => 'rechazado@example.com']);
+
+        $response = $this->actingAs($user)
+            ->get(route('admin.dashboard', ['estado' => EstadoPago::Pagado->value]));
+
+        $response->assertOk();
+        $response->assertSee('pagado@example.com');
+        $response->assertDontSee('rechazado@example.com');
+    }
 }

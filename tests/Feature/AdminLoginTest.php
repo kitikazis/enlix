@@ -7,13 +7,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class AdminPagosTest extends TestCase
+class AdminLoginTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_invitado_es_redirigido_a_login_al_entrar_a_pagos(): void
+    public function test_invitado_es_redirigido_a_login_al_entrar_al_dashboard(): void
     {
-        $this->get(route('admin.pagos.index'))
+        $this->get(route('admin.dashboard'))
             ->assertRedirect('/admin/login');
     }
 
@@ -41,7 +41,7 @@ class AdminPagosTest extends TestCase
         ], $overrides));
     }
 
-    public function test_login_correcto_permite_ver_pagos(): void
+    public function test_login_correcto_permite_ver_el_dashboard(): void
     {
         $user = User::factory()->create();
         $this->crearPago(['estado' => 'pagado']);
@@ -49,28 +49,13 @@ class AdminPagosTest extends TestCase
         $this->post(route('admin.login.store'), [
             'email' => $user->email,
             'password' => 'password',
-        ])->assertRedirect(route('admin.pagos.index'));
+        ])->assertRedirect(route('admin.dashboard'));
 
         $this->assertAuthenticatedAs($user);
 
-        $this->get(route('admin.pagos.index'))
+        $this->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('pagado');
-    }
-
-    public function test_filtro_por_estado_solo_muestra_esos_pagos(): void
-    {
-        $user = User::factory()->create();
-        $this->crearPago(['estado' => 'pagado', 'email' => 'pagado@example.com']);
-        $this->crearPago(['estado' => 'rechazado', 'email' => 'rechazado@example.com']);
-
-        $this->actingAs($user);
-
-        $response = $this->get(route('admin.pagos.index', ['estado' => 'pagado']));
-
-        $response->assertOk();
-        $response->assertSee('pagado@example.com');
-        $response->assertDontSee('rechazado@example.com');
     }
 
     public function test_logout_cierra_la_sesion(): void

@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
-use App\Http\Controllers\Admin\PagosController as AdminPagosController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
 use App\Http\Controllers\IzipayController;
 use App\Http\Controllers\PageController;
@@ -44,7 +43,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     $middlewarePagos = env('ADMIN_SIN_LOGIN', false) ? [] : ['auth'];
 
     Route::middleware($middlewarePagos)->group(function () {
-        Route::get('/pagos', [AdminPagosController::class, 'index'])->name('pagos.index');
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     });
 

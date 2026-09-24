@@ -8,12 +8,26 @@ use App\Enums\EstadoPago;
 use App\Http\Controllers\Controller;
 use App\Models\Pago;
 use App\Models\Producto;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
+/**
+ * Dashboard + listado de pagos en una sola pantalla (antes eran dos
+ * paginas separadas). No expone ninguna accion de escritura sobre pagos:
+ * el estado solo lo cambian IzipayController::validar()/ipn() (ver
+ * PagoService).
+ */
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $datos = $request->validate([
+            'estado' => ['nullable', Rule::enum(EstadoPago::class)],
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date'],
+        ]);
+
         $pagados = Pago::where('estado', EstadoPago::Pagado);
 
         $ingresosTotal = (clone $pagados)->sum('monto');
@@ -36,10 +50,13 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $ultimosPagos = Pago::query()
+        $pagos = Pago::query()
+            ->when($datos['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
+            ->when($datos['desde'] ?? null, fn ($q, $desde) => $q->whereDate('created_at', '>=', $desde))
+            ->when($datos['hasta'] ?? null, fn ($q, $hasta) => $q->whereDate('created_at', '<=', $hasta))
             ->orderByDesc('created_at')
-            ->limit(10)
-            ->get(['id', 'producto', 'email', 'monto', 'estado', 'created_at']);
+            ->paginate(30)
+            ->withQueryString();
 
         return view('admin.dashboard', [
             'ingresosTotal' => $ingresosTotal,
@@ -49,7 +66,8 @@ class DashboardController extends Controller
             'estados' => EstadoPago::cases(),
             'tasaConversion' => $tasaConversion,
             'ingresosPorProducto' => $ingresosPorProducto,
-            'ultimosPagos' => $ultimosPagos,
+            'pagos' => $pagos,
+            'filtros' => $datos,
             'totalProductosActivos' => Producto::where('activo', true)->count(),
             'totalProductos' => Producto::count(),
         ]);
