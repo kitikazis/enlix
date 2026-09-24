@@ -17,8 +17,12 @@ class EstadoPagoTest extends TestCase
     {
         return [
             'pagado y capturado' => ['PAID', 'CAPTURED', EstadoPago::Pagado],
-            'pagado autorizado sin capturar' => ['PAID', 'AUTHORISED', EstadoPago::Pagado],
-            'pagado sin detalle' => ['PAID', null, EstadoPago::Pagado],
+            // AUTHORISED sin capturar NO es pagado todavia: el comercio puede
+            // anularlo sin pasar por el banco (caso real de produccion, 24/09).
+            'autorizado sin capturar' => ['PAID', 'AUTHORISED', EstadoPago::EnVerificacion],
+            // Sin CAPTURED explicito no se asume pagado, aunque orderStatus
+            // diga PAID: mejor verificar de nuevo que dar dinero por cobrado.
+            'paid sin detalle no es pagado' => ['PAID', null, EstadoPago::EnVerificacion],
             'autorizado a validar' => ['PAID', 'AUTHORISED_TO_VALIDATE', EstadoPago::EnVerificacion],
             'esperando autorizacion' => ['RUNNING', 'WAITING_AUTHORISATION', EstadoPago::EnVerificacion],
             'esperando autorizacion a validar' => ['RUNNING', 'WAITING_AUTHORISATION_TO_VALIDATE', EstadoPago::EnVerificacion],

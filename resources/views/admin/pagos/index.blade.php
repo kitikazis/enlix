@@ -49,25 +49,25 @@
   <table class="table table-sm table-hover align-middle mb-0">
     <thead class="table-light">
       <tr>
-        <th>Fecha</th>
+        <th class="text-nowrap">Fecha</th>
         <th>Producto</th>
         <th>Email</th>
-        <th class="text-end">Monto</th>
+        <th class="text-end text-nowrap">Monto</th>
         <th>Estado</th>
-        <th>Tarjeta</th>
+        <th class="text-nowrap">Tarjeta</th>
         <th>Order ID</th>
       </tr>
     </thead>
     <tbody>
       @forelse ($pagos as $pago)
         <tr>
-          <td>{{ $pago->created_at->format('d/m/Y H:i') }}</td>
-          <td>{{ $pago->producto }}</td>
-          <td>{{ $pago->email }}</td>
-          <td class="text-end">{{ $pago->moneda }} {{ number_format($pago->monto / 100, 2) }}</td>
-          <td><span class="badge {{ $badge[$pago->estado->value] ?? 'text-bg-light' }}">{{ $pago->estado->etiqueta() }}</span></td>
-          <td>{{ $pago->card_brand ? $pago->card_brand.' '.$pago->card_masked_pan : '—' }}</td>
-          <td class="text-muted small">{{ $pago->izipay_order_id }}</td>
+          <td class="text-nowrap">{{ $pago->created_at->format('d/m/Y H:i') }}</td>
+          <td class="text-nowrap">{{ $pago->producto }}</td>
+          <td class="text-truncate" style="max-width: 180px;" title="{{ $pago->email }}">{{ $pago->email }}</td>
+          <td class="text-end text-nowrap">{{ $pago->moneda }} {{ number_format($pago->monto / 100, 2) }}</td>
+          <td class="text-nowrap"><span class="badge {{ $badge[$pago->estado->value] ?? 'text-bg-light' }}">{{ $pago->estado->etiqueta() }}</span></td>
+          <td class="text-nowrap">{{ $pago->card_brand ? $pago->card_brand.' '.$pago->card_masked_pan : '—' }}</td>
+          <td class="text-muted small text-truncate" style="max-width: 140px;" title="{{ $pago->izipay_order_id }}">{{ $pago->izipay_order_id }}</td>
         </tr>
       @empty
         <tr>

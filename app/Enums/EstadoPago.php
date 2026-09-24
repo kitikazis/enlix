@@ -28,8 +28,20 @@ enum EstadoPago: string
     /** detailedStatus que significan "caducó sin completarse". */
     private const DETALLES_EXPIRACION = ['EXPIRED', 'ABANDONED'];
 
-    /** detailedStatus que aún no son definitivos: hay que volver a consultar. */
+    /**
+     * detailedStatus que aún no son definitivos: hay que volver a consultar.
+     *
+     * AUTHORISED (sin "TO_VALIDATE") va aquí a propósito: significa que el
+     * banco autorizó el cargo pero Izipay TODAVÍA no lo capturó ("En espera
+     * de captura" en su Back Office). Mientras no esté capturado, el
+     * comercio puede anularlo sin que pase por el banco - confirmado en
+     * producción el 24/09: una autorización quedó "Pagado" en nuestro
+     * sistema y horas después se anuló en Izipay sin que nada nos avisara,
+     * porque 'pagado' es un estado final e inmutable por diseño. Solo
+     * CAPTURED es dinero realmente cobrado.
+     */
     private const DETALLES_VERIFICACION = [
+        'AUTHORISED',
         'AUTHORISED_TO_VALIDATE',
         'WAITING_AUTHORISATION',
         'WAITING_AUTHORISATION_TO_VALIDATE',
@@ -83,10 +95,14 @@ enum EstadoPago: string
      * Traduce la respuesta de Izipay (orderStatus + detailedStatus de la
      * transacción) al estado interno.
      *
-     * El detailedStatus manda cuando dice algo concluyente en contra o
-     * cuando indica que el pago sigue en curso; si no, decide orderStatus.
-     * Ante algo desconocido nunca se asume pagado: queda en verificación
-     * para que el job de conciliación lo vuelva a consultar.
+     * Regla deliberadamente conservadora: SOLO detailedStatus=CAPTURED
+     * cuenta como Pagado (dinero realmente cobrado, no solo autorizado). Un
+     * cargo "autorizado" pero sin capturar puede anularse sin pasar por el
+     * banco - confirmado en producción el 24/09: una autorización quedó
+     * "pagado" en nuestro sistema y horas después se anuló en Izipay sin
+     * avisarnos, porque 'pagado' es un estado final e inmutable por diseño.
+     * Ante cualquier duda (detalle desconocido, ausente, o orderStatus=PAID
+     * sin CAPTURED explícito) queda en verificación, nunca se asume pagado.
      *
      * // TODO: verificar la lista completa de detailedStatus en la doc de
      * // micuentaweb.pe. Confirmados con datos reales: CAPTURED, AUTHORISED,
@@ -96,6 +112,10 @@ enum EstadoPago: string
     {
         $detalle = strtoupper(trim((string) $detailedStatus));
         $orden = strtoupper(trim((string) $orderStatus));
+
+        if ($detalle === 'CAPTURED') {
+            return self::Pagado;
+        }
 
         if (in_array($detalle, self::DETALLES_RECHAZO, true)) {
             return self::Rechazado;
@@ -110,7 +130,10 @@ enum EstadoPago: string
         }
 
         return match ($orden) {
-            'PAID' => self::Pagado,
+            // PAID sin CAPTURED explicito: se prefiere verificar de nuevo
+            // (el job de conciliacion volvera a preguntar) antes que asumir
+            // pagado con datos incompletos.
+            'PAID' => self::EnVerificacion,
             'UNPAID' => self::Rechazado,
             'RUNNING', 'PARTIALLY_PAID' => self::EnVerificacion,
             'ABANDONED', 'EXPIRED' => self::Expirado,

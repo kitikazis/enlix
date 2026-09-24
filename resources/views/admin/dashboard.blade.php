@@ -68,7 +68,7 @@
   <div class="col-lg-6">
     <div class="card h-100 shadow-sm">
       <div class="card-header bg-white">Ingresos por producto</div>
-      <div class="card-body p-0">
+      <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead class="table-light">
             <tr><th>Producto</th><th class="text-end">Ventas</th><th class="text-end">Total</th></tr>

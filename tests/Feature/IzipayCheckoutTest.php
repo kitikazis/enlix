@@ -63,7 +63,9 @@ class IzipayCheckoutTest extends TestCase
                 [
                     'uuid' => 'uuid-1234',
                     'status' => 'CAPTURED',
-                    'detailedStatus' => 'AUTHORISED',
+                    // CAPTURED: dinero realmente cobrado. AUTHORISED (sin
+                    // capturar) NO cuenta como pagado - ver EstadoPago.
+                    'detailedStatus' => 'CAPTURED',
                     'transactionDetails' => [
                         'cardDetails' => [
                             'pan' => '497010XXXXXX0000',
@@ -619,6 +621,34 @@ class IzipayCheckoutTest extends TestCase
         $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
 
         $this->assertSame(EstadoPago::EnVerificacion, $pago->fresh()->estado);
+    }
+
+    public function test_ipn_autorizado_sin_capturar_no_marca_pagado(): void
+    {
+        // Caso real de producción (24/09): una autorización sin capturar se
+        // marcó "pagado" y horas después se anuló en Izipay sin que nuestro
+        // sistema se enterara, porque 'pagado' es inmutable. AUTHORISED sin
+        // captura debe quedar en verificación, no pagado.
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago, [
+            'transactions' => [['detailedStatus' => 'AUTHORISED']],
+        ]);
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+
+        $this->assertSame(EstadoPago::EnVerificacion, $pago->fresh()->estado);
+    }
+
+    public function test_ipn_capturado_si_marca_pagado(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago, [
+            'transactions' => [['detailedStatus' => 'CAPTURED']],
+        ]);
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+
+        $this->assertSame(EstadoPago::Pagado, $pago->fresh()->estado);
     }
 
     public function test_ipn_con_captura_fallida_marca_rechazado(): void
