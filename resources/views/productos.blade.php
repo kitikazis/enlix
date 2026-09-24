@@ -237,6 +237,28 @@
     btnContinuar.textContent = btnContinuarTextoOriginal;
   }
 
+  // Reintenta el clic en el boton de Krypton con espera creciente (0, 400,
+  // 900, 1600ms). Hacer clic varias veces en este boton no reenvia el pago:
+  // solo abre el formulario, el envio real es un boton distinto dentro de
+  // el (KR.onSubmit se dispara solo cuando el usuario completa y confirma).
+  const ESPERAS_POPIN_MS = [0, 400, 900, 1600];
+
+  function intentarAbrirPopin(intento) {
+    const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
+
+    if (btnPago) {
+      btnPago.click();
+    }
+
+    if (intento + 1 < ESPERAS_POPIN_MS.length) {
+      setTimeout(function () {
+        intentarAbrirPopin(intento + 1);
+      }, ESPERAS_POPIN_MS[intento + 1]);
+    } else if (!btnPago) {
+      mostrarResultado('error', 'No se pudo abrir el formulario de pago. Recarga la página e intenta de nuevo.');
+    }
+  }
+
   // 3) Asigna el formToken al PopIn y lo abre.
   function abrirPopin(formToken) {
     if (typeof KR === 'undefined') {
@@ -250,12 +272,11 @@
     // servida por micuentaweb.pe; ver nota de verificacion manual pendiente.
     KR.setFormToken(formToken, function () {
       restaurarBotonContinuar();
-      const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
-      if (btnPago) {
-        btnPago.click();
-      } else {
-        mostrarResultado('error', 'No se pudo abrir el formulario de pago. Recarga la página e intenta de nuevo.');
-      }
+      // Justo despues de este callback, Krypton todavia puede estar cargando
+      // recursos en segundo plano (fingerprint, campos desde secure.micuentaweb.pe)
+      // y su listener de click puede no estar listo todavia. Se reintenta el
+      // clic varias veces con espera creciente en vez de una sola vez.
+      intentarAbrirPopin(0);
     });
   }
 
