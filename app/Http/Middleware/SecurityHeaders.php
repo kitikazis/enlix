@@ -52,12 +52,17 @@ class SecurityHeaders
             // subdominios de micuentaweb.pe (static, secure, assets...), no
             // solo static.micuentaweb.pe: se usa comodin para no romper el
             // widget cada vez que Izipay agrega/cambia un subdominio interno.
-            "script-src 'self' 'nonce-{$nonce}' cdn.jsdelivr.net *.micuentaweb.pe",
+            // *.online-metrix.net es ThreatMetrix: el fingerprint de
+            // dispositivo que usa el analizador de riesgo/antifraude de
+            // Izipay en cada intento de pago. Si se bloquea, Izipay no recibe
+            // huella del dispositivo y tiende a rechazar la transaccion
+            // igual, sea cual sea la tarjeta.
+            "script-src 'self' 'nonce-{$nonce}' cdn.jsdelivr.net *.micuentaweb.pe *.online-metrix.net",
             "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com *.micuentaweb.pe",
             "font-src 'self' fonts.gstatic.com *.micuentaweb.pe",
-            "img-src 'self' data: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe",
-            "connect-src 'self' *.micuentaweb.pe",
-            "frame-src 'self' *.micuentaweb.pe www.google.com",
+            "img-src 'self' data: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe *.online-metrix.net",
+            "connect-src 'self' *.micuentaweb.pe *.online-metrix.net",
+            "frame-src 'self' *.micuentaweb.pe *.online-metrix.net www.google.com",
             "frame-ancestors 'self'",
             "form-action 'self' *.micuentaweb.pe",
             "object-src 'none'",
