@@ -34,6 +34,14 @@
   #pago-resultado.ok    { display: block; background: #e8f7ee; color: #176b3a; border: 1px solid #aadcbf; }
   #pago-resultado.error { display: block; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; }
   #pago-resultado.info  { display: block; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; }
+
+  /* Oculto por opacidad (no display/posicion: eso ya rompio que Krypton
+     pudiera abrir el formulario en dos intentos anteriores). El propio JS
+     de la pagina lo hace visible justo antes de intentar abrirlo, no se
+     depende de que Krypton lo revierta por su cuenta. */
+  #izipay-popin-wrapper {
+    opacity: 0;
+  }
 </style>
 
 <section class="section-pad">
@@ -250,6 +258,7 @@
     // servida por micuentaweb.pe; ver nota de verificacion manual pendiente.
     KR.setFormToken(formToken, function () {
       restaurarBotonContinuar();
+      document.getElementById('izipay-popin-wrapper').style.opacity = '1';
       const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
       if (btnPago) {
         btnPago.click();
