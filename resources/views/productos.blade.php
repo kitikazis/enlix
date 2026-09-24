@@ -212,7 +212,14 @@
     }).then(function (data) {
       if (!data.ok) {
         restaurarBotonContinuar();
-        return mostrarErrorModal(data.mensaje || 'No se pudo iniciar el pago.');
+        // data.mensaje: error propio del controlador. data.message/errors:
+        // formato por defecto de Laravel cuando falla la validacion de $request.
+        const primerErrorValidacion = data.errors && Object.values(data.errors)[0];
+        const mensaje = data.mensaje
+          || (primerErrorValidacion && primerErrorValidacion[0])
+          || data.message
+          || 'No se pudo iniciar el pago.';
+        return mostrarErrorModal(mensaje);
       }
       modalDatos.hide();
       abrirPopin(data.form_token);
