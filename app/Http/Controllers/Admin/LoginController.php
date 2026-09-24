@@ -26,7 +26,11 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($datos, remember: false)) {
+        // remember: true -> cookie de sesion persistente (semanas), para no
+        // pedir contraseña en cada visita. Aun asi sigue exigiendo login una
+        // vez: esta pantalla muestra datos reales de clientes en un dominio
+        // publico, no se debe dejar sin autenticacion.
+        if (! Auth::attempt($datos, remember: true)) {
             return back()
                 ->withErrors(['email' => 'Credenciales incorrectas.'])
                 ->onlyInput('email');
