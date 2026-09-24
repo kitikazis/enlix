@@ -430,6 +430,23 @@ class IzipayCheckoutTest extends TestCase
         ], $overrides));
     }
 
+    public function test_no_se_pueden_guardar_dos_pagos_con_el_mismo_transaction_uuid(): void
+    {
+        $this->crearPagoPendiente(['transaction_uuid' => 'uuid-repetido']);
+
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+
+        $this->crearPagoPendiente(['transaction_uuid' => 'uuid-repetido']);
+    }
+
+    public function test_varios_pagos_pendientes_pueden_tener_transaction_uuid_nulo(): void
+    {
+        $this->crearPagoPendiente();
+        $this->crearPagoPendiente();
+
+        $this->assertSame(2, Pago::whereNull('transaction_uuid')->count());
+    }
+
     public function test_envia_la_ip_real_del_comprador_a_izipay(): void
     {
         $this->fakeFormToken();
