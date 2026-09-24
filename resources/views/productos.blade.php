@@ -100,26 +100,29 @@
         <div class="row g-3">
           <div class="col-sm-6">
             <label class="form-label">Nombre</label>
-            <input type="text" class="form-control" id="f_first_name" autocomplete="given-name">
+            <input type="text" class="form-control" id="f_first_name" autocomplete="given-name" value="{{ $autollenar_test ? 'Juan' : '' }}">
           </div>
           <div class="col-sm-6">
             <label class="form-label">Apellido</label>
-            <input type="text" class="form-control" id="f_last_name" autocomplete="family-name">
+            <input type="text" class="form-control" id="f_last_name" autocomplete="family-name" value="{{ $autollenar_test ? 'Perez' : '' }}">
           </div>
           <div class="col-12">
             <label class="form-label">Correo electrónico</label>
-            <input type="email" class="form-control" id="f_email" autocomplete="email">
+            <input type="email" class="form-control" id="f_email" autocomplete="email" value="{{ $autollenar_test ? 'juan.perez@example.com' : '' }}">
           </div>
           <div class="col-12">
             <label class="form-label">Teléfono</label>
-            <input type="text" class="form-control" id="f_phone" placeholder="+51 999 999 999" autocomplete="tel">
+            <input type="text" class="form-control" id="f_phone" placeholder="+51 999 999 999" autocomplete="tel" value="{{ $autollenar_test ? '+51999999999' : '' }}">
           </div>
           <div class="col-12">
             <label class="form-label">Documento de identidad (DNI)</label>
-            <input type="text" class="form-control" id="f_dni" placeholder="12345678" maxlength="15" autocomplete="off">
+            <input type="text" class="form-control" id="f_dni" placeholder="12345678" maxlength="15" autocomplete="off" value="{{ $autollenar_test ? '12345678' : '' }}">
             <div class="form-text">Necesario para habilitar Yape, Plin y otros medios de pago además de tarjeta.</div>
           </div>
         </div>
+        @if ($autollenar_test)
+          <p class="text-warning mt-2 mb-0" style="font-size: 12px;">⚠ Datos de prueba precargados (IZIPAY_AUTOLLENAR_TEST=true). Apágalo en el .env antes de recibir clientes reales.</p>
+        @endif
         <div id="modal-error" class="text-danger mt-3" style="font-size: 13px; display: none;"></div>
       </div>
       <div class="modal-footer">

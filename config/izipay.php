@@ -37,4 +37,9 @@ return [
 
     'currency' => env('IZIPAY_CURRENCY', 'PEN'),
 
+    // true precarga el modal de compra con datos de prueba (Juan Perez...).
+    // Solo para certificar el checkout; apagalo (false) antes de recibir
+    // clientes reales, para que no vean el formulario prellenado.
+    'autollenar_test' => env('IZIPAY_AUTOLLENAR_TEST', false),
+
 ];

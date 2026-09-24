@@ -36,6 +36,7 @@ class IzipayController extends Controller
             'productos' => Producto::items(),
             'izipay_public_key' => config('izipay.public_key'),
             'izipay_js_client_url' => config('izipay.js_client_url'),
+            'autollenar_test' => config('izipay.autollenar_test'),
         ]);
     }
 
