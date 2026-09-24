@@ -37,7 +37,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->middleware('auth')
         ->name('logout');
 
-    Route::middleware('auth')->group(function () {
+    // ADMIN_SIN_LOGIN=true en .env quita el login temporalmente (solo pagos,
+    // solo lectura). Ponlo en false (o bórralo) para volver a exigir login.
+    $middlewarePagos = env('ADMIN_SIN_LOGIN', false) ? [] : ['auth'];
+
+    Route::middleware($middlewarePagos)->group(function () {
         Route::get('/pagos', [AdminPagosController::class, 'index'])->name('pagos.index');
     });
 });
