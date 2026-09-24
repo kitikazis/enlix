@@ -37,6 +37,12 @@ return [
 
     'currency' => env('IZIPAY_CURRENCY', 'PEN'),
 
+    // Segundos. Sin tope explícito, una caída lenta de Izipay deja colgado
+    // un worker de PHP hasta el límite del servidor.
+    'connect_timeout' => (int) env('IZIPAY_CONNECT_TIMEOUT', 5),
+
+    'timeout' => (int) env('IZIPAY_TIMEOUT', 15),
+
     // true precarga el modal de compra con datos de prueba (Juan Perez...).
     // Solo para certificar el checkout; apagalo (false) antes de recibir
     // clientes reales, para que no vean el formulario prellenado.

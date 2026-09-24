@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
@@ -51,7 +53,8 @@ class IzipayService
             )
                 ->acceptJson()
                 ->asJson()
-                ->timeout(30)
+                ->connectTimeout((int) config('izipay.connect_timeout'))
+                ->timeout((int) config('izipay.timeout'))
                 ->post($this->url('V4/Charge/CreatePayment'), $payload);
         } catch (ConnectionException) {
             return ['ok' => false, 'http' => 0, 'form_token' => null, 'public_key' => null];
@@ -113,7 +116,8 @@ class IzipayService
             )
                 ->acceptJson()
                 ->asJson()
-                ->timeout(30)
+                ->connectTimeout((int) config('izipay.connect_timeout'))
+                ->timeout((int) config('izipay.timeout'))
                 ->post($this->url('V4/Order/Get'), ['orderId' => $orderId]);
         } catch (ConnectionException) {
             Log::warning('Izipay: no se pudo consultar la orden', ['izipay_order_id' => $orderId]);

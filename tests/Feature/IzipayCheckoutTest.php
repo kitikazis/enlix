@@ -8,6 +8,7 @@ use App\Enums\EstadoPago;
 use App\Models\Pago;
 use App\Support\Producto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -427,6 +428,38 @@ class IzipayCheckoutTest extends TestCase
                 'orderCurrency' => $pago->moneda,
             ],
         ], $overrides));
+    }
+
+    public function test_los_timeouts_tienen_tope_explicito_y_razonable(): void
+    {
+        // Sin tope, una caída lenta de Izipay deja colgado un worker de PHP.
+        $conexion = config('izipay.connect_timeout');
+        $total = config('izipay.timeout');
+
+        $this->assertIsInt($conexion);
+        $this->assertIsInt($total);
+        $this->assertGreaterThan(0, $conexion);
+        $this->assertLessThanOrEqual(10, $conexion);
+        $this->assertLessThanOrEqual(30, $total);
+        $this->assertGreaterThanOrEqual($conexion, $total);
+    }
+
+    public function test_si_izipay_no_responde_no_se_crea_el_pago(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('Connection timed out'));
+        $producto = $this->primerProducto();
+
+        $response = $this->postJson(route('izipay.form-token'), [
+            'producto' => $producto['slug'],
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
+            'email' => 'juan@example.com',
+            'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
+        ]);
+
+        $response->assertStatus(422)->assertJson(['ok' => false]);
+        $this->assertDatabaseMissing('pagos', ['producto' => $producto['slug']]);
     }
 
     public function test_el_retorno_del_navegador_nunca_marca_pagado(): void
