@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\EstadoPago;
 use App\Http\Controllers\Controller;
 use App\Models\Pago;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -14,12 +18,10 @@ use Illuminate\View\View;
  */
 class PagosController extends Controller
 {
-    private const ESTADOS_VALIDOS = ['pendiente', 'pagado', 'rechazado', 'expirado'];
-
     public function index(Request $request): View
     {
         $datos = $request->validate([
-            'estado' => ['nullable', 'string', 'in:'.implode(',', self::ESTADOS_VALIDOS)],
+            'estado' => ['nullable', Rule::enum(EstadoPago::class)],
             'desde' => ['nullable', 'date'],
             'hasta' => ['nullable', 'date'],
         ]);
@@ -40,7 +42,7 @@ class PagosController extends Controller
         return view('admin.pagos.index', [
             'pagos' => $pagos,
             'resumen' => $resumen,
-            'estados' => self::ESTADOS_VALIDOS,
+            'estados' => EstadoPago::cases(),
             'filtros' => $datos,
         ]);
     }

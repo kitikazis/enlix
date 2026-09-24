@@ -52,7 +52,7 @@ class IzipayService
                 ->acceptJson()
                 ->asJson()
                 ->timeout(30)
-                ->post(rtrim((string) config('izipay.base_url'), '/').'/api-payment/V4/Charge/CreatePayment', $payload);
+                ->post($this->url('V4/Charge/CreatePayment'), $payload);
         } catch (ConnectionException) {
             return ['ok' => false, 'http' => 0, 'form_token' => null, 'public_key' => null];
         }
@@ -87,6 +87,67 @@ class IzipayService
             'form_token' => $formToken,
             'public_key' => data_get($data, 'answer.publicKey', config('izipay.public_key')),
         ];
+    }
+
+    /**
+     * Consulta en Izipay el estado real de una orden ya creada.
+     *
+     * Se usa cuando no llegó el IPN (job de conciliación y expiración): antes
+     * de dar por perdido un pago hay que preguntarle a la fuente de verdad.
+     *
+     * 'encontrada' => false significa que Izipay respondió pero no conoce esa
+     * orden (el comprador nunca llegó a intentar pagar). 'ok' => false
+     * significa que no se pudo consultar: en ese caso no se toca nada.
+     *
+     * // TODO: verificar en la doc de micuentaweb.pe el nombre exacto del
+     * // servicio (V4/Order/Get) y el parámetro (orderId).
+     *
+     * @return array{ok: bool, encontrada: bool, answer: array<string, mixed>}
+     */
+    public function consultarOrden(string $orderId): array
+    {
+        try {
+            $response = Http::withBasicAuth(
+                (string) config('izipay.username'),
+                (string) config('izipay.password')
+            )
+                ->acceptJson()
+                ->asJson()
+                ->timeout(30)
+                ->post($this->url('V4/Order/Get'), ['orderId' => $orderId]);
+        } catch (ConnectionException) {
+            Log::warning('Izipay: no se pudo consultar la orden', ['izipay_order_id' => $orderId]);
+
+            return ['ok' => false, 'encontrada' => false, 'answer' => []];
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Izipay: consulta de orden fallida', [
+                'izipay_order_id' => $orderId,
+                'http' => $response->status(),
+            ]);
+
+            return ['ok' => false, 'encontrada' => false, 'answer' => []];
+        }
+
+        $data = $response->json();
+
+        if (data_get($data, 'status') !== 'SUCCESS') {
+            // Izipay contestó, pero la orden no existe o no es consultable.
+            Log::info('Izipay: la orden no existe en la pasarela', [
+                'izipay_order_id' => $orderId,
+                'error_code' => data_get($data, 'answer.errorCode'),
+            ]);
+
+            return ['ok' => true, 'encontrada' => false, 'answer' => []];
+        }
+
+        return ['ok' => true, 'encontrada' => true, 'answer' => (array) data_get($data, 'answer', [])];
+    }
+
+    private function url(string $servicio): string
+    {
+        return rtrim((string) config('izipay.base_url'), '/').'/api-payment/'.$servicio;
     }
 
     /**

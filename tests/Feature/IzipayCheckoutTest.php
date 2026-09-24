@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
+use App\Enums\EstadoPago;
 use App\Models\Pago;
 use App\Support\Producto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +45,7 @@ class IzipayCheckoutTest extends TestCase
             'monto' => $producto['precio_centimos'],
             'moneda' => 'PEN',
             'izipay_order_id' => 'ENX-TEST-'.uniqid(),
-            'estado' => 'pendiente',
+            'estado' => EstadoPago::Pendiente,
         ], $overrides));
     }
 
@@ -117,7 +120,7 @@ class IzipayCheckoutTest extends TestCase
         $this->assertDatabaseHas('pagos', [
             'producto' => $producto['slug'],
             'monto' => $producto['precio_centimos'],
-            'estado' => 'pendiente',
+            'estado' => EstadoPago::Pendiente,
         ]);
     }
 
@@ -164,7 +167,7 @@ class IzipayCheckoutTest extends TestCase
             'kr-hash-key' => 'password',
         ]))->assertOk();
 
-        $this->assertSame('pendiente', $pago->fresh()->estado);
+        $this->assertSame(EstadoPago::Pendiente, $pago->fresh()->estado);
     }
 
     public function test_monto_distinto_no_marca_pagado(): void
@@ -185,7 +188,7 @@ class IzipayCheckoutTest extends TestCase
             'kr-hash-key' => 'password',
         ]))->assertOk();
 
-        $this->assertSame('pendiente', $pago->fresh()->estado);
+        $this->assertSame(EstadoPago::Pendiente, $pago->fresh()->estado);
     }
 
     public function test_kr_hash_key_incorrecto_es_rechazado(): void
@@ -208,12 +211,12 @@ class IzipayCheckoutTest extends TestCase
             'kr-hash-key' => 'password', // IPN exige 'password', no 'sha256_hmac'
         ]))->assertOk();
 
-        $this->assertSame('pendiente', $pago->fresh()->estado);
+        $this->assertSame(EstadoPago::Pendiente, $pago->fresh()->estado);
     }
 
     public function test_pago_pagado_no_regresa_a_rechazado_tras_unpaid_posterior(): void
     {
-        $pago = $this->crearPagoPendiente(['estado' => 'pagado']);
+        $pago = $this->crearPagoPendiente(['estado' => EstadoPago::Pagado]);
 
         $answer = $this->krAnswer([
             'orderStatus' => 'UNPAID',
@@ -230,7 +233,7 @@ class IzipayCheckoutTest extends TestCase
             'kr-hash-key' => 'password',
         ]))->assertOk();
 
-        $this->assertSame('pagado', $pago->fresh()->estado);
+        $this->assertSame(EstadoPago::Pagado, $pago->fresh()->estado);
     }
 
     public function test_ipn_repetido_cinco_veces_deja_un_solo_registro_y_estado_estable(): void
@@ -255,7 +258,7 @@ class IzipayCheckoutTest extends TestCase
         }
 
         $this->assertSame(1, Pago::where('izipay_order_id', $pago->izipay_order_id)->count());
-        $this->assertSame('pagado', $pago->fresh()->estado);
+        $this->assertSame(EstadoPago::Pagado, $pago->fresh()->estado);
     }
 
     public function test_ipn_con_order_id_inexistente_responde_200_sin_crear_registro(): void
@@ -372,8 +375,8 @@ class IzipayCheckoutTest extends TestCase
 
         $this->artisan('izipay:expirar-pendientes')->assertSuccessful();
 
-        $this->assertSame('expirado', $viejo->fresh()->estado);
-        $this->assertSame('pendiente', $reciente->fresh()->estado);
+        $this->assertSame(EstadoPago::Expirado, $viejo->fresh()->estado);
+        $this->assertSame(EstadoPago::Pendiente, $reciente->fresh()->estado);
     }
 
     public function test_rate_limit_form_token_por_ip_y_email(): void
@@ -395,5 +398,106 @@ class IzipayCheckoutTest extends TestCase
         }
 
         $this->postJson(route('izipay.form-token'), $payload)->assertStatus(429);
+    }
+
+    /** @return array<string, string> */
+    private function firmarParaNavegador(array $answer): array
+    {
+        return array_merge($this->firmar($answer, config('izipay.sha256_key')), [
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'sha256_hmac',
+        ]);
+    }
+
+    /** @return array<string, string> */
+    private function firmarParaIpn(array $answer): array
+    {
+        return array_merge($this->firmar($answer, config('izipay.password')), [
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'password',
+        ]);
+    }
+
+    private function answerDelPago(Pago $pago, array $overrides = []): array
+    {
+        return $this->krAnswer(array_replace_recursive([
+            'orderDetails' => [
+                'orderId' => $pago->izipay_order_id,
+                'orderTotalAmount' => $pago->monto,
+                'orderCurrency' => $pago->moneda,
+            ],
+        ], $overrides));
+    }
+
+    public function test_el_retorno_del_navegador_nunca_marca_pagado(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago); // orderStatus PAID
+
+        $response = $this->postJson(route('izipay.validar'), $this->firmarParaNavegador($answer));
+
+        $response->assertStatus(202)->assertJson(['ok' => false, 'pendiente' => true]);
+        $this->assertSame(EstadoPago::EnVerificacion, $pago->fresh()->estado);
+    }
+
+    public function test_el_ipn_si_marca_pagado(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago);
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+
+        $this->assertSame(EstadoPago::Pagado, $pago->fresh()->estado);
+    }
+
+    public function test_el_ipn_confirma_un_pago_que_el_navegador_dejo_en_verificacion(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago);
+
+        $this->postJson(route('izipay.validar'), $this->firmarParaNavegador($answer))->assertStatus(202);
+        $this->assertSame(EstadoPago::EnVerificacion, $pago->fresh()->estado);
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+        $this->assertSame(EstadoPago::Pagado, $pago->fresh()->estado);
+    }
+
+    public function test_ipn_pendiente_de_autorizacion_no_marca_pagado(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago, [
+            'orderStatus' => 'RUNNING',
+            'transactions' => [['detailedStatus' => 'WAITING_AUTHORISATION']],
+        ]);
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+
+        $this->assertSame(EstadoPago::EnVerificacion, $pago->fresh()->estado);
+    }
+
+    public function test_ipn_con_captura_fallida_marca_rechazado(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago, [
+            'transactions' => [['detailedStatus' => 'CAPTURE_FAILED']],
+        ]);
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+
+        $this->assertSame(EstadoPago::Rechazado, $pago->fresh()->estado);
+    }
+
+    public function test_los_mensajes_al_cliente_no_prometen_correo(): void
+    {
+        $pago = $this->crearPagoPendiente();
+        $answer = $this->answerDelPago($pago);
+
+        $respuestaNavegador = $this->postJson(route('izipay.validar'), $this->firmarParaNavegador($answer));
+        $this->assertStringNotContainsStringIgnoringCase('correo', $respuestaNavegador->json('mensaje'));
+
+        $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
+
+        $respuestaFinal = $this->postJson(route('izipay.validar'), $this->firmarParaNavegador($answer));
+        $this->assertStringNotContainsStringIgnoringCase('correo', $respuestaFinal->json('mensaje'));
     }
 }

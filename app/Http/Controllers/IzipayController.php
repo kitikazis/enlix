@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Enums\EstadoPago;
 use App\Models\Pago;
 use App\Services\IzipayService;
 use App\Services\PagoService;
@@ -27,6 +30,8 @@ use App\Support\Producto;
 class IzipayController extends Controller
 {
     private const MENSAJE_GENERICO = 'No se pudo procesar el pago. Intenta nuevamente.';
+
+    private const MENSAJE_VERIFICANDO = 'Estamos confirmando tu pago. En unos minutos verás el resultado.';
 
     public function index(): View
     {
@@ -85,7 +90,7 @@ class IzipayController extends Controller
                 'monto' => $monto,
                 'moneda' => config('izipay.currency', 'PEN'),
                 'izipay_order_id' => $orderId,
-                'estado' => 'pendiente',
+                'estado' => EstadoPago::Pendiente,
             ]);
         } catch (\Throwable $e) {
             // El formToken ya se genero: si esto falla, el IPN/validar no podra
@@ -130,24 +135,30 @@ class IzipayController extends Controller
             return response()->json(['ok' => false, 'mensaje' => self::MENSAJE_GENERICO], 422);
         }
 
-        $resultado = $pagos->registrar($answer, 'validar');
+        $resultado = $pagos->registrar($answer, PagoService::ORIGEN_VALIDAR);
 
         if (! $resultado['ok'] || ! ($resultado['procesado'] ?? false)) {
             return response()->json([
                 'ok' => false,
                 'pendiente' => true,
-                'mensaje' => 'Tu pago está en proceso. Te confirmaremos por correo cuando se complete.',
+                'mensaje' => self::MENSAJE_VERIFICANDO,
             ], 202);
         }
 
-        if ($resultado['estado'] === 'pagado') {
-            return response()->json([
+        // El retorno del navegador nunca confirma el cobro: como mucho deja el
+        // pago en verificación a la espera del IPN (ver PagoService).
+        return match ($resultado['estado']) {
+            EstadoPago::Pagado => response()->json([
                 'ok' => true,
-                'mensaje' => '¡Pago realizado con éxito! Te enviaremos los detalles a tu correo.',
-            ]);
-        }
-
-        return response()->json(['ok' => false, 'mensaje' => self::MENSAJE_GENERICO], 422);
+                'mensaje' => '¡Pago realizado con éxito!',
+            ]),
+            EstadoPago::EnVerificacion, EstadoPago::Pendiente => response()->json([
+                'ok' => false,
+                'pendiente' => true,
+                'mensaje' => self::MENSAJE_VERIFICANDO,
+            ], 202),
+            default => response()->json(['ok' => false, 'mensaje' => self::MENSAJE_GENERICO], 422),
+        };
     }
 
     /**
@@ -183,7 +194,7 @@ class IzipayController extends Controller
             return response('OK', 200);
         }
 
-        $pagos->registrar($answer, 'ipn');
+        $pagos->registrar($answer, PagoService::ORIGEN_IPN);
 
         $orderStatus = data_get($answer, 'orderStatus', 'DESCONOCIDO');
 

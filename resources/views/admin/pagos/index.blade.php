@@ -1,11 +1,14 @@
 @extends('layouts.admin')
 
 @php
+  use App\Enums\EstadoPago;
+
   $badge = [
-    'pendiente' => 'text-bg-warning',
-    'pagado' => 'text-bg-success',
-    'rechazado' => 'text-bg-danger',
-    'expirado' => 'text-bg-secondary',
+    EstadoPago::Pendiente->value => 'text-bg-warning',
+    EstadoPago::EnVerificacion->value => 'text-bg-info',
+    EstadoPago::Pagado->value => 'text-bg-success',
+    EstadoPago::Rechazado->value => 'text-bg-danger',
+    EstadoPago::Expirado->value => 'text-bg-secondary',
   ];
 @endphp
 
@@ -14,7 +17,7 @@
 
 <div class="d-flex flex-wrap gap-2 mb-3">
   @foreach ($estados as $estado)
-    <span class="badge {{ $badge[$estado] }}">{{ ucfirst($estado) }}: {{ $resumen[$estado] ?? 0 }}</span>
+    <span class="badge {{ $badge[$estado->value] }}">{{ $estado->etiqueta() }}: {{ $resumen[$estado->value] ?? 0 }}</span>
   @endforeach
 </div>
 
@@ -24,7 +27,7 @@
     <select name="estado" class="form-select form-select-sm">
       <option value="">Todos</option>
       @foreach ($estados as $estado)
-        <option value="{{ $estado }}" @selected(($filtros['estado'] ?? '') === $estado)>{{ ucfirst($estado) }}</option>
+        <option value="{{ $estado->value }}" @selected(($filtros['estado'] ?? '') === $estado->value)>{{ $estado->etiqueta() }}</option>
       @endforeach
     </select>
   </div>
@@ -62,7 +65,7 @@
           <td>{{ $pago->producto }}</td>
           <td>{{ $pago->email }}</td>
           <td class="text-end">{{ $pago->moneda }} {{ number_format($pago->monto / 100, 2) }}</td>
-          <td><span class="badge {{ $badge[$pago->estado] ?? 'text-bg-light' }}">{{ ucfirst($pago->estado) }}</span></td>
+          <td><span class="badge {{ $badge[$pago->estado->value] ?? 'text-bg-light' }}">{{ $pago->estado->etiqueta() }}</span></td>
           <td>{{ $pago->card_brand ? $pago->card_brand.' '.$pago->card_masked_pan : '—' }}</td>
           <td class="text-muted small">{{ $pago->izipay_order_id }}</td>
         </tr>

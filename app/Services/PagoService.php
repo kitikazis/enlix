@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
+use App\Enums\EstadoPago;
 use App\Models\Pago;
 use App\Support\Producto;
 use Illuminate\Support\Facades\DB;
@@ -15,67 +18,145 @@ use Illuminate\Support\Facades\Log;
  *   crea unicamente IzipayController::formToken(). Si esta clase creara
  *   filas, un kr-answer falsificado posteado directo a /izipay/validar
  *   podria fabricar un pago 'pagado' para un order_id inventado.
- * - Un pago 'pagado' nunca cambia de estado desde aqui (idempotente).
- * - Se valida moneda Y monto contra lo que se registro en el formToken,
- *   no solo la moneda.
+ * - El retorno del navegador NUNCA marca pagado: como mucho deja el pago en
+ *   verificacion. Solo el IPN (servidor a servidor) confirma el cobro.
+ * - Un estado final no se mueve nunca mas (ver EstadoPago::puedeTransicionarA).
+ * - Se valida moneda Y monto contra lo que se registro en el formToken.
  */
 class PagoService
 {
+    public const ORIGEN_IPN = 'ipn';
+
+    public const ORIGEN_VALIDAR = 'validar';
+
+    public const ORIGEN_CONCILIACION = 'conciliacion';
+
+    public const MOTIVO_SIN_ORDER_ID = 'sin_order_id';
+
+    public const MOTIVO_ORDEN_DESCONOCIDA = 'order_id_desconocido';
+
+    public const MOTIVO_NO_COINCIDE = 'mismatch';
+
+    public const MOTIVO_TRANSICION_INVALIDA = 'transicion_invalida';
+
+    /**
+     * @return array{ok: bool, procesado: bool, estado?: EstadoPago, motivo?: string}
+     */
     public function registrar(array $answer, string $origen): array
     {
         $orderId = data_get($answer, 'orderDetails.orderId');
 
-        if (! $orderId) {
+        if (! is_string($orderId) || $orderId === '') {
             Log::warning('Izipay: kr-answer sin orderId', ['origen' => $origen]);
 
-            return ['ok' => true, 'procesado' => false, 'motivo' => 'sin_order_id'];
+            return ['ok' => true, 'procesado' => false, 'motivo' => self::MOTIVO_SIN_ORDER_ID];
         }
 
-        return DB::transaction(function () use ($answer, $orderId, $origen) {
+        return DB::transaction(function () use ($answer, $orderId, $origen): array {
             $pago = Pago::where('izipay_order_id', $orderId)->lockForUpdate()->first();
 
             if ($pago === null) {
                 // No se crea la fila aqui a proposito (ver docblock de la clase).
-                Log::info('Izipay: order_id no reconocido', ['order_id' => $orderId, 'origen' => $origen]);
-
-                return ['ok' => true, 'procesado' => false, 'motivo' => 'order_id_desconocido'];
-            }
-
-            if ($pago->estado === 'pagado') {
-                // Idempotente: ya esta pagado, no se toca sin importar lo que diga este answer.
-                return ['ok' => true, 'procesado' => true, 'estado' => 'pagado'];
-            }
-
-            $monedaOk = data_get($answer, 'orderDetails.orderCurrency') === $pago->moneda;
-            $montoOk = (int) data_get($answer, 'orderDetails.orderTotalAmount', -1) === (int) $pago->monto;
-            $productoOk = Producto::find($pago->producto) !== null;
-
-            if (! $monedaOk || ! $montoOk || ! $productoOk) {
-                Log::warning('Izipay: kr-answer no coincide con el pago registrado', [
-                    'order_id' => $orderId,
-                    'moneda_ok' => $monedaOk,
-                    'monto_ok' => $montoOk,
-                    'producto_ok' => $productoOk,
+                Log::info('Izipay: order_id no reconocido', [
+                    'izipay_order_id' => $orderId,
+                    'origen' => $origen,
                 ]);
 
-                return ['ok' => false, 'procesado' => false, 'motivo' => 'mismatch'];
+                return ['ok' => true, 'procesado' => false, 'motivo' => self::MOTIVO_ORDEN_DESCONOCIDA];
             }
 
-            $orderStatus = data_get($answer, 'orderStatus');
-            $nuevoEstado = $orderStatus === 'PAID' ? 'pagado' : 'rechazado';
+            $estadoActual = $pago->estado;
 
-            $pago->estado = $nuevoEstado;
-            $pago->izipay_order_id = $orderId;
-            $pago->transaction_uuid = data_get($answer, 'transactions.0.uuid');
-            $pago->card_brand = data_get($answer, 'transactions.0.transactionDetails.cardDetails.effectiveBrand');
-            $pago->card_masked_pan = data_get($answer, 'transactions.0.transactionDetails.cardDetails.pan');
-            $pago->respuesta = $this->sanitizarRespuesta($answer);
-            $pago->save();
+            if ($estadoActual->esFinal()) {
+                // Idempotente: lo que diga este answer ya no cambia nada.
+                return ['ok' => true, 'procesado' => true, 'estado' => $estadoActual];
+            }
 
-            Log::info('Izipay: pago registrado', ['order_id' => $orderId, 'estado' => $nuevoEstado]);
+            if (! $this->coincideConLaOrden($answer, $pago)) {
+                return ['ok' => false, 'procesado' => false, 'motivo' => self::MOTIVO_NO_COINCIDE];
+            }
 
-            return ['ok' => true, 'procesado' => true, 'estado' => $nuevoEstado];
+            $estadoNuevo = $this->estadoSegunOrigen($answer, $origen);
+
+            if (! $estadoActual->puedeTransicionarA($estadoNuevo)) {
+                Log::info('Izipay: transicion de estado ignorada', [
+                    'pago_id' => $pago->id,
+                    'izipay_order_id' => $orderId,
+                    'origen' => $origen,
+                    'estado_anterior' => $estadoActual->value,
+                    'estado_nuevo' => $estadoNuevo->value,
+                ]);
+
+                return [
+                    'ok' => true,
+                    'procesado' => true,
+                    'estado' => $estadoActual,
+                    'motivo' => self::MOTIVO_TRANSICION_INVALIDA,
+                ];
+            }
+
+            $this->aplicarEstado($pago, $estadoNuevo, $answer);
+
+            Log::info('Izipay: pago actualizado', [
+                'pago_id' => $pago->id,
+                'izipay_order_id' => $orderId,
+                'origen' => $origen,
+                'estado_anterior' => $estadoActual->value,
+                'estado_nuevo' => $estadoNuevo->value,
+            ]);
+
+            return ['ok' => true, 'procesado' => true, 'estado' => $estadoNuevo];
         });
+    }
+
+    /**
+     * El retorno del navegador solo sirve para la experiencia de usuario: si
+     * la respuesta dice "pagado", aqui se topa en verificacion y se espera la
+     * confirmacion del IPN, que es la fuente de verdad.
+     */
+    private function estadoSegunOrigen(array $answer, string $origen): EstadoPago
+    {
+        $estado = EstadoPago::desdeRespuestaIzipay(
+            data_get($answer, 'orderStatus'),
+            data_get($answer, 'transactions.0.detailedStatus'),
+        );
+
+        if ($origen === self::ORIGEN_VALIDAR && $estado === EstadoPago::Pagado) {
+            return EstadoPago::EnVerificacion;
+        }
+
+        return $estado;
+    }
+
+    private function coincideConLaOrden(array $answer, Pago $pago): bool
+    {
+        $monedaOk = data_get($answer, 'orderDetails.orderCurrency') === $pago->moneda;
+        $montoOk = (int) data_get($answer, 'orderDetails.orderTotalAmount', -1) === $pago->monto;
+        $productoOk = Producto::find($pago->producto) !== null;
+
+        if ($monedaOk && $montoOk && $productoOk) {
+            return true;
+        }
+
+        Log::warning('Izipay: la respuesta no coincide con el pago registrado', [
+            'pago_id' => $pago->id,
+            'izipay_order_id' => $pago->izipay_order_id,
+            'moneda_ok' => $monedaOk,
+            'monto_ok' => $montoOk,
+            'producto_ok' => $productoOk,
+        ]);
+
+        return false;
+    }
+
+    private function aplicarEstado(Pago $pago, EstadoPago $estado, array $answer): void
+    {
+        $pago->estado = $estado;
+        $pago->transaction_uuid = data_get($answer, 'transactions.0.uuid');
+        $pago->card_brand = data_get($answer, 'transactions.0.transactionDetails.cardDetails.effectiveBrand');
+        $pago->card_masked_pan = data_get($answer, 'transactions.0.transactionDetails.cardDetails.pan');
+        $pago->respuesta = $this->sanitizarRespuesta($answer);
+        $pago->save();
     }
 
     /**
