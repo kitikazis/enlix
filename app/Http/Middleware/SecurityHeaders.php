@@ -53,8 +53,8 @@ class SecurityHeaders
             // solo static.micuentaweb.pe: se usa comodin para no romper el
             // widget cada vez que Izipay agrega/cambia un subdominio interno.
             "script-src 'self' 'nonce-{$nonce}' cdn.jsdelivr.net *.micuentaweb.pe",
-            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com",
-            "font-src 'self' fonts.gstatic.com",
+            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com *.micuentaweb.pe",
+            "font-src 'self' fonts.gstatic.com *.micuentaweb.pe",
             "img-src 'self' data: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe",
             "connect-src 'self' *.micuentaweb.pe",
             "frame-src 'self' *.micuentaweb.pe www.google.com",
