@@ -34,6 +34,16 @@
   #pago-resultado.ok    { display: block; background: #e8f7ee; color: #176b3a; border: 1px solid #aadcbf; }
   #pago-resultado.error { display: block; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; }
   #pago-resultado.info  { display: block; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; }
+
+  /* Antes de que Krypton abra el popin, lo saca de pantalla (no display:none:
+     eso rompio que "kr-payment-button" se pudiera hacer click antes). Cuando
+     Krypton abre el popin, se posiciona el mismo con sus propios estilos
+     inline, que pisan esta regla. */
+  #izipay-popin-wrapper {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+  }
 </style>
 
 <section class="section-pad">
