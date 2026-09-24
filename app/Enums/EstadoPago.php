@@ -20,10 +20,22 @@ enum EstadoPago: string
     case EnVerificacion = 'en_verificacion';
     case Pagado = 'pagado';
     case Rechazado = 'rechazado';
+    case Anulado = 'anulado';
     case Expirado = 'expirado';
 
-    /** detailedStatus que descartan el pago de forma definitiva. */
-    private const DETALLES_RECHAZO = ['REFUSED', 'CANCELLED', 'CAPTURE_FAILED'];
+    /**
+     * detailedStatus que el BANCO rechazó: la tarjeta nunca llegó a
+     * autorizarse. Distinto de Anulado (sí se autorizó, se canceló después).
+     */
+    private const DETALLES_RECHAZO = ['REFUSED', 'CAPTURE_FAILED'];
+
+    /**
+     * detailedStatus de una autorización que SÍ pasó por el banco, pero se
+     * canceló/anuló antes de capturarse (por el comercio o automáticamente).
+     * Caso real: una autorización quedó "pagado" y horas después se anuló
+     * en el Back Office sin capturarse - ver desdeRespuestaIzipay().
+     */
+    private const DETALLES_ANULACION = ['CANCELLED'];
 
     /** detailedStatus que significan "caducó sin completarse". */
     private const DETALLES_EXPIRACION = ['EXPIRED', 'ABANDONED'];
@@ -53,7 +65,7 @@ enum EstadoPago: string
     public function esFinal(): bool
     {
         return match ($this) {
-            self::Pagado, self::Rechazado, self::Expirado => true,
+            self::Pagado, self::Rechazado, self::Anulado, self::Expirado => true,
             self::Pendiente, self::EnVerificacion => false,
         };
     }
@@ -87,6 +99,7 @@ enum EstadoPago: string
             self::EnVerificacion => 'En verificación',
             self::Pagado => 'Pagado',
             self::Rechazado => 'Rechazado',
+            self::Anulado => 'Anulado',
             self::Expirado => 'Expirado',
         };
     }
@@ -119,6 +132,10 @@ enum EstadoPago: string
 
         if (in_array($detalle, self::DETALLES_RECHAZO, true)) {
             return self::Rechazado;
+        }
+
+        if (in_array($detalle, self::DETALLES_ANULACION, true)) {
+            return self::Anulado;
         }
 
         if (in_array($detalle, self::DETALLES_EXPIRACION, true)) {

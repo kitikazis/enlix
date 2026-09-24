@@ -8,6 +8,7 @@
     EstadoPago::EnVerificacion->value => 'text-bg-info',
     EstadoPago::Pagado->value => 'text-bg-success',
     EstadoPago::Rechazado->value => 'text-bg-danger',
+    EstadoPago::Anulado->value => 'text-bg-dark',
     EstadoPago::Expirado->value => 'text-bg-secondary',
   ];
 @endphp

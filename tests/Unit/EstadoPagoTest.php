@@ -29,7 +29,9 @@ class EstadoPagoTest extends TestCase
             'bajo verificacion' => ['RUNNING', 'UNDER_VERIFICATION', EstadoPago::EnVerificacion],
             'en curso' => ['RUNNING', null, EstadoPago::EnVerificacion],
             'rechazado' => ['UNPAID', 'REFUSED', EstadoPago::Rechazado],
-            'cancelado' => ['UNPAID', 'CANCELLED', EstadoPago::Rechazado],
+            // CANCELLED es distinto de REFUSED: el banco SI autorizo el cargo,
+            // pero se anulo antes de capturarse (caso real de produccion, 24/09).
+            'anulado' => ['UNPAID', 'CANCELLED', EstadoPago::Anulado],
             'captura fallida' => ['PAID', 'CAPTURE_FAILED', EstadoPago::Rechazado],
             'no pagado sin detalle' => ['UNPAID', null, EstadoPago::Rechazado],
             'expirado' => ['UNPAID', 'EXPIRED', EstadoPago::Expirado],
@@ -63,6 +65,7 @@ class EstadoPagoTest extends TestCase
     {
         $this->assertTrue(EstadoPago::Pagado->esFinal());
         $this->assertTrue(EstadoPago::Rechazado->esFinal());
+        $this->assertTrue(EstadoPago::Anulado->esFinal());
         $this->assertTrue(EstadoPago::Expirado->esFinal());
         $this->assertFalse(EstadoPago::Pendiente->esFinal());
         $this->assertFalse(EstadoPago::EnVerificacion->esFinal());
@@ -73,6 +76,7 @@ class EstadoPagoTest extends TestCase
         foreach (EstadoPago::cases() as $destino) {
             $this->assertFalse(EstadoPago::Pagado->puedeTransicionarA($destino));
             $this->assertFalse(EstadoPago::Rechazado->puedeTransicionarA($destino));
+            $this->assertFalse(EstadoPago::Anulado->puedeTransicionarA($destino));
             $this->assertFalse(EstadoPago::Expirado->puedeTransicionarA($destino));
         }
     }
