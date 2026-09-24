@@ -86,6 +86,7 @@ class IzipayCheckoutTest extends TestCase
     {
         Http::fake([
             'api.micuentaweb.pe/*' => Http::response([
+                'status' => 'SUCCESS',
                 'answer' => ['formToken' => $formToken, 'publicKey' => 'pk_test'],
             ], 200),
         ]);
@@ -117,6 +118,30 @@ class IzipayCheckoutTest extends TestCase
             'monto' => $producto['precio_centimos'],
             'estado' => 'pendiente',
         ]);
+    }
+
+    public function test_form_token_con_status_error_en_body_http_200_no_se_trata_como_exito(): void
+    {
+        // Izipay responde HTTP 200 incluso con credenciales invalidas: el
+        // error va dentro del body ("status":"ERROR"), no en el codigo HTTP.
+        Http::fake([
+            'api.micuentaweb.pe/*' => Http::response([
+                'status' => 'ERROR',
+                'answer' => ['errorCode' => 'INT_905', 'errorMessage' => 'invalid login or private key'],
+            ], 200),
+        ]);
+        $producto = $this->primerProducto();
+
+        $response = $this->postJson(route('izipay.form-token'), [
+            'producto' => $producto['slug'],
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
+            'email' => 'juan@example.com',
+            'phone_number' => '+51999999999',
+        ]);
+
+        $response->assertStatus(422)->assertJson(['ok' => false]);
+        $this->assertDatabaseMissing('pagos', ['producto' => $producto['slug']]);
     }
 
     public function test_moneda_distinta_no_marca_pagado(): void
@@ -327,7 +352,7 @@ class IzipayCheckoutTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
         $this->assertStringContainsString("default-src 'self'", $csp);
-        $this->assertStringContainsString('static.micuentaweb.pe', $csp);
+        $this->assertStringContainsString('*.micuentaweb.pe', $csp);
         $this->assertStringContainsString("style-src 'self' 'unsafe-inline'", $csp);
 
         preg_match("/'nonce-([a-zA-Z0-9]+)'/", $csp, $m);

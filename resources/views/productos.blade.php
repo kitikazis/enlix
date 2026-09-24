@@ -125,9 +125,21 @@
 </div>
 
 {{-- Contenedor del PopIn de Izipay (cliente Krypton). El formToken se asigna
-     dinámicamente con KR.setFormToken() tras crearlo en el backend. --}}
-<div id="izipay-popin-wrapper" style="display:none;">
-  <div class="kr-embedded" kr-popin id="izipay-popin"></div>
+     dinámicamente con KR.setFormToken() tras crearlo en el backend. Los
+     campos y el boton deben existir como hijos reales en el HTML (asi lo
+     exige Krypton, ver ejemplos oficiales lyra/rest-php-examples e
+     izipay-pe/Popin-PaymentForm-Php-Sdk): sin ellos, "kr-payment-button"
+     no existe en el DOM y el popin nunca se abre. Krypton oculta este
+     bloque por su cuenta hasta que se abre el popin; no forzar display:none
+     aqui porque interfiere con esa logica interna. --}}
+<div id="izipay-popin-wrapper">
+  <div class="kr-embedded" kr-popin id="izipay-popin">
+    <div class="kr-pan"></div>
+    <div class="kr-expiry"></div>
+    <div class="kr-security-code"></div>
+    <button class="kr-payment-button"></button>
+    <div class="kr-form-error"></div>
+  </div>
 </div>
 
 @if ($izipay_public_key)
@@ -135,7 +147,7 @@
   src="{{ $izipay_js_client_url }}"
   kr-public-key="{{ $izipay_public_key }}"
   nonce="{{ $cspNonce }}"></script>
-<link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic-reset.css">
+<link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.css">
 <script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.js" nonce="{{ $cspNonce }}"></script>
 @endif
 

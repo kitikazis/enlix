@@ -48,11 +48,15 @@ class SecurityHeaders
     {
         $directivas = [
             "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}' cdn.jsdelivr.net static.micuentaweb.pe",
+            // El cliente Krypton (PopIn) reparte sus recursos entre varios
+            // subdominios de micuentaweb.pe (static, secure, assets...), no
+            // solo static.micuentaweb.pe: se usa comodin para no romper el
+            // widget cada vez que Izipay agrega/cambia un subdominio interno.
+            "script-src 'self' 'nonce-{$nonce}' cdn.jsdelivr.net *.micuentaweb.pe",
             "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com",
             "font-src 'self' fonts.gstatic.com",
-            "img-src 'self' images.unsplash.com cdn.simpleicons.org",
-            "connect-src 'self' api.micuentaweb.pe",
+            "img-src 'self' data: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe",
+            "connect-src 'self' *.micuentaweb.pe",
             "frame-src 'self' *.micuentaweb.pe www.google.com",
             "frame-ancestors 'self'",
             "form-action 'self' *.micuentaweb.pe",

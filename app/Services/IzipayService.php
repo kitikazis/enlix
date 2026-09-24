@@ -59,11 +59,26 @@ class IzipayService
         }
 
         $data = $response->json();
+        $formToken = data_get($data, 'answer.formToken');
+
+        // Izipay responde HTTP 200 incluso con credenciales invalidas u otros
+        // errores: el fallo viene dentro del body ("status":"ERROR"), no en
+        // el codigo HTTP. Sin esta validacion, un formToken vacio se habria
+        // reportado como exito.
+        if (data_get($data, 'status') !== 'SUCCESS' || empty($formToken)) {
+            Log::warning('Izipay: respuesta sin formToken', [
+                'http' => $response->status(),
+                'status' => data_get($data, 'status'),
+                'error_code' => data_get($data, 'answer.errorCode'),
+            ]);
+
+            return ['ok' => false, 'http' => $response->status(), 'form_token' => null, 'public_key' => null];
+        }
 
         return [
             'ok' => true,
             'http' => $response->status(),
-            'form_token' => data_get($data, 'answer.formToken'),
+            'form_token' => $formToken,
             'public_key' => data_get($data, 'answer.publicKey', config('izipay.public_key')),
         ];
     }

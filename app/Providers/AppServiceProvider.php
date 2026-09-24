@@ -38,6 +38,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip().'|'.$email);
         });
 
+        // Login del panel admin: limitado por IP + email para frenar fuerza bruta.
+        RateLimiter::for('admin-login', function (Request $request) {
+            $email = Str::lower((string) $request->input('email', ''));
+
+            return Limit::perMinute(5)->by($request->ip().'|'.$email);
+        });
+
         if ($this->app->isProduction()) {
             URL::forceScheme('https');
         }
