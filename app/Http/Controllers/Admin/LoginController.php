@@ -22,7 +22,7 @@ class LoginController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $datos = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 

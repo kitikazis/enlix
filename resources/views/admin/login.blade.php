@@ -16,8 +16,8 @@
         <form method="POST" action="{{ route('admin.login.store') }}">
           @csrf
           <div class="mb-3">
-            <label class="form-label">Correo</label>
-            <input type="email" name="email" value="{{ old('email') }}" class="form-control" required autofocus>
+            <label class="form-label">Usuario</label>
+            <input type="text" name="email" value="{{ old('email') }}" class="form-control" required autofocus>
           </div>
           <div class="mb-3">
             <label class="form-label">Contraseña</label>
