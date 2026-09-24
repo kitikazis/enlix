@@ -21,7 +21,7 @@ class IzipayService
     /**
      * Crea un formToken para iniciar el pago (PopIn de Izipay).
      *
-     * @param  array  $cliente  ['first_name','last_name','email','phone_number','identity_code']
+     * @param  array  $cliente  ['first_name','last_name','email','phone_number','identity_code','ip']
      * @return array{ok: bool, http: int, form_token: ?string, public_key: ?string}
      */
     public function crearFormToken(int $montoCentimos, string $orderId, array $cliente): array
@@ -45,6 +45,17 @@ class IzipayService
                 ],
             ],
         ];
+
+        // La IP del comprador es una de las señales que pesan en el analizador
+        // de riesgo de Izipay (ThreatMetrix). Solo se envía si es confiable:
+        // con proxies no confiables, $request->ip() sería un valor que el
+        // propio atacante elige, y mandarlo ensuciaría el antifraude.
+        //
+        // // TODO: verificar en la doc de micuentaweb.pe la ruta exacta del
+        // // campo (se asume customer.extraDetails.ipAddress).
+        if (! empty($cliente['ip'])) {
+            $payload['customer']['extraDetails']['ipAddress'] = $cliente['ip'];
+        }
 
         try {
             $response = Http::withBasicAuth(

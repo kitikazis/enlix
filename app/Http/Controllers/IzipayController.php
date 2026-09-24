@@ -74,6 +74,9 @@ class IzipayController extends Controller
             'email' => $datos['email'],
             'phone_number' => $datos['phone_number'],
             'identity_code' => strtoupper($datos['identity_code']),
+            // Confiable solo porque fuera de 'local' no se confía en
+            // X-Forwarded-For (ver bootstrap/app.php): aquí llega REMOTE_ADDR.
+            'ip' => $request->ip(),
         ];
 
         $resultado = $izipay->crearFormToken($monto, $orderId, $cliente);

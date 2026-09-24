@@ -430,6 +430,55 @@ class IzipayCheckoutTest extends TestCase
         ], $overrides));
     }
 
+    public function test_envia_la_ip_real_del_comprador_a_izipay(): void
+    {
+        $this->fakeFormToken();
+        $producto = $this->primerProducto();
+
+        // REMOTE_ADDR es la IP real; el X-Forwarded-For falsificado debe
+        // ignorarse para no ensuciar el antifraude de Izipay.
+        $this->withServerVariables(['REMOTE_ADDR' => '190.235.10.20'])
+            ->withHeaders(['X-Forwarded-For' => '10.0.0.66'])
+            ->postJson(route('izipay.form-token'), [
+                'producto' => $producto['slug'],
+                'first_name' => 'Juan',
+                'last_name' => 'Perez',
+                'email' => 'juan@example.com',
+                'phone_number' => '+51999999999',
+                'identity_code' => '12345678',
+            ])->assertOk();
+
+        Http::assertSent(function ($request) {
+            return data_get($request->data(), 'customer.extraDetails.ipAddress') === '190.235.10.20';
+        });
+    }
+
+    public function test_envia_nombre_telefono_y_documento_en_billing_details(): void
+    {
+        $this->fakeFormToken();
+        $producto = $this->primerProducto();
+
+        $this->postJson(route('izipay.form-token'), [
+            'producto' => $producto['slug'],
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
+            'email' => 'juan@example.com',
+            'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
+        ])->assertOk();
+
+        Http::assertSent(function ($request) {
+            $billing = data_get($request->data(), 'customer.billingDetails');
+
+            return $billing['firstName'] === 'Juan'
+                && $billing['lastName'] === 'Perez'
+                && $billing['phoneNumber'] === '+51999999999'
+                && $billing['identityType'] === 'DNI'
+                && $billing['identityCode'] === '12345678'
+                && $billing['country'] === 'PE';
+        });
+    }
+
     public function test_los_timeouts_tienen_tope_explicito_y_razonable(): void
     {
         // Sin tope, una caída lenta de Izipay deja colgado un worker de PHP.
