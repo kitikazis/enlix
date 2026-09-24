@@ -38,11 +38,16 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip().'|'.$email);
         });
 
-        // Login del panel admin: limitado por IP + email para frenar fuerza bruta.
+        // Login del panel admin: dos límites en paralelo. El de IP+email frena
+        // el goteo desde una sola máquina; el de solo email frena el ataque
+        // distribuido (varias IPs contra la misma cuenta), que el primero no ve.
         RateLimiter::for('admin-login', function (Request $request) {
             $email = Str::lower((string) $request->input('email', ''));
 
-            return Limit::perMinute(5)->by($request->ip().'|'.$email);
+            return [
+                Limit::perMinute(5)->by($request->ip().'|'.$email),
+                Limit::perMinute(10)->by('email|'.$email),
+            ];
         });
 
         if ($this->app->isProduction()) {

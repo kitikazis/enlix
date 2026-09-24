@@ -16,14 +16,24 @@ return Application::configure(basePath: dirname(__DIR__))
             SecurityHeaders::class,
         ]);
 
-        // Sin esto, detrás de cualquier proxy que termina TLS (ngrok, Nginx,
-        // balanceador de carga) Laravel ve la petición interna como HTTP y
-        // genera route()/url() con http://, rompiendo fetch() por mixed
-        // content en una página servida por https. Se confía en el header
-        // X-Forwarded-Proto (y el resto de X-Forwarded-*) de cualquier proxy
-        // inmediato; no es un riesgo nuevo porque la app nunca queda expuesta
-        // directamente a internet sin un proxy delante en ningun despliegue real.
-        $middleware->trustProxies(at: '*');
+        // Proxies de confianza. NUNCA '*' en producción: enlix.pe corre sobre
+        // LiteSpeed sirviendo directo (sin Cloudflare ni balanceador), así que
+        // confiar en X-Forwarded-For permitiría a cualquiera falsificar su IP
+        // y evadir los rate limiters (verificado: 7/7 intentos de login sin
+        // 429 rotando la cabecera). En local sí se usa '*' porque ngrok
+        // termina TLS y sin eso Laravel genera URLs http:// (mixed content).
+        //
+        // TRUSTED_PROXIES acepta una lista separada por comas (o '*') para
+        // cuando se ponga un CDN/balanceador delante. bootstrap/app.php es el
+        // único punto donde env() es legítimo: la config aún no está cargada.
+        $proxiesConfigurados = trim((string) env('TRUSTED_PROXIES', ''));
+
+        $middleware->trustProxies(at: match (true) {
+            $proxiesConfigurados === '*' => '*',
+            $proxiesConfigurados !== '' => explode(',', $proxiesConfigurados),
+            env('APP_ENV') === 'local' => '*',
+            default => [],
+        });
 
         // No hay ruta 'login' (solo 'admin.login'); sin esto, un invitado que
         // intenta entrar a /admin/pagos recibe un 401 en vez de un redirect.
