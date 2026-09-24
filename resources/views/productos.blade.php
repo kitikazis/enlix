@@ -35,11 +35,13 @@
   #pago-resultado.error { display: block; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; }
   #pago-resultado.info  { display: block; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; }
 
-  /* Solo alineacion horizontal (text-align), no toca display/position/
-     opacity del contenedor de Krypton - eso es lo que rompia que el
-     formulario se abriera en intentos anteriores. */
+  /* Centra el contenido de Krypton con flex en el WRAPPER (contenedor
+     externo), no en el elemento de Krypton mismo. flex en el padre no
+     afecta el "position: fixed" que Krypton aplica al abrir el popin -
+     ese tipo de posicionamiento ignora el layout del padre. */
   #izipay-popin-wrapper {
-    text-align: center;
+    display: flex;
+    justify-content: center;
   }
 </style>
 
