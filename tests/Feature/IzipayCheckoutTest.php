@@ -369,6 +369,15 @@ class IzipayCheckoutTest extends TestCase
 
     public function test_comando_expira_pagos_pendientes_de_mas_de_24_horas(): void
     {
+        // Izipay responde que no conoce la orden: el comprador abrió el
+        // checkout y nunca llegó a intentar pagar.
+        Http::fake([
+            '*/V4/Order/Get' => Http::response([
+                'status' => 'ERROR',
+                'answer' => ['errorCode' => 'PSP_010'],
+            ], 200),
+        ]);
+
         $viejo = $this->crearPagoPendiente();
         $viejo->forceFill(['created_at' => now()->subDay()->subMinute()])->save();
 
@@ -378,6 +387,44 @@ class IzipayCheckoutTest extends TestCase
 
         $this->assertSame(EstadoPago::Expirado, $viejo->fresh()->estado);
         $this->assertSame(EstadoPago::Pendiente, $reciente->fresh()->estado);
+    }
+
+    public function test_el_comando_de_expiracion_rescata_un_pago_que_si_se_cobro(): void
+    {
+        $viejo = $this->crearPagoPendiente();
+        $viejo->forceFill(['created_at' => now()->subDay()->subMinute()])->save();
+
+        Http::fake([
+            '*/V4/Order/Get' => Http::response([
+                'status' => 'SUCCESS',
+                'answer' => [
+                    'orderStatus' => 'PAID',
+                    'orderDetails' => [
+                        'orderId' => $viejo->izipay_order_id,
+                        'orderTotalAmount' => $viejo->monto,
+                        'orderCurrency' => $viejo->moneda,
+                    ],
+                    'transactions' => [['uuid' => 'uuid-rescatado', 'detailedStatus' => 'CAPTURED']],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('izipay:expirar-pendientes')->assertSuccessful();
+
+        // Nunca se expira a ciegas: si Izipay dice que se cobró, se cobra.
+        $this->assertSame(EstadoPago::Pagado, $viejo->fresh()->estado);
+    }
+
+    public function test_el_comando_de_expiracion_no_toca_nada_si_izipay_no_responde(): void
+    {
+        $viejo = $this->crearPagoPendiente();
+        $viejo->forceFill(['created_at' => now()->subDay()->subMinute()])->save();
+
+        Http::fake(fn () => throw new ConnectionException('Connection timed out'));
+
+        $this->artisan('izipay:expirar-pendientes')->assertSuccessful();
+
+        $this->assertSame(EstadoPago::Pendiente, $viejo->fresh()->estado);
     }
 
     public function test_rate_limit_form_token_por_ip_y_email(): void
