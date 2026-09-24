@@ -23,7 +23,10 @@ return [
         'plan-web-basico' => [
             'nombre'          => 'Plan Web Básico',
             'descripcion'     => 'Sitio web institucional listo para tu empresa, con diseño responsive y formulario de contacto.',
-            'precio_centimos' => 9900,   // S/ 99.00
+            // TEMPORAL: bajado para la prueba de pago real en produccion que
+            // pide Izipay (deadline 24/09 5pm). Volver a 9900 (S/ 99.00)
+            // apenas se confirme el pago aprobado.
+            'precio_centimos' => 100,   // S/ 1.00 (temporal)
             'features'        => [
                 'Hasta 5 secciones',
                 'Diseño responsive',
