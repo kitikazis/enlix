@@ -19,7 +19,7 @@ class IzipayService
     /**
      * Crea un formToken para iniciar el pago (PopIn de Izipay).
      *
-     * @param  array  $cliente  ['first_name','last_name','email','phone_number']
+     * @param  array  $cliente  ['first_name','last_name','email','phone_number','identity_code']
      * @return array{ok: bool, http: int, form_token: ?string, public_key: ?string}
      */
     public function crearFormToken(int $montoCentimos, string $orderId, array $cliente): array
@@ -34,6 +34,12 @@ class IzipayService
                     'firstName' => $cliente['first_name'],
                     'lastName' => $cliente['last_name'],
                     'phoneNumber' => $cliente['phone_number'],
+                    // Documento de identidad + pais: Izipay los usa para
+                    // habilitar medios de pago adicionales (Yape, Plin, QR)
+                    // ademas de tarjeta en el mismo PopIn.
+                    'identityType' => 'DNI',
+                    'identityCode' => $cliente['identity_code'],
+                    'country' => 'PE',
                 ],
             ],
         ];

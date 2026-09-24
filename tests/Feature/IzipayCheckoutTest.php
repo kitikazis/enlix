@@ -103,6 +103,7 @@ class IzipayCheckoutTest extends TestCase
             'last_name' => 'Perez',
             'email' => 'juan@example.com',
             'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
             // Un atacante intenta colar un monto/precio propio: debe ser ignorado.
             'monto' => 1,
             'precio_centimos' => 1,
@@ -138,6 +139,7 @@ class IzipayCheckoutTest extends TestCase
             'last_name' => 'Perez',
             'email' => 'juan@example.com',
             'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
         ]);
 
         $response->assertStatus(422)->assertJson(['ok' => false]);
@@ -317,6 +319,7 @@ class IzipayCheckoutTest extends TestCase
             'last_name' => 'Perez',
             'email' => 'juan@example.com',
             'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
         ])->assertOk();
 
         // Camino de error: firma invalida (ejercita el Log::warning con kr-hash disponible).
@@ -384,6 +387,7 @@ class IzipayCheckoutTest extends TestCase
             'last_name' => 'Perez',
             'email' => 'mismo@example.com',
             'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
         ];
 
         for ($i = 0; $i < 5; $i++) {

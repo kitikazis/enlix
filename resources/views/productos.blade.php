@@ -114,6 +114,11 @@
             <label class="form-label">Teléfono</label>
             <input type="text" class="form-control" id="f_phone" placeholder="+51 999 999 999" autocomplete="tel">
           </div>
+          <div class="col-12">
+            <label class="form-label">Documento de identidad (DNI)</label>
+            <input type="text" class="form-control" id="f_dni" placeholder="12345678" maxlength="15" autocomplete="off">
+            <div class="form-text">Necesario para habilitar Yape, Plin y otros medios de pago además de tarjeta.</div>
+          </div>
         </div>
         <div id="modal-error" class="text-danger mt-3" style="font-size: 13px; display: none;"></div>
       </div>
@@ -160,7 +165,10 @@
   };
 
   let productoActual = null;
+  let intentoEnviado = false;
   const modalDatos = new bootstrap.Modal(document.getElementById('modalDatos'));
+  const btnContinuar = document.getElementById('btnContinuar');
+  const btnContinuarTextoOriginal = btnContinuar.textContent;
 
   // 1) Click en "Comprar" -> abrir el modal de datos.
   document.querySelectorAll('.btn-comprar').forEach(function (btn) {
@@ -173,50 +181,70 @@
       document.getElementById('modalProducto').textContent =
         productoActual.nombre + ' — S/ ' + (productoActual.monto / 100).toFixed(2);
       ocultarErrorModal();
+      restaurarBotonContinuar();
       modalDatos.show();
     });
   });
 
   // 2) Continuar -> pedir el formToken al backend (el monto SIEMPRE lo calcula el servidor) y abrir el PopIn.
-  document.getElementById('btnContinuar').addEventListener('click', function () {
+  btnContinuar.addEventListener('click', function () {
     const first_name = document.getElementById('f_first_name').value.trim();
     const last_name  = document.getElementById('f_last_name').value.trim();
     const email      = document.getElementById('f_email').value.trim();
     const phone      = document.getElementById('f_phone').value.trim();
+    const dni        = document.getElementById('f_dni').value.trim();
 
-    if (!first_name || !last_name || !email || !phone) {
+    if (!first_name || !last_name || !email || !phone || !dni) {
       return mostrarErrorModal('Completa todos los campos para continuar.');
     }
 
+    ocultarErrorModal();
+    btnContinuar.disabled = true;
+    btnContinuar.textContent = 'Procesando...';
+
     postJson(URLS.formToken, {
-      producto:     productoActual.slug,
-      first_name:   first_name,
-      last_name:    last_name,
-      email:        email,
-      phone_number: phone,
+      producto:      productoActual.slug,
+      first_name:    first_name,
+      last_name:     last_name,
+      email:         email,
+      phone_number:  phone,
+      identity_code: dni,
     }).then(function (data) {
       if (!data.ok) {
+        restaurarBotonContinuar();
         return mostrarErrorModal(data.mensaje || 'No se pudo iniciar el pago.');
       }
       modalDatos.hide();
       abrirPopin(data.form_token);
     }).catch(function () {
+      restaurarBotonContinuar();
       mostrarErrorModal('Error de conexión. Intenta nuevamente.');
     });
   });
 
+  function restaurarBotonContinuar() {
+    btnContinuar.disabled = false;
+    btnContinuar.textContent = btnContinuarTextoOriginal;
+  }
+
   // 3) Asigna el formToken al PopIn y lo abre.
   function abrirPopin(formToken) {
     if (typeof KR === 'undefined') {
+      restaurarBotonContinuar();
       return mostrarResultado('error', 'No se pudo cargar la pasarela de pago. Recarga la página.');
     }
+
+    intentoEnviado = false;
 
     // Callback (no Promise) por compatibilidad con la version del cliente Krypton
     // servida por micuentaweb.pe; ver nota de verificacion manual pendiente.
     KR.setFormToken(formToken, function () {
+      restaurarBotonContinuar();
       const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
       if (btnPago) {
         btnPago.click();
+      } else {
+        mostrarResultado('error', 'No se pudo abrir el formulario de pago. Recarga la página e intenta de nuevo.');
       }
     });
   }
@@ -226,6 +254,8 @@
   //    el resultado se envía por fetch() a /izipay/validar, igual que el resto del flujo.
   if (typeof KR !== 'undefined') {
     KR.onSubmit(function (paymentResponse) {
+      intentoEnviado = true;
+
       postJson(URLS.validar, {
         'kr-answer':        paymentResponse.rawClientAnswer,
         'kr-hash':           paymentResponse.hash,
@@ -239,6 +269,17 @@
     KR.onError(function () {
       mostrarResultado('error', 'No se pudo procesar el pago. Intenta con otra tarjeta.');
     });
+
+    // Se dispara al cerrar el PopIn, tanto si el usuario pagó como si lo
+    // cerró sin intentarlo. Solo avisamos del cierre manual: si ya hubo un
+    // intento, KR.onSubmit/resolverResultado ya se encargó del mensaje.
+    if (typeof KR.onPopinClosed === 'function') {
+      KR.onPopinClosed(function () {
+        if (!intentoEnviado) {
+          mostrarResultado('info', 'Cerraste el formulario de pago sin completarlo. Puedes intentarlo de nuevo cuando quieras.');
+        }
+      });
+    }
   }
 
   function resolverResultado(data) {

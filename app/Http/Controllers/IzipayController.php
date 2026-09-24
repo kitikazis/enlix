@@ -47,6 +47,9 @@ class IzipayController extends Controller
             'last_name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email:rfc'],
             'phone_number' => ['required', 'string', 'regex:/^[0-9+ ]{6,20}$/'],
+            // DNI (u otro documento de identidad): Izipay lo usa para habilitar
+            // medios de pago adicionales (Yape, Plin, QR) ademas de tarjeta.
+            'identity_code' => ['required', 'string', 'regex:/^[A-Za-z0-9]{6,15}$/'],
         ]);
 
         $producto = Producto::find($datos['producto']);
@@ -64,6 +67,7 @@ class IzipayController extends Controller
             'last_name' => strip_tags($datos['last_name']),
             'email' => $datos['email'],
             'phone_number' => $datos['phone_number'],
+            'identity_code' => strtoupper($datos['identity_code']),
         ];
 
         $resultado = $izipay->crearFormToken($monto, $orderId, $cliente);
