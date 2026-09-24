@@ -10,9 +10,14 @@
 <body style="background:#f5f6f8;">
 
 @auth
-<nav class="navbar navbar-dark" style="background:#0b2447;">
+<nav class="navbar navbar-dark navbar-expand" style="background:#0b2447;">
   <div class="container">
     <span class="navbar-brand mb-0 h1">Enlix · Admin</span>
+    <div class="navbar-nav me-auto">
+      <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active fw-bold' : '' }}" href="{{ route('admin.dashboard') }}">Dashboard</a>
+      <a class="nav-link {{ request()->routeIs('admin.pagos.*') ? 'active fw-bold' : '' }}" href="{{ route('admin.pagos.index') }}">Pagos</a>
+      <a class="nav-link {{ request()->routeIs('admin.productos.*') ? 'active fw-bold' : '' }}" href="{{ route('admin.productos.index') }}">Productos</a>
+    </div>
     <form method="POST" action="{{ route('admin.logout') }}" class="d-flex">
       @csrf
       <button type="submit" class="btn btn-outline-light btn-sm">Cerrar sesión</button>

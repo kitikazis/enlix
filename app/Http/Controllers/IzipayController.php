@@ -60,7 +60,10 @@ class IzipayController extends Controller
 
         $producto = Producto::find($datos['producto']);
 
-        if ($producto === null) {
+        // find() SI devuelve productos inactivos (un pago ya en curso debe
+        // poder validarse igual), pero no se puede INICIAR una compra nueva
+        // de algo que el admin desactivó, aunque alguien adivine el slug.
+        if ($producto === null || ! $producto['activo']) {
             return response()->json(['ok' => false, 'mensaje' => 'Producto no encontrado.'], 404);
         }
 
