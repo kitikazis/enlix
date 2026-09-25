@@ -58,3 +58,7 @@
 
     --radius-nav: 0.625rem;
 }
+
+[x-cloak] {
+    display: none !important;
+}

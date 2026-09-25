@@ -43,6 +43,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // enmascaradas de clientes reales, igual de sensible que los precios.
     Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/exportar', [AdminDashboardController::class, 'exportarCsv'])->name('dashboard.exportar');
     });
 
     Route::middleware('auth')->prefix('productos')->name('productos.')->group(function () {
