@@ -38,17 +38,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->middleware('auth')
         ->name('logout');
 
-    // ADMIN_SIN_LOGIN=true en .env quita el login temporalmente (solo pagos,
-    // solo lectura). Ponlo en false (o bórralo) para volver a exigir login.
-    $middlewarePagos = env('ADMIN_SIN_LOGIN', false) ? [] : ['auth'];
-
-    Route::middleware($middlewarePagos)->group(function () {
+    // Dashboard y Productos exigen login siempre. El bypass ADMIN_SIN_LOGIN
+    // que existia aqui se retiro: el dashboard muestra emails y tarjetas
+    // enmascaradas de clientes reales, igual de sensible que los precios.
+    Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     });
 
-    // Productos SIEMPRE exige login, sin excepcion de ADMIN_SIN_LOGIN: aqui
-    // se edita el precio real que se cobra en el checkout, es mas sensible
-    // que solo consultar pagos.
     Route::middleware('auth')->prefix('productos')->name('productos.')->group(function () {
         Route::get('/', [AdminProductosController::class, 'index'])->name('index');
         Route::get('/crear', [AdminProductosController::class, 'create'])->name('create');

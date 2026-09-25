@@ -95,4 +95,29 @@ class EstadoPagoTest extends TestCase
         $this->assertFalse(EstadoPago::EnVerificacion->puedeTransicionarA(EstadoPago::Pendiente));
         $this->assertTrue(EstadoPago::EnVerificacion->puedeTransicionarA(EstadoPago::Pagado));
     }
+
+    public function test_cada_estado_tiene_badge_y_punto_de_color(): void
+    {
+        foreach (EstadoPago::cases() as $estado) {
+            $this->assertNotSame('', $estado->badgeClasses());
+            $this->assertNotSame('', $estado->dotClass());
+        }
+    }
+
+    public function test_los_codigos_izipay_coinciden_con_el_mapeo_real(): void
+    {
+        // Pendiente es el valor inicial antes de que Izipay conteste: no
+        // tiene detailedStatus propio.
+        $this->assertSame([], EstadoPago::Pendiente->codigosIzipay());
+
+        foreach (EstadoPago::cases() as $estado) {
+            foreach ($estado->codigosIzipay() as $codigo) {
+                $this->assertSame(
+                    $estado,
+                    EstadoPago::desdeRespuestaIzipay(null, $codigo),
+                    "El codigo {$codigo} deberia mapear a {$estado->value}"
+                );
+            }
+        }
+    }
 }

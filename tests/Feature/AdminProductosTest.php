@@ -21,11 +21,11 @@ class AdminProductosTest extends TestCase
 
     public function test_las_rutas_de_productos_exigen_auth_de_forma_incondicional(): void
     {
-        // A diferencia de /admin/pagos, aqui se edita el precio real del
-        // checkout: no debe existir ningun camino (ni ADMIN_SIN_LOGIN) que
-        // las deje sin autenticacion. Se verifica el middleware registrado
-        // en vez de manipular env() en caliente, porque las rutas ya quedan
-        // fijadas al arrancar la aplicacion.
+        // Aqui se edita el precio real del checkout: no debe existir ningun
+        // camino que las deje sin autenticacion (dashboard y productos
+        // exigen 'auth' siempre, sin bypass). Se verifica el middleware
+        // registrado en vez de manipular env() en caliente, porque las
+        // rutas ya quedan fijadas al arrancar la aplicacion.
         foreach (['admin.productos.index', 'admin.productos.create', 'admin.productos.store'] as $nombre) {
             $ruta = \Illuminate\Support\Facades\Route::getRoutes()->getByName($nombre);
             $this->assertContains('auth', $ruta->gatherMiddleware(), "La ruta {$nombre} debe exigir 'auth' siempre.");

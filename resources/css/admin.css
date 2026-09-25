@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@source '../views/admin/**/*.blade.php';
+@source '../views/components/admin/**/*.blade.php';
+@source '../views/components/layouts/admin-dashboard.blade.php';
+
+/*
+ * Tokens del rediseño del dashboard admin (ver PDF de referencia,
+ * 2026-09-25). Todo color/radio vive aquí, nunca como hex suelto en las
+ * vistas.
+ */
+@theme {
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+
+    --color-page: #f5f4f0;
+    --color-card: #ffffff;
+    --color-border: #e4e2dc;
+
+    --color-text-primary: #15171c;
+    --color-text-secondary: #5e6270;
+    --color-text-caption: #6e7380;
+    --color-text-disabled: #a8adb7;
+
+    --color-sidebar: #15171c;
+    --color-sidebar-active: #262932;
+    --color-sidebar-item: #c9cbd2;
+
+    --color-accent: #2f43d0;
+    --color-accent-hover: #1f2e9e;
+
+    --color-danger-strong: #a8322c;
+
+    /* Estados de pago: fondo de badge / texto / punto. */
+    --color-pendiente-bg: #fbf1dc;
+    --color-pendiente-text: #7a4e0c;
+    --color-pendiente-dot: #b7791f;
+
+    --color-verificacion-bg: #e3eafb;
+    --color-verificacion-text: #1e3f8f;
+    --color-verificacion-dot: #2b59c3;
+
+    --color-pagado-bg: #ddf1e6;
+    --color-pagado-text: #145c38;
+    --color-pagado-dot: #1f7a4d;
+
+    --color-rechazado-bg: #f8e1df;
+    --color-rechazado-text: #8e2a24;
+    --color-rechazado-dot: #c2413a;
+
+    --color-anulado-bg: #ecedef;
+    --color-anulado-text: #4b5160;
+    --color-anulado-dot: #6b7280;
+
+    --color-expirado-bg: #f1f1f2;
+    --color-expirado-text: #5e6270;
+    --color-expirado-dot: #a8adb7;
+
+    --radius-nav: 0.625rem;
+}

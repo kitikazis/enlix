@@ -104,6 +104,50 @@ enum EstadoPago: string
         };
     }
 
+    /** Clases Tailwind de fondo+texto para el badge del dashboard admin. */
+    public function badgeClasses(): string
+    {
+        return match ($this) {
+            self::Pendiente => 'bg-pendiente-bg text-pendiente-text',
+            self::EnVerificacion => 'bg-verificacion-bg text-verificacion-text',
+            self::Pagado => 'bg-pagado-bg text-pagado-text',
+            self::Rechazado => 'bg-rechazado-bg text-rechazado-text',
+            self::Anulado => 'bg-anulado-bg text-anulado-text',
+            self::Expirado => 'bg-expirado-bg text-expirado-text',
+        };
+    }
+
+    /** Clase Tailwind del punto de color que acompaña al badge. */
+    public function dotClass(): string
+    {
+        return match ($this) {
+            self::Pendiente => 'bg-pendiente-dot',
+            self::EnVerificacion => 'bg-verificacion-dot',
+            self::Pagado => 'bg-pagado-dot',
+            self::Rechazado => 'bg-rechazado-dot',
+            self::Anulado => 'bg-anulado-dot',
+            self::Expirado => 'bg-expirado-dot',
+        };
+    }
+
+    /**
+     * detailedStatus reales que caen en este estado (mismos arrays que usa
+     * desdeRespuestaIzipay, para que la UI nunca muestre un código distinto
+     * al que de verdad se evalúa). Pendiente no tiene: es el valor inicial
+     * antes de que Izipay conteste algo.
+     */
+    public function codigosIzipay(): array
+    {
+        return match ($this) {
+            self::Pendiente => [],
+            self::EnVerificacion => self::DETALLES_VERIFICACION,
+            self::Pagado => ['CAPTURED'],
+            self::Rechazado => self::DETALLES_RECHAZO,
+            self::Anulado => self::DETALLES_ANULACION,
+            self::Expirado => self::DETALLES_EXPIRACION,
+        };
+    }
+
     /**
      * Traduce la respuesta de Izipay (orderStatus + detailedStatus de la
      * transacción) al estado interno.
