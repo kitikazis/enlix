@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="{{ asset('assets/css/styles.css') }}?v=5" rel="stylesheet">
+  <link href="{{ asset('assets/css/styles.css') }}?v=6" rel="stylesheet">
 </head>
 <body>
 

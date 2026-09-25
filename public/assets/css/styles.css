@@ -135,6 +135,37 @@ a:hover { color: var(--enlix-blue-900); }
   height: 2px;
   background: var(--enlix-blue-700);
 }
+.enlix-carrito-link {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  padding: 8px 10px !important;
+}
+.enlix-carrito-badge {
+  position: absolute;
+  top: 2px; right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--enlix-blue-700);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  transition: transform .2s ease;
+}
+.enlix-carrito-badge.is-empty {
+  display: none;
+}
+.enlix-carrito-badge.enlix-bounce {
+  animation: enlixCarritoBounce .4s ease;
+}
+@keyframes enlixCarritoBounce {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+}
 .enlix-navbar .dropdown-menu {
   border-radius: var(--radius-sm);
   border: 1px solid var(--enlix-border);

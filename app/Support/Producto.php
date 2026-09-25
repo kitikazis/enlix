@@ -58,12 +58,14 @@ class Producto
     private static function aArray(ProductoModel $p): array
     {
         return [
+            'id' => $p->id,
             'slug' => $p->slug,
             'nombre' => $p->nombre,
             'descripcion' => $p->descripcion,
             'precio_centimos' => $p->precio_centimos,
             'features' => $p->features ?? [],
             'activo' => $p->activo,
+            'stock_disponible' => $p->stockDisponible(),
         ];
     }
 }

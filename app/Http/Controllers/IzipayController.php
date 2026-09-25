@@ -17,9 +17,13 @@ use Illuminate\View\View;
 use App\Support\Producto;
 
 /**
- * Tienda + pago con Izipay (PopIn / Krypton client).
+ * Tienda (catálogo) + pago con Izipay (PopIn / Krypton client).
  *
- * - index(): muestra los 3 productos y la llave pública de Izipay.
+ * - index(): muestra el catálogo. Agregar al carrito vive en
+ *   CarritoController; el pago (formToken/validar/ipn de aquí abajo) sigue
+ *   siendo el flujo de 1 producto por pago, ya en producción - el carrito
+ *   nuevo (tabla `pedidos`) tendrá su propia integración con Izipay más
+ *   adelante, sin tocar esta.
  * - formToken(): crea el formToken (el monto SIEMPRE sale del servidor)
  *   y registra el pago como 'pendiente'.
  * - validar(): retorno del navegador tras el PopIn (KR.onSubmit). Sirve
@@ -39,9 +43,6 @@ class IzipayController extends Controller
             'titulo' => 'Productos - Enlix',
             'current' => 'productos',
             'productos' => Producto::items(),
-            'izipay_public_key' => config('izipay.public_key'),
-            'izipay_js_client_url' => config('izipay.js_client_url'),
-            'autollenar_test' => config('izipay.autollenar_test'),
         ]);
     }
 

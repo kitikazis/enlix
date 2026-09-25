@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\CarritoService;
 use App\Support\Catalogo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -29,6 +30,14 @@ class AppServiceProvider extends ServiceProvider
         // Comparte los grupos de servicios con TODAS las vistas (menú, footer, sidebar).
         View::composer('*', function ($view) {
             $view->with('grupos', Catalogo::grupos());
+        });
+
+        // Contador del carrito para el ícono del header, visible en todas las
+        // vistas. No crea un carrito nuevo si el visitante no tiene cookie
+        // todavía (CarritoService::actual() devuelve null en ese caso) - solo
+        // lee lo que ya exista, para no escribir en cada request.
+        View::composer('*', function ($view) {
+            $view->with('carritoCantidad', app(CarritoService::class)->cantidadTotal());
         });
 
         // Form-token de Izipay: limitado por IP + email, no solo por IP.

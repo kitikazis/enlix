@@ -59,3 +59,18 @@
     initMobileMenu();
   }
 })();
+
+// Contador del carrito en el header. Global (no dentro del IIFE de arriba)
+// porque lo usan los scripts inline de /productos y /carrito.
+function actualizarBadgeCarrito(cantidad) {
+  var badge = document.querySelector('[data-carrito-badge]');
+  if (!badge) return;
+
+  badge.textContent = cantidad;
+  badge.classList.toggle('is-empty', cantidad < 1);
+
+  // Reinicia la animación aunque ya estuviera corriendo.
+  badge.classList.remove('enlix-bounce');
+  void badge.offsetWidth;
+  badge.classList.add('enlix-bounce');
+}

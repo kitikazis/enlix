@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
+use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\IzipayController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ServicioController;
@@ -12,8 +13,24 @@ Route::get('/', [PageController::class, 'inicio'])->name('inicio');
 Route::get('/nosotros', [PageController::class, 'nosotros'])->name('nosotros');
 Route::get('/contacto', [PageController::class, 'contacto'])->name('contacto');
 
-// Tienda + pago con Izipay
+// Tienda
 Route::get('/productos', [IzipayController::class, 'index'])->name('productos');
+
+// Carrito (invitado, por cookie - ver CarritoService). El pago (Izipay) va
+// en /checkout, no aqui: eso es la Fase 4 del plan de e-commerce.
+Route::prefix('carrito')->name('carrito.')->group(function () {
+    Route::get('/', [CarritoController::class, 'index'])->name('index');
+    Route::get('/resumen', [CarritoController::class, 'mostrar'])->name('resumen');
+    Route::post('/items', [CarritoController::class, 'agregar'])
+        ->middleware('throttle:60,1')
+        ->name('items.store');
+    Route::patch('/items/{item}', [CarritoController::class, 'actualizar'])
+        ->middleware('throttle:60,1')
+        ->name('items.update');
+    Route::delete('/items/{item}', [CarritoController::class, 'eliminar'])
+        ->middleware('throttle:60,1')
+        ->name('items.destroy');
+});
 
 Route::post('/izipay/form-token', [IzipayController::class, 'formToken'])
     ->middleware('throttle:izipay')
