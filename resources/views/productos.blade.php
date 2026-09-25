@@ -32,9 +32,10 @@
     max-width: 640px; margin: 0 auto; display: none; border-radius: 6px; padding: 16px 20px;
     align-items: center; gap: 12px;
   }
-  #pago-resultado.ok    { display: flex; background: #e8f7ee; color: #176b3a; border: 1px solid #aadcbf; animation: pagoResultadoIn .35s ease; }
-  #pago-resultado.error { display: flex; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; animation: pagoResultadoIn .35s ease; }
-  #pago-resultado.info  { display: flex; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; animation: pagoResultadoIn .35s ease; }
+  #pago-resultado.ok        { display: flex; background: #e8f7ee; color: #176b3a; border: 1px solid #aadcbf; animation: pagoResultadoIn .35s ease; }
+  #pago-resultado.error     { display: flex; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; animation: pagoResultadoIn .35s ease; }
+  #pago-resultado.info,
+  #pago-resultado.pendiente { display: flex; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; animation: pagoResultadoIn .35s ease; }
 
   .pago-resultado-icono {
     display: inline-flex; align-items: center; justify-content: center;
@@ -46,6 +47,16 @@
   .pago-resultado-icono.error { background: #d64545; }
   .pago-resultado-icono.info  { background: #3d7fd1; }
 
+  /* Estado "pendiente": el pago sigue confirmándose (esperando el IPN de
+     Izipay), así que en vez del icono estático usamos un spinner para
+     comunicar "en curso" en vez de "resultado final". */
+  .pago-resultado-spinner {
+    width: 20px; height: 20px; border-radius: 50%; flex: none;
+    border: 3px solid rgba(30, 78, 140, .2);
+    border-top-color: #1e4e8c;
+    animation: pagoResultadoSpin .8s linear infinite;
+  }
+
   @keyframes pagoResultadoIn {
     from { opacity: 0; transform: translateY(-8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -53,6 +64,9 @@
   @keyframes pagoResultadoIconoIn {
     from { transform: scale(0); }
     to   { transform: scale(1); }
+  }
+  @keyframes pagoResultadoSpin {
+    to { transform: rotate(360deg); }
   }
 
   /* Centra el contenido de Krypton con flex en el WRAPPER (contenedor
@@ -253,8 +267,7 @@
           || 'No se pudo iniciar el pago.';
         return mostrarErrorModal(mensaje);
       }
-      modalDatos.hide();
-      abrirPopin(data.form_token);
+      prepararYAbrirPopin(data.form_token);
     }).catch(function () {
       restaurarBotonContinuar();
       mostrarErrorModal('Error de conexión. Intenta nuevamente.');
@@ -266,7 +279,22 @@
     btnContinuar.textContent = btnContinuarTextoOriginal;
   }
 
-  // 3) Asigna el formToken al PopIn y lo abre.
+  const elModalDatos = document.getElementById('modalDatos');
+
+  // 3) Espera a que el modal de datos termine de cerrarse (evento
+  //    'hidden.bs.modal', no basta con llamar a hide()) antes de abrir el
+  //    PopIn de Izipay. Abrirlo mientras Bootstrap todavia esta a mitad de
+  //    la transicion de cierre (con su trampa de foco y backdrop activos)
+  //    es lo que hacia que el PopIn a veces no apareciera solo.
+  function prepararYAbrirPopin(formToken) {
+    elModalDatos.addEventListener('hidden.bs.modal', function onHidden() {
+      elModalDatos.removeEventListener('hidden.bs.modal', onHidden);
+      abrirPopin(formToken);
+    });
+    modalDatos.hide();
+  }
+
+  // 4) Asigna el formToken al PopIn y lo abre.
   function abrirPopin(formToken) {
     if (typeof KR === 'undefined') {
       restaurarBotonContinuar();
@@ -276,9 +304,15 @@
     intentoEnviado = false;
 
     // Callback (no Promise) por compatibilidad con la version del cliente Krypton
-    // servida por micuentaweb.pe; ver nota de verificacion manual pendiente.
+    // servida por micuentaweb.pe.
     KR.setFormToken(formToken, function () {
       restaurarBotonContinuar();
+      // KR.openPopin() es el metodo documentado para abrir un "kr-popin"
+      // por codigo; simular un click en el boton oculto (como se hacia
+      // antes) es fragil y podia no disparar la apertura.
+      if (typeof KR.openPopin === 'function') {
+        return KR.openPopin();
+      }
       const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
       if (btnPago) {
         btnPago.click();
@@ -288,7 +322,7 @@
     });
   }
 
-  // 4) Callback que Izipay invoca tras el intento de pago (KR.onSubmit).
+  // 5) Callback que Izipay invoca tras el intento de pago (KR.onSubmit).
   //    Se retorna false para evitar la redirección/POST por defecto del formulario:
   //    el resultado se envía por fetch() a /izipay/validar, igual que el resto del flujo.
   if (typeof KR !== 'undefined') {
@@ -332,7 +366,7 @@
     if (data.ok) {
       mostrarResultado('ok', data.mensaje);
     } else if (data.pendiente) {
-      mostrarResultado('info', data.mensaje);
+      mostrarResultado('pendiente', data.mensaje);
     } else {
       mostrarResultado('error', data.mensaje || 'No se pudo procesar el pago.');
     }
@@ -367,9 +401,15 @@
     box.innerHTML = '';
 
     const icono = document.createElement('span');
-    icono.className = 'pago-resultado-icono ' + tipo;
     icono.setAttribute('aria-hidden', 'true');
-    icono.textContent = { ok: '✓', error: '✕', info: 'i' }[tipo] || '';
+
+    if (tipo === 'pendiente') {
+      // Sigue confirmándose (esperando el IPN) -> spinner, no un icono fijo.
+      icono.className = 'pago-resultado-spinner';
+    } else {
+      icono.className = 'pago-resultado-icono ' + tipo;
+      icono.textContent = { ok: '✓', error: '✕', info: 'i' }[tipo] || '';
+    }
 
     const texto = document.createElement('span');
     texto.textContent = mensaje;
