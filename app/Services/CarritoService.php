@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Carrito;
 use App\Models\ItemCarrito;
 use App\Models\Producto;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -53,6 +54,36 @@ class CarritoService
     public function cantidadTotal(): int
     {
         return (int) ($this->actual()?->items()->sum('cantidad') ?? 0);
+    }
+
+    /**
+     * Resumen serializable del carrito (items + totales), usado tanto por
+     * CarritoController (JSON) como por CheckoutController (para mostrar el
+     * pedido antes de pagar).
+     *
+     * @return array{cantidad_total: int, subtotal_centimos: int, items: Collection}
+     */
+    public function resumen(): array
+    {
+        $carrito = $this->actual();
+        $items = $carrito?->items()->with('producto')->get() ?? collect();
+
+        $itemsData = $items->map(fn (ItemCarrito $item) => [
+            'id' => $item->id,
+            'producto_id' => $item->producto_id,
+            'nombre' => $item->producto?->nombre ?? '(producto ya no disponible)',
+            'slug' => $item->producto?->slug,
+            'cantidad' => $item->cantidad,
+            'precio_unitario_centimos' => $item->precio_unitario_centimos,
+            'subtotal_centimos' => $item->subtotalCentimos(),
+            'stock_disponible' => $item->producto?->stockDisponible() ?? 0,
+        ])->values();
+
+        return [
+            'cantidad_total' => (int) $itemsData->sum('cantidad'),
+            'subtotal_centimos' => (int) $itemsData->sum('subtotal_centimos'),
+            'items' => $itemsData,
+        ];
     }
 
     /**

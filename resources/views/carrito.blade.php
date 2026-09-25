@@ -85,9 +85,7 @@
             <span>Total</span>
             <span id="carrito-total">S/ {{ number_format($resumen['subtotal_centimos'] / 100, 2) }}</span>
           </div>
-          <button type="button" class="btn btn-primary-enlix w-100 mt-3" disabled title="El pago se habilita en la siguiente fase (checkout)">
-            Continuar al pago (próximamente)
-          </button>
+          <a href="{{ route('checkout.index') }}" class="btn btn-primary-enlix w-100 mt-3">Continuar al pago</a>
           <a href="{{ route('productos') }}" class="d-block text-center mt-3" style="font-size: 14px;">Seguir comprando</a>
         </div>
       </div>

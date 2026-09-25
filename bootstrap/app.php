@@ -40,9 +40,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo('/admin/login');
 
         // El IPN de Izipay es llamado por Izipay (sin sesión/CSRF); la firma
-        // HMAC (kr-hash) es lo que garantiza la integridad de esta ruta.
+        // HMAC (kr-hash) es lo que garantiza la integridad de estas rutas.
         $middleware->validateCsrfTokens(except: [
             'izipay/ipn',
+            'checkout/ipn',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

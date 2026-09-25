@@ -20,13 +20,13 @@ class CarritoController extends Controller
         return view('carrito', [
             'titulo' => 'Carrito - Enlix',
             'current' => 'productos',
-            'resumen' => $this->resumenArray(),
+            'resumen' => $this->carritos->resumen(),
         ]);
     }
 
     public function mostrar(): JsonResponse
     {
-        return response()->json($this->resumenArray());
+        return response()->json($this->carritos->resumen());
     }
 
     public function agregar(Request $request): JsonResponse
@@ -48,7 +48,7 @@ class CarritoController extends Controller
             return response()->json(['ok' => false, 'mensaje' => $e->getMessage()], 422);
         }
 
-        return response()->json(['ok' => true, 'mensaje' => 'Agregado al carrito.'] + $this->resumenArray());
+        return response()->json(['ok' => true, 'mensaje' => 'Agregado al carrito.'] + $this->carritos->resumen());
     }
 
     public function actualizar(Request $request, ItemCarrito $item): JsonResponse
@@ -65,7 +65,7 @@ class CarritoController extends Controller
             return response()->json(['ok' => false, 'mensaje' => $e->getMessage()], 422);
         }
 
-        return response()->json(['ok' => true] + $this->resumenArray());
+        return response()->json(['ok' => true] + $this->carritos->resumen());
     }
 
     public function eliminar(ItemCarrito $item): JsonResponse
@@ -74,7 +74,7 @@ class CarritoController extends Controller
 
         $this->carritos->eliminarItem($item);
 
-        return response()->json(['ok' => true] + $this->resumenArray());
+        return response()->json(['ok' => true] + $this->carritos->resumen());
     }
 
     /** Evita que alguien edite/borre items de un carrito ajeno adivinando el ID. */
@@ -83,28 +83,5 @@ class CarritoController extends Controller
         $carrito = $this->carritos->actual();
 
         abort_unless($carrito && $item->carrito_id === $carrito->id, 404);
-    }
-
-    private function resumenArray(): array
-    {
-        $carrito = $this->carritos->actual();
-        $items = $carrito?->items()->with('producto')->get() ?? collect();
-
-        $itemsData = $items->map(fn (ItemCarrito $item) => [
-            'id' => $item->id,
-            'producto_id' => $item->producto_id,
-            'nombre' => $item->producto?->nombre ?? '(producto ya no disponible)',
-            'slug' => $item->producto?->slug,
-            'cantidad' => $item->cantidad,
-            'precio_unitario_centimos' => $item->precio_unitario_centimos,
-            'subtotal_centimos' => $item->subtotalCentimos(),
-            'stock_disponible' => $item->producto?->stockDisponible() ?? 0,
-        ])->values();
-
-        return [
-            'cantidad_total' => (int) $itemsData->sum('cantidad'),
-            'subtotal_centimos' => (int) $itemsData->sum('subtotal_centimos'),
-            'items' => $itemsData,
-        ];
     }
 }

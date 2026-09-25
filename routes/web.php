@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
 use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\IzipayController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ServicioController;
@@ -17,7 +18,7 @@ Route::get('/contacto', [PageController::class, 'contacto'])->name('contacto');
 Route::get('/productos', [IzipayController::class, 'index'])->name('productos');
 
 // Carrito (invitado, por cookie - ver CarritoService). El pago (Izipay) va
-// en /checkout, no aqui: eso es la Fase 4 del plan de e-commerce.
+// en /checkout, no aqui.
 Route::prefix('carrito')->name('carrito.')->group(function () {
     Route::get('/', [CarritoController::class, 'index'])->name('index');
     Route::get('/resumen', [CarritoController::class, 'mostrar'])->name('resumen');
@@ -30,6 +31,25 @@ Route::prefix('carrito')->name('carrito.')->group(function () {
     Route::delete('/items/{item}', [CarritoController::class, 'eliminar'])
         ->middleware('throttle:60,1')
         ->name('items.destroy');
+});
+
+// Checkout del carrito (tabla `pedidos`, coexiste con /izipay/* de abajo -
+// ver docblock de CheckoutController).
+Route::prefix('checkout')->name('checkout.')->group(function () {
+    Route::get('/', [CheckoutController::class, 'index'])->name('index');
+
+    Route::post('/', [CheckoutController::class, 'crear'])
+        ->middleware('throttle:izipay')
+        ->name('crear');
+
+    Route::post('/validar', [CheckoutController::class, 'validar'])
+        ->middleware('throttle:60,1')
+        ->name('validar');
+
+    // IPN de Izipay (notificacion servidor-servidor, exenta de CSRF en bootstrap/app.php)
+    Route::post('/ipn', [CheckoutController::class, 'ipn'])
+        ->middleware('throttle:60,1')
+        ->name('ipn');
 });
 
 Route::post('/izipay/form-token', [IzipayController::class, 'formToken'])

@@ -44,6 +44,7 @@ class Pedido extends Model
         'transaction_uuid',
         'card_brand',
         'card_masked_pan',
+        'respuesta',
         'pagado_en',
     ];
 
@@ -54,6 +55,7 @@ class Pedido extends Model
         'total_centimos' => 'integer',
         'estado_pago' => EstadoPago::class,
         'estado_envio' => EstadoEnvio::class,
+        'respuesta' => 'array',
         'pagado_en' => 'datetime',
     ];
 

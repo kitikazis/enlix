@@ -17,3 +17,9 @@ Schedule::command('izipay:conciliar-pendientes')
 Schedule::command('izipay:expirar-pendientes')
     ->hourly()
     ->withoutOverlapping();
+
+// Libera el stock reservado de pedidos del carrito abandonados a mitad de
+// checkout (más de 20 min en 'pendiente' sin pago real, confirmado con Izipay).
+Schedule::command('pedidos:liberar-reservas-expiradas')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
