@@ -28,7 +28,7 @@
 @include('partials.footer')
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{{ asset('assets/js/enlix.js') }}"></script>
+<script src="{{ asset('assets/js/enlix.js') }}?v=2"></script>
 @stack('scripts')
 </body>
 </html>

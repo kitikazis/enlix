@@ -82,6 +82,7 @@
 <script nonce="{{ $cspNonce }}">
   const CSRF_TOKEN = @json(csrf_token());
   const URL_AGREGAR_CARRITO = @json(route('carrito.items.store'));
+  const URL_RESUMEN_CARRITO = @json(route('carrito.resumen'));
 
   document.querySelectorAll('.btn-agregar-carrito').forEach(function (btn) {
     const textoOriginal = btn.textContent.trim();
@@ -92,10 +93,10 @@
       btn.disabled = true;
       ocultarErrorCarrito(btn);
 
-      postJson(URL_AGREGAR_CARRITO, {
+      fetchJsonEnlix('POST', URL_AGREGAR_CARRITO, {
         producto_id: parseInt(btn.dataset.productoId, 10),
         cantidad: 1,
-      }).then(function (data) {
+      }, CSRF_TOKEN).then(function (data) {
         if (!data.ok) {
           mostrarErrorCarrito(btn, data.mensaje || 'No se pudo agregar al carrito.');
           btn.disabled = false;
@@ -111,11 +112,22 @@
           btn.disabled = false;
         }, 1500);
       }).catch(function () {
-        mostrarErrorCarrito(btn, 'Error de conexión. Intenta nuevamente.');
+        // La petición pudo haber llegado bien al servidor aunque la
+        // respuesta no se pudo leer como JSON (ver fetchJsonEnlix en
+        // enlix.js) - se refresca el contador real en vez de asumir que no
+        // se agregó nada.
+        refrescarBadgeCarrito();
+        mostrarErrorCarrito(btn, 'No se pudo confirmar el agregado. Revisa tu carrito antes de reintentar.');
         btn.disabled = false;
       });
     });
   });
+
+  function refrescarBadgeCarrito() {
+    fetchJsonEnlix('GET', URL_RESUMEN_CARRITO, null, CSRF_TOKEN)
+      .then(function (data) { actualizarBadgeCarrito(data.cantidad_total); })
+      .catch(function () {});
+  }
 
   function mostrarErrorCarrito(btn, mensaje) {
     const card = btn.closest('.prod-card');
@@ -131,18 +143,6 @@
   function ocultarErrorCarrito(btn) {
     const error = btn.closest('.prod-card').querySelector('.prod-card-error');
     if (error) error.remove();
-  }
-
-  function postJson(url, body) {
-    return fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN,
-      },
-      body: JSON.stringify(body),
-    }).then(function (r) { return r.json(); });
   }
 </script>
 @endpush

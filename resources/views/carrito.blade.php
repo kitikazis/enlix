@@ -125,17 +125,19 @@
     });
 
     fila.querySelector('.carrito-item-eliminar').addEventListener('click', function () {
-      fetchJson('DELETE', URL_ITEMS + '/' + itemId, null).then(function (data) {
+      fetchJsonEnlix('DELETE', URL_ITEMS + '/' + itemId, null, CSRF_TOKEN).then(function (data) {
         if (!data.ok) return;
         fila.remove();
         actualizarTotal(data);
         if (data.cantidad_total < 1) mostrarCarritoVacio();
+      }).catch(function () {
+        mostrarError('No se pudo confirmar. Recarga la página antes de reintentar.');
       });
     });
 
     function actualizarCantidad(nuevaCantidad) {
       ocultarError();
-      fetchJson('PATCH', URL_ITEMS + '/' + itemId, { cantidad: nuevaCantidad }).then(function (data) {
+      fetchJsonEnlix('PATCH', URL_ITEMS + '/' + itemId, { cantidad: nuevaCantidad }, CSRF_TOKEN).then(function (data) {
         if (!data.ok) {
           mostrarError(data.mensaje || 'No se pudo actualizar la cantidad.');
           return;
@@ -144,6 +146,8 @@
         const item = data.items.find(function (i) { return i.id == itemId; });
         if (item) subtotalEl.textContent = formateadorSoles.format(item.subtotal_centimos / 100);
         actualizarTotal(data);
+      }).catch(function () {
+        mostrarError('No se pudo confirmar el cambio. Recarga la página antes de reintentar.');
       });
     }
 
@@ -165,18 +169,6 @@
   function mostrarCarritoVacio() {
     document.getElementById('carrito-contenido').style.display = 'none';
     document.getElementById('carrito-vacio').style.display = '';
-  }
-
-  function fetchJson(method, url, body) {
-    return fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN,
-      },
-      body: body ? JSON.stringify(body) : null,
-    }).then(function (r) { return r.json(); });
   }
 </script>
 @endpush

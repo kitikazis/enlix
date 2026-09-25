@@ -74,3 +74,42 @@ function actualizarBadgeCarrito(cantidad) {
   void badge.offsetWidth;
   badge.classList.add('enlix-bounce');
 }
+
+/**
+ * fetch() a JSON, tolerante a que el hosting compartido imprima un
+ * warning/deprecation de PHP antes del JSON real (display_errors de
+ * php.ini, independiente de APP_DEBUG) - eso rompe JSON.parse aunque el
+ * servidor sí haya procesado la petición. Si el parseo directo falla,
+ * reintenta desde el primer "{" antes de darse por vencido. Global, la usan
+ * los scripts inline de /productos y /carrito.
+ */
+function fetchJsonEnlix(method, url, body, csrfToken) {
+  return fetch(url, {
+    method: method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-TOKEN': csrfToken,
+    },
+    body: body ? JSON.stringify(body) : null,
+  }).then(function (r) {
+    return r.text().then(function (texto) { return parsearJsonTolerante(texto, url); });
+  });
+}
+
+function parsearJsonTolerante(texto, url) {
+  try {
+    return JSON.parse(texto);
+  } catch (e) {
+    var inicio = texto.indexOf('{');
+    if (inicio > 0) {
+      try {
+        return JSON.parse(texto.slice(inicio));
+      } catch (e2) {
+        // sigue abajo con el error original
+      }
+    }
+    console.error('Respuesta no-JSON de ' + url + ':', texto);
+    throw e;
+  }
+}
