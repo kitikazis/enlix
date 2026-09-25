@@ -30,10 +30,30 @@
   .prod-card-price .currency { font-size: 18px; color: var(--enlix-muted); vertical-align: super; }
   #pago-resultado {
     max-width: 640px; margin: 0 auto; display: none; border-radius: 6px; padding: 16px 20px;
+    align-items: center; gap: 12px;
   }
-  #pago-resultado.ok    { display: block; background: #e8f7ee; color: #176b3a; border: 1px solid #aadcbf; }
-  #pago-resultado.error { display: block; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; }
-  #pago-resultado.info  { display: block; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; }
+  #pago-resultado.ok    { display: flex; background: #e8f7ee; color: #176b3a; border: 1px solid #aadcbf; animation: pagoResultadoIn .35s ease; }
+  #pago-resultado.error { display: flex; background: #fdeaea; color: #9b1c1c; border: 1px solid #f2b8b8; animation: pagoResultadoIn .35s ease; }
+  #pago-resultado.info  { display: flex; background: #eef4fd; color: #1e4e8c; border: 1px solid #bcd4f2; animation: pagoResultadoIn .35s ease; }
+
+  .pago-resultado-icono {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; flex: none;
+    font-size: 14px; font-weight: 700; color: #fff; line-height: 1;
+    animation: pagoResultadoIconoIn .4s cubic-bezier(.34, 1.56, .64, 1) .1s both;
+  }
+  .pago-resultado-icono.ok    { background: #1fae5c; }
+  .pago-resultado-icono.error { background: #d64545; }
+  .pago-resultado-icono.info  { background: #3d7fd1; }
+
+  @keyframes pagoResultadoIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pagoResultadoIconoIn {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+  }
 
   /* Centra el contenido de Krypton con flex en el WRAPPER (contenedor
      externo), no en el elemento de Krypton mismo. flex en el padre no
@@ -302,6 +322,13 @@
   }
 
   function resolverResultado(data) {
+    // El popin no se cierra solo porque KR.onSubmit devuelve false (así lo
+    // exige validar el pago por fetch() contra el backend en vez de dejar
+    // que Krypton redirija). Una vez que ya tenemos la respuesta final del
+    // pago, cerramos el popin nosotros para que el mensaje de resultado sea
+    // visible.
+    cerrarPopin();
+
     if (data.ok) {
       mostrarResultado('ok', data.mensaje);
     } else if (data.pendiente) {
@@ -312,7 +339,14 @@
   }
 
   function errorConexion() {
+    cerrarPopin();
     mostrarResultado('error', 'Error de conexión al procesar el pago.');
+  }
+
+  function cerrarPopin() {
+    if (typeof KR !== 'undefined' && typeof KR.closePopin === 'function') {
+      KR.closePopin();
+    }
   }
 
   function postJson(url, body) {
@@ -328,10 +362,20 @@
   }
 
   function mostrarResultado(tipo, mensaje) {
-    const icono = { ok: '✅ ', error: '❌ ', info: 'ℹ️ ' }[tipo] || '';
     const box = document.getElementById('pago-resultado');
     box.className = 'mb-4 ' + tipo;
-    box.textContent = icono + mensaje;
+    box.innerHTML = '';
+
+    const icono = document.createElement('span');
+    icono.className = 'pago-resultado-icono ' + tipo;
+    icono.setAttribute('aria-hidden', 'true');
+    icono.textContent = { ok: '✓', error: '✕', info: 'i' }[tipo] || '';
+
+    const texto = document.createElement('span');
+    texto.textContent = mensaje;
+
+    box.appendChild(icono);
+    box.appendChild(texto);
     box.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
