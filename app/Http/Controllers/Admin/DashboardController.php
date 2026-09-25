@@ -90,7 +90,9 @@ class DashboardController extends Controller
             'ingresosTotal' => (int) Pago::where('estado', EstadoPago::Pagado)->sum('monto'),
 
             'intentos' => $intentos,
-            'ticketPromedio' => $intentos > 0 ? (int) round($enRango()->avg('monto')) : 0,
+            // avg() puede devolver string segun el driver de base de datos;
+            // round() con strict_types exige int|float.
+            'ticketPromedio' => $intentos > 0 ? (int) round((float) $enRango()->avg('monto')) : 0,
             'tasaConversion' => $intentos > 0 ? round($pagadosEnRango / $intentos * 100, 1) : 0.0,
             'tasaRechazo' => $intentos > 0 ? round($rechazadosEnRango / $intentos * 100, 1) : 0.0,
             'rechazadosEnRango' => $rechazadosEnRango,
