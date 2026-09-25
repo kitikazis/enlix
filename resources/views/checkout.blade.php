@@ -165,15 +165,13 @@
 
           <button type="button" class="btn btn-primary-enlix w-100 mt-3" id="btnContinuar">Continuar al pago</button>
 
-          <div id="izipay-popin-wrapper">
-            <div class="kr-embedded" kr-popin id="izipay-popin">
-              <div class="kr-pan"></div>
-              <div class="kr-expiry"></div>
-              <div class="kr-security-code"></div>
-              <button class="kr-payment-button"></button>
-              <div class="kr-form-error"></div>
-            </div>
-          </div>
+          {{-- Vacío a propósito: el kr-embedded/kr-popin de Krypton se
+               inyecta recién por JS cuando hay formToken (ver abrirPopin()).
+               Si el <div class="kr-embedded" kr-popin> vive en el HTML desde
+               el principio, Krypton lo renderiza inline (botón "PAY" en
+               inglés) antes de que exista un pago que iniciar, duplicando el
+               botón "Continuar al pago" y confundiendo al usuario. --}}
+          <div id="izipay-popin-wrapper"></div>
 
           <p class="text-center mt-3 mb-0" style="font-size: 12.5px; color: var(--enlix-muted);">
             🔒 Pago seguro procesado por Izipay. No almacenamos los datos de tu tarjeta.
@@ -189,6 +187,7 @@
 <script
   src="{{ $izipay_js_client_url }}"
   kr-public-key="{{ $izipay_public_key }}"
+  kr-language="es-Es"
   nonce="{{ $cspNonce }}"></script>
 <link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.css">
 <script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.js" nonce="{{ $cspNonce }}"></script>
@@ -294,6 +293,23 @@
     }
 
     intentoEnviado = false;
+
+    // Recién aquí se crean los campos reales que Krypton necesita en el DOM
+    // (ver comentario en el HTML): antes de este punto no había ningún pago
+    // que mostrar, así que no había razón para que el botón nativo existiera.
+    const wrapper = document.getElementById('izipay-popin-wrapper');
+    wrapper.innerHTML = '';
+    const popin = document.createElement('div');
+    popin.className = 'kr-embedded';
+    popin.id = 'izipay-popin';
+    popin.setAttribute('kr-popin', '');
+    popin.innerHTML =
+      '<div class="kr-pan"></div>' +
+      '<div class="kr-expiry"></div>' +
+      '<div class="kr-security-code"></div>' +
+      '<button class="kr-payment-button"></button>' +
+      '<div class="kr-form-error"></div>';
+    wrapper.appendChild(popin);
 
     KR.setFormToken(formToken, function () {
       restaurarBotonContinuar();
