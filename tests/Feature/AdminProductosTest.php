@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Categoria;
+use App\Models\ImagenProducto;
+use App\Models\Marca;
 use App\Models\Producto;
 use App\Models\User;
 use App\Support\Producto as CatalogoProducto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminProductosTest extends TestCase
@@ -27,7 +33,7 @@ class AdminProductosTest extends TestCase
         // registrado en vez de manipular env() en caliente, porque las
         // rutas ya quedan fijadas al arrancar la aplicacion.
         foreach (['admin.productos.index', 'admin.productos.create', 'admin.productos.store'] as $nombre) {
-            $ruta = \Illuminate\Support\Facades\Route::getRoutes()->getByName($nombre);
+            $ruta = Route::getRoutes()->getByName($nombre);
             $this->assertContains('auth', $ruta->gatherMiddleware(), "La ruta {$nombre} debe exigir 'auth' siempre.");
         }
     }
@@ -152,5 +158,141 @@ class AdminProductosTest extends TestCase
 
         $this->assertTrue($producto->fresh()->activo);
         $this->assertArrayHasKey('plan-web-basico', CatalogoProducto::items());
+    }
+
+    public function test_crea_un_producto_con_categoria_marca_sku_stock_y_especificaciones(): void
+    {
+        $user = User::factory()->create();
+        $categoria = Categoria::create(['nombre' => 'Tarjetas gráficas', 'slug' => 'tarjetas-graficas']);
+        $marca = Marca::create(['nombre' => 'NVIDIA', 'slug' => 'nvidia']);
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'categoria_id' => $categoria->id,
+            'marca_id' => $marca->id,
+            'sku' => 'GPU-001',
+            'nombre' => 'RTX de prueba',
+            'descripcion' => 'x',
+            'especificaciones' => "Socket: AM5\nVRAM: 8GB",
+            'precio' => '10.00',
+            'stock' => 5,
+        ])->assertRedirect(route('admin.productos.index'));
+
+        $producto = Producto::where('sku', 'GPU-001')->first();
+        $this->assertNotNull($producto);
+        $this->assertSame($categoria->id, $producto->categoria_id);
+        $this->assertSame($marca->id, $producto->marca_id);
+        $this->assertSame(5, $producto->stock);
+        $this->assertSame(['Socket' => 'AM5', 'VRAM' => '8GB'], $producto->especificaciones);
+    }
+
+    public function test_no_permite_dos_productos_con_el_mismo_sku(): void
+    {
+        $user = User::factory()->create();
+        Producto::create([
+            'slug' => 'existente', 'nombre' => 'Existente', 'descripcion' => 'x',
+            'precio_centimos' => 1000, 'sku' => 'DUP-001', 'activo' => true,
+        ]);
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'sku' => 'DUP-001',
+            'nombre' => 'Otro producto',
+            'descripcion' => 'x',
+            'precio' => '10.00',
+        ])->assertSessionHasErrors('sku');
+
+        $this->assertDatabaseMissing('productos', ['nombre' => 'Otro producto']);
+    }
+
+    public function test_dos_productos_pueden_tener_sku_vacio(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'nombre' => 'Sin SKU uno', 'descripcion' => 'x', 'precio' => '10.00',
+        ])->assertRedirect(route('admin.productos.index'));
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'nombre' => 'Sin SKU dos', 'descripcion' => 'x', 'precio' => '10.00',
+        ])->assertSessionDoesntHaveErrors('sku');
+    }
+
+    public function test_sube_imagenes_al_crear_un_producto(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'nombre' => 'Con imagenes', 'descripcion' => 'x', 'precio' => '10.00',
+            'imagenes' => [
+                UploadedFile::fake()->image('foto1.jpg'),
+                UploadedFile::fake()->image('foto2.png'),
+            ],
+        ])->assertRedirect(route('admin.productos.index'));
+
+        $producto = Producto::where('nombre', 'Con imagenes')->first();
+        $this->assertSame(2, $producto->imagenes()->count());
+        Storage::disk('public')->assertExists($producto->imagenes()->first()->ruta);
+    }
+
+    public function test_rechaza_un_archivo_que_no_es_imagen(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'nombre' => 'Con archivo malo', 'descripcion' => 'x', 'precio' => '10.00',
+            'imagenes' => [UploadedFile::fake()->create('virus.exe', 100)],
+        ])->assertSessionHasErrors('imagenes.0');
+
+        $this->assertDatabaseMissing('productos', ['nombre' => 'Con archivo malo']);
+    }
+
+    public function test_elimina_una_imagen_existente_al_editar(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $imagen = ImagenProducto::create([
+            'producto_id' => $producto->id,
+            'ruta' => UploadedFile::fake()->image('vieja.jpg')->store('productos', 'public'),
+            'orden' => 1,
+        ]);
+
+        $this->actingAs($user)->put(route('admin.productos.update', $producto), [
+            'nombre' => $producto->nombre,
+            'descripcion' => $producto->descripcion,
+            'precio' => '99.00',
+            'eliminar_imagenes' => [$imagen->id],
+        ])->assertRedirect(route('admin.productos.index'));
+
+        $this->assertDatabaseMissing('imagenes_producto', ['id' => $imagen->id]);
+        Storage::disk('public')->assertMissing($imagen->ruta);
+    }
+
+    public function test_renderiza_el_form_de_crear(): void
+    {
+        $user = User::factory()->create();
+        Categoria::create(['nombre' => 'Tarjetas gráficas', 'slug' => 'tarjetas-graficas']);
+
+        $this->actingAs($user)->get(route('admin.productos.create'))
+            ->assertOk()
+            ->assertSee('Tarjetas gráficas')
+            ->assertSee('SKU');
+    }
+
+    public function test_renderiza_el_form_de_editar_con_imagenes_existentes(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        ImagenProducto::create([
+            'producto_id' => $producto->id,
+            'ruta' => UploadedFile::fake()->image('actual.jpg')->store('productos', 'public'),
+            'orden' => 1,
+        ]);
+
+        $this->actingAs($user)->get(route('admin.productos.edit', $producto))
+            ->assertOk()
+            ->assertSee('Eliminar');
     }
 }
