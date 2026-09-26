@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use App\Models\Pago;
 use App\Support\Producto;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -655,6 +656,7 @@ class IzipayCheckoutTest extends TestCase
         $this->postJson(route('izipay.ipn'), $this->firmarParaIpn($answer))->assertOk();
 
         $this->assertSame(EstadoPago::Pagado, $pago->fresh()->estado);
+        $this->assertSame(MetodoPago::Tarjeta, $pago->fresh()->metodo_pago);
     }
 
     public function test_ipn_con_captura_fallida_marca_rechazado(): void

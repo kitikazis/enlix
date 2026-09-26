@@ -42,6 +42,7 @@
                             <th class="py-2 pr-3 font-medium">Cliente</th>
                             <th class="py-2 pr-3 text-right font-medium">Total</th>
                             <th class="py-2 pr-3 font-medium">Pago</th>
+                            <th class="py-2 pr-3 font-medium">Método</th>
                             <th class="py-2 pr-3 font-medium">Envío</th>
                             <th class="py-2 font-medium"></th>
                         </tr>
@@ -56,6 +57,7 @@
                                 </td>
                                 <td class="whitespace-nowrap py-2.5 pr-3 text-right font-mono">S/ {{ number_format($pedido->total_centimos / 100, 2) }}</td>
                                 <td class="whitespace-nowrap py-2.5 pr-3"><x-admin.badge-estado :estado="$pedido->estado_pago" /></td>
+                                <td class="whitespace-nowrap py-2.5 pr-3 text-text-secondary">{{ $pedido->metodo_pago?->etiqueta() ?? '—' }}</td>
                                 <td class="whitespace-nowrap py-2.5 pr-3">
                                     @if ($pedido->estado_envio)
                                         <x-admin.badge-estado :estado="$pedido->estado_envio" />
@@ -69,7 +71,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="py-8">
+                                <td colspan="8" class="py-8">
                                     <x-admin.empty-state title="No hay pedidos con estos filtros." />
                                 </td>
                             </tr>

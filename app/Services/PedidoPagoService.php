@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\EstadoEnvio;
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use App\Models\Pedido;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -162,6 +163,7 @@ class PedidoPagoService
         $pedido->transaction_uuid = data_get($answer, 'transactions.0.uuid');
         $pedido->card_brand = data_get($answer, 'transactions.0.transactionDetails.cardDetails.effectiveBrand');
         $pedido->card_masked_pan = data_get($answer, 'transactions.0.transactionDetails.cardDetails.pan');
+        $pedido->metodo_pago = MetodoPago::desdeRespuestaIzipay($answer);
         $pedido->respuesta = $this->sanitizarRespuesta($answer);
 
         if ($estado === EstadoPago::Pagado) {

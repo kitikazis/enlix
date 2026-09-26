@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use App\Models\ItemPedido;
 use App\Models\Pedido;
 use App\Models\User;
@@ -88,6 +89,7 @@ class AdminPedidosTest extends TestCase
             'transaction_uuid' => 'uuid-abc',
             'card_brand' => 'VISA',
             'card_masked_pan' => '455788XXXXXX8317',
+            'metodo_pago' => MetodoPago::Tarjeta,
         ]);
 
         ItemPedido::create([
@@ -106,6 +108,7 @@ class AdminPedidosTest extends TestCase
             ->assertSee('Juan Perez')
             ->assertSee('GPU de prueba')
             ->assertSee('GPU-001')
-            ->assertSee('VISA');
+            ->assertSee('VISA')
+            ->assertSee('Tarjeta');
     }
 }

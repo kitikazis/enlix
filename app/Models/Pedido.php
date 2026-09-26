@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\EstadoEnvio;
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -44,6 +45,7 @@ class Pedido extends Model
         'transaction_uuid',
         'card_brand',
         'card_masked_pan',
+        'metodo_pago',
         'respuesta',
         'pagado_en',
     ];
@@ -55,6 +57,7 @@ class Pedido extends Model
         'total_centimos' => 'integer',
         'estado_pago' => EstadoPago::class,
         'estado_envio' => EstadoEnvio::class,
+        'metodo_pago' => MetodoPago::class,
         'respuesta' => 'array',
         'pagado_en' => 'datetime',
     ];

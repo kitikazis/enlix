@@ -143,7 +143,7 @@ class DashboardController extends Controller
             // Exporta el correo sin enmascarar: es un archivo para el propio
             // admin (ya autenticado), no la vista en pantalla.
             $salida = fopen('php://output', 'w');
-            fputcsv($salida, ['Fecha', 'Producto', 'Email', 'Monto', 'Moneda', 'Estado', 'Order ID']);
+            fputcsv($salida, ['Fecha', 'Producto', 'Email', 'Monto', 'Moneda', 'Estado', 'Método', 'Order ID']);
 
             foreach ($pagos as $pago) {
                 fputcsv($salida, [
@@ -153,6 +153,7 @@ class DashboardController extends Controller
                     number_format($pago->monto / 100, 2),
                     $pago->moneda,
                     $pago->estado->etiqueta(),
+                    $pago->metodo_pago?->etiqueta() ?? '',
                     $pago->izipay_order_id,
                 ]);
             }

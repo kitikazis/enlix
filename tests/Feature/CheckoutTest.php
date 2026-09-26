@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use App\Models\Carrito;
 use App\Models\Pedido;
 use App\Models\Producto;
@@ -220,6 +221,7 @@ class CheckoutTest extends TestCase
         $pedido->refresh();
         $this->assertTrue($pedido->estado_pago === EstadoPago::Pagado);
         $this->assertNotNull($pedido->pagado_en);
+        $this->assertSame(MetodoPago::Tarjeta, $pedido->metodo_pago);
 
         $producto->refresh();
         $this->assertSame(7, $producto->stock);

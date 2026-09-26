@@ -79,6 +79,7 @@
             <dl class="flex flex-col gap-2 text-sm">
                 <div class="flex justify-between gap-3"><dt class="text-text-caption">Order ID</dt><dd class="font-mono text-xs text-text-primary">{{ $pedido->izipay_order_id ?? '—' }}</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-text-caption">Transaction UUID</dt><dd class="font-mono text-xs text-text-primary">{{ $pedido->transaction_uuid ?? '—' }}</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-text-caption">Método</dt><dd class="text-text-primary">{{ $pedido->metodo_pago?->etiqueta() ?? '—' }}</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-text-caption">Tarjeta</dt><dd class="font-mono text-xs text-text-primary">{{ $pedido->card_brand ? $pedido->card_brand.' '.$pedido->card_masked_pan : '—' }}</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-text-caption">Pagado el</dt><dd class="text-text-primary">{{ $pedido->pagado_en?->setTimezone('America/Lima')->format('d/m/Y H:i') ?? '—' }}</dd></div>
             </dl>

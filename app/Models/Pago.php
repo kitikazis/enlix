@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -28,6 +29,7 @@ class Pago extends Model
         'transaction_uuid',
         'card_brand',
         'card_masked_pan',
+        'metodo_pago',
         'estado',
         'respuesta',
     ];
@@ -35,6 +37,7 @@ class Pago extends Model
     protected $casts = [
         'monto'     => 'integer',
         'estado'    => EstadoPago::class,
+        'metodo_pago' => MetodoPago::class,
         'respuesta' => 'array',
     ];
 

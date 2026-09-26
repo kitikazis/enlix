@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\EstadoPago;
+use App\Enums\MetodoPago;
 use App\Models\Pago;
 use App\Support\Producto;
 use Illuminate\Support\Facades\DB;
@@ -155,6 +156,7 @@ class PagoService
         $pago->transaction_uuid = data_get($answer, 'transactions.0.uuid');
         $pago->card_brand = data_get($answer, 'transactions.0.transactionDetails.cardDetails.effectiveBrand');
         $pago->card_masked_pan = data_get($answer, 'transactions.0.transactionDetails.cardDetails.pan');
+        $pago->metodo_pago = MetodoPago::desdeRespuestaIzipay($answer);
         $pago->respuesta = $this->sanitizarRespuesta($answer);
         $pago->save();
     }

@@ -258,6 +258,7 @@
                                 <th class="py-2 pr-3 font-medium">Email</th>
                                 <th class="py-2 pr-3 text-right font-medium">Monto</th>
                                 <th class="py-2 pr-3 font-medium">Estado</th>
+                                <th class="py-2 pr-3 font-medium">Método</th>
                                 <th class="py-2 pr-3 font-medium">Tarjeta</th>
                                 <th class="py-2 font-medium">Order ID</th>
                             </tr>
@@ -273,12 +274,13 @@
                                     </td>
                                     <td class="whitespace-nowrap py-2.5 pr-3 text-right font-mono">{{ $pago->moneda }} {{ number_format($pago->monto / 100, 2) }}</td>
                                     <td class="whitespace-nowrap py-2.5 pr-3"><x-admin.badge-estado :estado="$pago->estado" /></td>
+                                    <td class="whitespace-nowrap py-2.5 pr-3 text-text-secondary">{{ $pago->metodo_pago?->etiqueta() ?? '—' }}</td>
                                     <td class="whitespace-nowrap py-2.5 pr-3 font-mono text-xs text-text-secondary">{{ $pago->card_brand ? $pago->card_brand.' '.$pago->card_masked_pan : '—' }}</td>
                                     <td class="max-w-[140px] truncate py-2.5 font-mono text-xs text-text-caption" title="{{ $pago->izipay_order_id }}">{{ $pago->izipay_order_id }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="py-8">
+                                    <td colspan="8" class="py-8">
                                         <x-admin.empty-state title="No hay pagos con estos filtros." />
                                     </td>
                                 </tr>
