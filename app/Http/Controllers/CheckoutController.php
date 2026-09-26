@@ -114,7 +114,7 @@ class CheckoutController extends Controller
             'phone_number' => $datos['telefono'],
             'identity_code' => strtoupper($datos['numero_documento']),
             'ip' => $request->ip(),
-        ]);
+        ], route('checkout.ipn'));
 
         if (! $resultado['ok']) {
             // No se deja el pedido en 'pendiente' con stock reservado para

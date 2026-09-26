@@ -142,6 +142,19 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Carrito::sole()->items()->count());
     }
 
+    public function test_crear_pedido_envia_ipn_target_url_absoluta_al_checkout(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente());
+
+        Http::assertSent(fn ($request) => $request['ipnTargetUrl'] === route('checkout.ipn')
+            && str_starts_with($request['ipnTargetUrl'], 'http'));
+    }
+
     public function test_no_deja_pagar_mas_del_stock_disponible(): void
     {
         $producto = $this->producto(stock: 1);

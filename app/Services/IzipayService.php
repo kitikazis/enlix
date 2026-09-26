@@ -22,9 +22,16 @@ class IzipayService
      * Crea un formToken para iniciar el pago (PopIn de Izipay).
      *
      * @param  array  $cliente  ['first_name','last_name','email','phone_number','identity_code','ip']
+     * @param  string|null  $ipnTargetUrl  URL de IPN especifica para ESTA orden (override de la regla
+     *                                     global configurada en el Back Office). Se deja null en el
+     *                                     flujo viejo (pagos) a proposito: ese sigue usando la regla
+     *                                     global de /izipay/ipn ya registrada en Back Office. El
+     *                                     checkout nuevo (pedidos) SI la pasa, apuntando a
+     *                                     /checkout/ipn, para no depender de que alguien registre una
+     *                                     segunda regla manualmente.
      * @return array{ok: bool, http: int, form_token: ?string, public_key: ?string}
      */
-    public function crearFormToken(int $montoCentimos, string $orderId, array $cliente): array
+    public function crearFormToken(int $montoCentimos, string $orderId, array $cliente, ?string $ipnTargetUrl = null): array
     {
         $payload = [
             'amount' => $montoCentimos,
@@ -45,6 +52,10 @@ class IzipayService
                 ],
             ],
         ];
+
+        if ($ipnTargetUrl !== null) {
+            $payload['ipnTargetUrl'] = $ipnTargetUrl;
+        }
 
         // La IP del comprador es una de las señales que pesan en el analizador
         // de riesgo de Izipay (ThreatMetrix). Solo se envía si es confiable:

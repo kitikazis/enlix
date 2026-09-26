@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Enums\EstadoPago;
 use App\Models\Pago;
 use App\Support\Producto;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -119,6 +120,11 @@ class IzipayCheckoutTest extends TestCase
 
         Http::assertSent(fn ($request) => $request['amount'] === $producto['precio_centimos']
             && $request['currency'] === 'PEN');
+
+        // El flujo viejo NO manda ipnTargetUrl: sigue dependiendo de la regla
+        // global de /izipay/ipn ya registrada en el Back Office. Solo el
+        // checkout nuevo (pedidos) la manda, ver CheckoutTest.
+        Http::assertSent(fn ($request) => ! isset($request['ipnTargetUrl']));
 
         $this->assertDatabaseHas('pagos', [
             'producto' => $producto['slug'],
@@ -483,7 +489,7 @@ class IzipayCheckoutTest extends TestCase
     {
         $this->crearPagoPendiente(['transaction_uuid' => 'uuid-repetido']);
 
-        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        $this->expectException(UniqueConstraintViolationException::class);
 
         $this->crearPagoPendiente(['transaction_uuid' => 'uuid-repetido']);
     }
