@@ -157,6 +157,7 @@ class PagoService
         $pago->card_brand = data_get($answer, 'transactions.0.transactionDetails.cardDetails.effectiveBrand');
         $pago->card_masked_pan = data_get($answer, 'transactions.0.transactionDetails.cardDetails.pan');
         $pago->metodo_pago = MetodoPago::desdeRespuestaIzipay($answer);
+        $pago->detailed_status = data_get($answer, 'transactions.0.detailedStatus');
         $pago->respuesta = $this->sanitizarRespuesta($answer);
         $pago->save();
     }

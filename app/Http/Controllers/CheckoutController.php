@@ -201,7 +201,19 @@ class CheckoutController extends Controller
             return response('OK', 200);
         }
 
-        $pedidos->registrar($answer, PedidoPagoService::ORIGEN_IPN);
+        $resultado = $pedidos->registrar($answer, PedidoPagoService::ORIGEN_IPN);
+
+        // No se loguea el kr-answer completo (trae nombre/email/telefono del
+        // cliente): solo los campos de estado, suficientes para diagnosticar
+        // un mapeo de estado sin volcar datos personales al log.
+        Log::info('Checkout IPN: notificacion recibida', [
+            'izipay_order_id' => data_get($answer, 'orderDetails.orderId'),
+            'order_status' => data_get($answer, 'orderStatus'),
+            'detailed_status' => data_get($answer, 'transactions.0.detailedStatus'),
+            'procesado' => $resultado['procesado'] ?? false,
+            'estado_resultante' => ($resultado['estado'] ?? null)?->value,
+            'motivo' => $resultado['motivo'] ?? null,
+        ]);
 
         $orderStatus = data_get($answer, 'orderStatus', 'DESCONOCIDO');
 

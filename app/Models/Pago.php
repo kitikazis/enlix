@@ -30,6 +30,7 @@ class Pago extends Model
         'card_brand',
         'card_masked_pan',
         'metodo_pago',
+        'detailed_status',
         'estado',
         'respuesta',
     ];

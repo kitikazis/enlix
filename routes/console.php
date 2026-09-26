@@ -13,6 +13,12 @@ Schedule::command('izipay:conciliar-pendientes')
     ->everyMinute()
     ->withoutOverlapping();
 
+// Mismo rescate que arriba, pero para pedidos del carrito en 'en_verificacion'
+// (autorizados en el navegador, IPN de captura nunca llegó).
+Schedule::command('izipay:conciliar-pedidos-pendientes')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 // Cierra los que ya pasaron las 24h y Izipay confirma que nunca existieron.
 Schedule::command('izipay:expirar-pendientes')
     ->hourly()
@@ -22,4 +28,11 @@ Schedule::command('izipay:expirar-pendientes')
 // checkout (más de 20 min en 'pendiente' sin pago real, confirmado con Izipay).
 Schedule::command('pedidos:liberar-reservas-expiradas')
     ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Red de seguridad más amplia (7 días) por si algo se escapó de las ventanas
+// acotadas de los jobs de arriba (72h como mucho). También sirve a mano:
+// php artisan izipay:reconcile --order=ENX-...
+Schedule::command('izipay:reconcile')
+    ->hourly()
     ->withoutOverlapping();

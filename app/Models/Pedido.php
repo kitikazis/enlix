@@ -46,6 +46,7 @@ class Pedido extends Model
         'card_brand',
         'card_masked_pan',
         'metodo_pago',
+        'detailed_status',
         'respuesta',
         'pagado_en',
     ];

@@ -167,6 +167,7 @@ class PedidoPagoService
         $pedido->card_brand = data_get($answer, 'transactions.0.transactionDetails.cardDetails.effectiveBrand');
         $pedido->card_masked_pan = data_get($answer, 'transactions.0.transactionDetails.cardDetails.pan');
         $pedido->metodo_pago = MetodoPago::desdeRespuestaIzipay($answer);
+        $pedido->detailed_status = data_get($answer, 'transactions.0.detailedStatus');
         $pedido->respuesta = $this->sanitizarRespuesta($answer);
 
         if ($estado === EstadoPago::Pagado) {

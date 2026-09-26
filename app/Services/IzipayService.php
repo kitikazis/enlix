@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -168,7 +169,19 @@ class IzipayService
             return ['ok' => true, 'encontrada' => false, 'answer' => []];
         }
 
-        return ['ok' => true, 'encontrada' => true, 'answer' => (array) data_get($data, 'answer', [])];
+        $answer = (array) data_get($data, 'answer', []);
+
+        // Se loguea la forma completa de la respuesta (sin el bloque
+        // 'customer', que trae datos personales) mientras se termina de
+        // confirmar contra casos reales que su estructura coincide con la
+        // que usan el IPN y el retorno del navegador (orderStatus +
+        // transactions[].detailedStatus) - ver el TODO de este método.
+        Log::info('Izipay: respuesta de Order/Get', [
+            'izipay_order_id' => $orderId,
+            'respuesta' => Arr::except($answer, ['customer']),
+        ]);
+
+        return ['ok' => true, 'encontrada' => true, 'answer' => $answer];
     }
 
     private function url(string $servicio): string

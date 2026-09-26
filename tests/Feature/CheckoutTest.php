@@ -266,6 +266,35 @@ class CheckoutTest extends TestCase
         $this->assertSame(1, Pedido::count());
     }
 
+    public function test_pedido_pagado_no_regresa_a_rechazado_tras_ipn_desordenada(): void
+    {
+        $producto = $this->producto(stock: 5);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente());
+
+        $pedido = Pedido::sole();
+        $pedido->forceFill(['estado_pago' => EstadoPago::Pagado])->save();
+
+        // IPN atrasada/desordenada que llega despues, diciendo lo contrario.
+        $answer = $this->krAnswer($pedido->codigo, $pedido->total_centimos, [
+            'orderStatus' => 'UNPAID',
+            'transactions' => [['uuid' => 'uuid-1234', 'status' => 'REFUSED', 'detailedStatus' => 'REFUSED']],
+        ]);
+        $firma = $this->firmar($answer, 'test-password-secreta');
+
+        $this->postJson(route('checkout.ipn'), [
+            'kr-answer' => $firma['kr-answer'],
+            'kr-hash' => $firma['kr-hash'],
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'password',
+        ])->assertOk();
+
+        $this->assertSame(EstadoPago::Pagado, $pedido->fresh()->estado_pago);
+    }
+
     public function test_el_ipn_envia_email_de_confirmacion_al_cliente(): void
     {
         Mail::fake();
