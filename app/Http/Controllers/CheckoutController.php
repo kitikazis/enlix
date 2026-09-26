@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\EstadoPago;
+use App\Http\Requests\CheckoutCrearRequest;
 use App\Services\CarritoService;
 use App\Services\IzipayService;
 use App\Services\PedidoPagoService;
@@ -53,34 +54,9 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function crear(Request $request, PedidoService $pedidos, IzipayService $izipay): JsonResponse
+    public function crear(CheckoutCrearRequest $request, PedidoService $pedidos, IzipayService $izipay): JsonResponse
     {
-        $datos = $request->validate([
-            'first_name' => ['required', 'string', 'max:60'],
-            'last_name' => ['required', 'string', 'max:60'],
-            'email' => ['required', 'email:rfc'],
-            'telefono' => ['required', 'string', 'regex:/^[0-9+ ]{6,20}$/'],
-            'tipo_documento' => ['required', 'in:DNI,RUC,CE'],
-            // 8 digitos para DNI, 11 para RUC - CE no tiene formato fijo, no se valida.
-            'numero_documento' => ['required', 'string', 'max:15', function ($attribute, $value, $fail) use ($request) {
-                $tipo = $request->input('tipo_documento');
-
-                if ($tipo === 'DNI' && ! preg_match('/^\d{8}$/', (string) $value)) {
-                    $fail('El DNI debe tener 8 dígitos.');
-                }
-
-                if ($tipo === 'RUC' && ! preg_match('/^\d{11}$/', (string) $value)) {
-                    $fail('El RUC debe tener 11 dígitos.');
-                }
-            }],
-            'tipo_comprobante' => ['required', 'in:boleta,factura'],
-            'razon_social' => ['required_if:tipo_comprobante,factura', 'nullable', 'string', 'max:150'],
-            'metodo_entrega' => ['required', 'in:envio,recojo'],
-            'direccion' => ['required_if:metodo_entrega,envio', 'nullable', 'string', 'max:255'],
-            'distrito' => ['required_if:metodo_entrega,envio', 'nullable', 'string', 'max:100'],
-            'ciudad' => ['nullable', 'string', 'max:100'],
-            'referencia' => ['nullable', 'string', 'max:255'],
-        ]);
+        $datos = $request->validated();
 
         $carrito = $this->carritos->actual();
 

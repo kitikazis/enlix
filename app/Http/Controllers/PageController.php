@@ -32,4 +32,12 @@ class PageController extends Controller
             'current' => 'contacto',
         ]);
     }
+
+    public function terminos(): View
+    {
+        return view('terminos', [
+            'titulo' => 'Términos y condiciones - Enlix',
+            'current' => 'terminos',
+        ]);
+    }
 }

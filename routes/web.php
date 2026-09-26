@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [PageController::class, 'inicio'])->name('inicio');
 Route::get('/nosotros', [PageController::class, 'nosotros'])->name('nosotros');
 Route::get('/contacto', [PageController::class, 'contacto'])->name('contacto');
+Route::get('/terminos', [PageController::class, 'terminos'])->name('terminos');
 
 // Tienda
 Route::get('/productos', [IzipayController::class, 'index'])->name('productos');

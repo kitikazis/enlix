@@ -67,6 +67,7 @@ class CheckoutTest extends TestCase
             'distrito' => '',
             'ciudad' => '',
             'referencia' => '',
+            'terminos' => true,
         ], $overrides);
     }
 
@@ -443,5 +444,24 @@ class CheckoutTest extends TestCase
         $this->artisan('pedidos:liberar-reservas-expiradas')->assertSuccessful();
 
         $this->assertTrue($pedido->fresh()->estado_pago === EstadoPago::Pendiente);
+    }
+
+    public function test_no_deja_pagar_sin_aceptar_terminos(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $r = $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['terminos' => false]));
+
+        $r->assertStatus(422)->assertJsonValidationErrors('terminos');
+        $this->assertDatabaseCount('pedidos', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_pagina_de_terminos_responde_ok(): void
+    {
+        $this->get(route('terminos'))->assertOk();
     }
 }

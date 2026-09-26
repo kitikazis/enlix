@@ -163,7 +163,14 @@
             <span>S/ {{ number_format($resumen['subtotal_centimos'] / 100, 2) }}</span>
           </div>
 
-          <button type="button" class="btn btn-primary-enlix w-100 mt-3" id="btnContinuar">Continuar al pago</button>
+          <div class="form-check mt-3">
+            <input type="checkbox" class="form-check-input" id="f_terminos">
+            <label class="form-check-label" for="f_terminos" style="font-size: 13px;">
+              Acepto los <a href="{{ route('terminos') }}" target="_blank" rel="noopener">términos y condiciones</a>
+            </label>
+          </div>
+
+          <button type="button" class="btn btn-primary-enlix w-100 mt-2" id="btnContinuar">Continuar al pago</button>
 
           {{-- Vacío a propósito: el kr-embedded/kr-popin de Krypton se
                inyecta recién por JS cuando hay formToken (ver abrirPopin()).
@@ -248,6 +255,7 @@
       distrito: document.getElementById('f_distrito').value.trim(),
       ciudad: document.getElementById('f_ciudad').value.trim(),
       referencia: document.getElementById('f_referencia').value.trim(),
+      terminos: document.getElementById('f_terminos').checked,
     };
 
     if (!datos.first_name || !datos.last_name || !datos.email || !datos.telefono || !datos.numero_documento) {
@@ -258,6 +266,9 @@
     }
     if (datos.metodo_entrega === 'envio' && (!datos.direccion || !datos.distrito)) {
       return mostrarErrorCheckout('Completa la dirección y el distrito para el envío.');
+    }
+    if (!datos.terminos) {
+      return mostrarErrorCheckout('Debes aceptar los términos y condiciones para continuar.');
     }
 
     ocultarErrorCheckout();
