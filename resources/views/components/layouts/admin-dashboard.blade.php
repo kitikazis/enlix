@@ -17,6 +17,7 @@
     $enlacesMenu = [
         ['url' => route('admin.dashboard'), 'activo' => request()->routeIs('admin.dashboard'), 'label' => 'Dashboard'],
         ['url' => route('admin.dashboard').'#pagos', 'activo' => false, 'label' => 'Pagos', 'badge' => $badgeAtencion ?? null],
+        ['url' => route('admin.pedidos.index'), 'activo' => request()->routeIs('admin.pedidos.*'), 'label' => 'Pedidos'],
         ['url' => route('admin.productos.index'), 'activo' => request()->routeIs('admin.productos.*'), 'label' => 'Productos'],
     ];
 @endphp

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
+use App\Http\Controllers\Admin\PedidosController as AdminPedidosController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
@@ -81,6 +82,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/exportar', [AdminDashboardController::class, 'exportarCsv'])->name('dashboard.exportar');
+    });
+
+    Route::middleware('auth')->prefix('pedidos')->name('pedidos.')->group(function () {
+        Route::get('/', [AdminPedidosController::class, 'index'])->name('index');
+        Route::get('/{pedido}', [AdminPedidosController::class, 'show'])->name('show');
     });
 
     Route::middleware('auth')->prefix('productos')->name('productos.')->group(function () {
