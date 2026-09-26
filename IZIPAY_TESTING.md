@@ -10,6 +10,13 @@
 > **ejecutar** las pruebas reales contra Izipay (TEST y PRODUCCIÓN) y
 > **registrar la URL del IPN** en su Back Office — eso no se puede hacer
 > desde el código, requiere credenciales reales y acceso al panel de Izipay.
+>
+> ⚠️ **Este documento describe el flujo VIEJO** (`/productos` → tarjeta
+> directa → tabla `pagos`, 1 producto por pago). Desde la Fase 4 del
+> e-commerce existe un flujo NUEVO y paralelo (`/checkout`, carrito
+> multi-producto, tabla `pedidos`) que reutiliza el mismo `IzipayService`
+> pero tiene su propio IPN y sus propias credenciales de Back Office
+> (las mismas de Izipay, no hay una cuenta distinta) — ver sección 5.
 
 ---
 
@@ -189,6 +196,55 @@ PRODUCCIÓN (sección 3.3).
 
 ---
 
+## 5. Checkout nuevo (carrito, tabla `pedidos`)
+
+`CheckoutController` (`/checkout`, `/checkout/validar`, `/checkout/ipn`) es
+el flujo multi-producto. Reutiliza `IzipayService` tal cual (mismo
+`Charge/CreatePayment`, misma verificación HMAC) pero registra el resultado
+en `PedidoPagoService`/`pedidos`, no en `PagoService`/`pagos` — son dos
+motores independientes que coexisten a propósito (ver `PROJECT_CONTEXT.md`).
+
+### 5.1 IPN: ya no depende solo de la regla del Back Office
+
+Desde el commit `fix: el checkout nuevo manda ipnTargetUrl explicito a
+Izipay`, cada `Charge/CreatePayment` del checkout incluye
+`ipnTargetUrl` apuntando a `route('checkout.ipn')` (URL absoluta,
+calculada del `APP_URL` de ese momento). En teoría esto le dice a Izipay
+a dónde mandar el IPN **de esa orden puntual**, sin depender de que
+alguien haya registrado una regla global.
+
+**Aun así, registra `/checkout/ipn` como regla en el Back Office** (mismo
+procedimiento que la sección 2.3/3.3, pero con esta URL) como respaldo:
+`ipnTargetUrl` es un parámetro documentado por Lyra para la Transaction de
+la API V4, pero no hay una prueba real todavía que confirme que Izipay lo
+respeta tal cual en esta cuenta — si lo ignorara, sin la regla global el
+checkout nuevo se quedaría sin IPN.
+
+- TEST: `https://xxxx.ngrok-free.app/checkout/ipn`
+- PRODUCCIÓN: `https://enlix.pe/checkout/ipn`
+
+### 5.2 Diferencias a la hora de probar
+
+- El checkout nuevo exige el checkbox de términos y condiciones
+  (`/terminos`) antes de generar el formToken.
+- El monto que se manda a Izipay incluye el costo de envío si
+  `metodo_entrega = envio` y `config('tienda.envio.modo') = fijo` (por
+  defecto es `gratis`, no cobra nada extra) — ver `config/tienda.php`.
+- Al confirmarse el pago (IPN, nunca el retorno del navegador) se
+  descuenta stock real y se mandan dos correos: confirmación al cliente y
+  aviso a `ADMIN_EMAIL` (si está configurado) — revisa
+  `storage/logs/laravel.log` en local (`MAIL_MAILER=log`) para verlos sin
+  necesitar SMTP real.
+- El pedido queda visible en `/admin/pedidos` (listado y detalle), no en
+  el dashboard de pagos.
+
+Cubierto por `tests/Feature/CheckoutTest.php` (formToken con precio del
+servidor, `ipnTargetUrl`, reserva/liberación de stock, IPN idempotente,
+DNI/RUC, términos, envío gratis/fijo) — correr `php artisan test
+--filter=CheckoutTest`.
+
+---
+
 ## Checklist final para responder a Izipay
 
 - [ ] Integración de la pasarela — código listo (`IzipayService`,
@@ -200,3 +256,6 @@ PRODUCCIÓN (sección 3.3).
 - [ ] IPN registrado en Back Office (TEST y PRODUCCIÓN) y confirmado con
       el botón "probar URL" del panel, o con una notificación real
       recibida — sección 4.
+- [ ] `/checkout/ipn` registrado igual que `/izipay/ipn` (TEST y
+      PRODUCCIÓN) — sección 5.1, aunque `ipnTargetUrl` ya lo manda por su
+      cuenta.

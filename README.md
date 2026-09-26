@@ -1,59 +1,66 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Enlix
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sitio web corporativo + tienda online de Enlix (Lima, Perú). Laravel 12,
+renderizado en servidor con Blade, sin SPA ni API pública.
 
-## About Laravel
+- **Institucional**: inicio, nosotros, contacto, catálogo de servicios de TI.
+- **Tienda**: catálogo de productos (BD), carrito por cookie de invitado,
+  checkout con pago por [Izipay](https://www.izipay.pe/) (cliente Krypton/PopIn).
+- **Admin** (`/admin`): login, gestión de productos (categoría, marca, SKU,
+  stock, imágenes), listado de pedidos, dashboard de pagos.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Para el detalle completo de arquitectura, base de datos, rutas y flujos,
+ver **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)**. Para certificar/probar la
+integración con Izipay, ver **[IZIPAY_TESTING.md](IZIPAY_TESTING.md)**.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Levantar el proyecto en local
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite   # DB_CONNECTION=sqlite por defecto
+php artisan migrate
+php artisan db:seed              # categorías, marcas y el producto de prueba
+php artisan storage:link         # necesario para las imágenes de producto
+```
 
-## Learning Laravel
+Completa en `.env` las credenciales de Izipay en modo **TEST** (ver
+`IZIPAY_TESTING.md`, sección 2.1) antes de probar el checkout.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Levantar el servidor:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan serve
+```
 
-## Laravel Sponsors
+## Tests
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+php artisan test
+```
 
-### Premium Partners
+PHPUnit (no Pest), `RefreshDatabase` contra SQLite en memoria. Cubre carrito,
+stock, checkout/pedidos, el flujo viejo de pagos, panel admin y seguridad
+(rate limiting, proxies confiables).
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Frontend
 
-## Contributing
+- Sitio público y admin CRUD de productos: Bootstrap 5 (CDN) + JS vanilla,
+  sin build step.
+- Dashboard admin (`/admin/dashboard`) y listado/detalle de pedidos:
+  Tailwind v4 (Vite) + Alpine.js (CDN). Para compilar sus assets:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+npm install
+npm run dev    # o npm run build para producción
+```
 
-## Code of Conduct
+## Despliegue (cPanel)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+No hay CI/CD automatizado. El flujo manual es: `git pull` en el servidor,
+`composer install --no-dev --optimize-autoloader`, `php artisan migrate --force`,
+`php artisan view:clear` (o `config:cache`/`route:cache` si aplica), y
+`php artisan storage:link` la primera vez. El cron de cPanel debe correr
+`php artisan schedule:run` cada minuto (concilia pagos, expira pendientes y
+libera reservas de stock abandonadas — ver `routes/console.php`).
