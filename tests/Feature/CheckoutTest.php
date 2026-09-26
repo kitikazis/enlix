@@ -571,4 +571,59 @@ class CheckoutTest extends TestCase
     {
         $this->get(route('terminos'))->assertOk();
     }
+
+    public function test_envio_gratis_por_defecto_no_cobra_nada(): void
+    {
+        config(['tienda.envio.modo' => 'gratis']);
+        $producto = $this->producto(precioCentimos: 10000);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente([
+                'metodo_entrega' => 'envio',
+                'direccion' => 'Av. Siempre Viva 123',
+                'distrito' => 'Miraflores',
+            ]));
+
+        $pedido = Pedido::sole();
+        $this->assertSame(0, $pedido->costo_envio_centimos);
+        $this->assertSame(10000, $pedido->total_centimos);
+    }
+
+    public function test_envio_con_tarifa_fija_se_suma_al_total(): void
+    {
+        config(['tienda.envio.modo' => 'fijo', 'tienda.envio.tarifa_fija_centimos' => 1500]);
+        $producto = $this->producto(precioCentimos: 10000);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente([
+                'metodo_entrega' => 'envio',
+                'direccion' => 'Av. Siempre Viva 123',
+                'distrito' => 'Miraflores',
+            ]));
+
+        $pedido = Pedido::sole();
+        $this->assertSame(1500, $pedido->costo_envio_centimos);
+        $this->assertSame(11500, $pedido->total_centimos);
+
+        Http::assertSent(fn ($request) => $request['amount'] === 11500);
+    }
+
+    public function test_recojo_en_tienda_nunca_cobra_envio_aunque_el_modo_sea_fijo(): void
+    {
+        config(['tienda.envio.modo' => 'fijo', 'tienda.envio.tarifa_fija_centimos' => 1500]);
+        $producto = $this->producto(precioCentimos: 10000);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['metodo_entrega' => 'recojo']));
+
+        $pedido = Pedido::sole();
+        $this->assertSame(0, $pedido->costo_envio_centimos);
+        $this->assertSame(10000, $pedido->total_centimos);
+    }
 }

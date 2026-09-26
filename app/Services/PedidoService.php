@@ -81,12 +81,12 @@ class PedidoService
                 $subtotal += $subtotalItem;
             }
 
-            // Costo de envío: sin lista de tarifas real todavía (ver nota en
-            // CheckoutController), queda en 0 aunque el cliente elija envío a
-            // domicilio - no se inventa una tarifa.
+            $costoEnvio = $this->costoEnvio($datosCliente['metodo_entrega']);
+
             $pedido->update([
                 'subtotal_centimos' => $subtotal,
-                'total_centimos' => $subtotal,
+                'costo_envio_centimos' => $costoEnvio,
+                'total_centimos' => $subtotal + $costoEnvio,
             ]);
 
             return $pedido->fresh('items');
@@ -135,6 +135,24 @@ class PedidoService
 
             return true;
         });
+    }
+
+    /**
+     * 'recojo' nunca cobra envío, sin importar el modo configurado. 'envio'
+     * cobra según config('tienda.envio.modo'): 'gratis' (por defecto, S/0)
+     * o 'fijo' (siempre envio.tarifa_fija_centimos, sin tarifario por zona
+     * todavía).
+     */
+    private function costoEnvio(string $metodoEntrega): int
+    {
+        if ($metodoEntrega !== 'envio') {
+            return 0;
+        }
+
+        return match (config('tienda.envio.modo', 'gratis')) {
+            'fijo' => (int) config('tienda.envio.tarifa_fija_centimos', 0),
+            default => 0,
+        };
     }
 
     private function generarCodigo(): string
