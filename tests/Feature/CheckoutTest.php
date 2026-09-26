@@ -6,12 +6,15 @@ namespace Tests\Feature;
 
 use App\Enums\EstadoPago;
 use App\Enums\MetodoPago;
+use App\Mail\PedidoPagadoAdmin;
+use App\Mail\PedidoPagadoCliente;
 use App\Models\Carrito;
 use App\Models\Pedido;
 use App\Models\Producto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
@@ -261,6 +264,108 @@ class CheckoutTest extends TestCase
         $producto->refresh();
         $this->assertSame(8, $producto->stock);
         $this->assertSame(1, Pedido::count());
+    }
+
+    public function test_el_ipn_envia_email_de_confirmacion_al_cliente(): void
+    {
+        Mail::fake();
+        $producto = $this->producto(stock: 5);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['email' => 'cliente@example.com']));
+
+        $pedido = Pedido::sole();
+        $answer = $this->krAnswer($pedido->codigo, $pedido->total_centimos);
+        $firma = $this->firmar($answer, 'test-password-secreta');
+
+        $this->postJson(route('checkout.ipn'), [
+            'kr-answer' => $firma['kr-answer'],
+            'kr-hash' => $firma['kr-hash'],
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'password',
+        ]);
+
+        Mail::assertQueued(PedidoPagadoCliente::class, fn ($mail) => $mail->pedido->id === $pedido->id
+            && $mail->hasTo('cliente@example.com'));
+    }
+
+    public function test_el_ipn_envia_email_al_admin_si_esta_configurado(): void
+    {
+        config(['tienda.admin_email' => 'admin@enlix.pe']);
+        Mail::fake();
+        $producto = $this->producto(stock: 5);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente());
+
+        $pedido = Pedido::sole();
+        $answer = $this->krAnswer($pedido->codigo, $pedido->total_centimos);
+        $firma = $this->firmar($answer, 'test-password-secreta');
+
+        $this->postJson(route('checkout.ipn'), [
+            'kr-answer' => $firma['kr-answer'],
+            'kr-hash' => $firma['kr-hash'],
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'password',
+        ]);
+
+        Mail::assertQueued(PedidoPagadoAdmin::class, fn ($mail) => $mail->hasTo('admin@enlix.pe'));
+    }
+
+    public function test_no_envia_email_al_admin_si_no_esta_configurado(): void
+    {
+        config(['tienda.admin_email' => null]);
+        Mail::fake();
+        $producto = $this->producto(stock: 5);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente());
+
+        $pedido = Pedido::sole();
+        $answer = $this->krAnswer($pedido->codigo, $pedido->total_centimos);
+        $firma = $this->firmar($answer, 'test-password-secreta');
+
+        $this->postJson(route('checkout.ipn'), [
+            'kr-answer' => $firma['kr-answer'],
+            'kr-hash' => $firma['kr-hash'],
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'password',
+        ]);
+
+        Mail::assertNotQueued(PedidoPagadoAdmin::class);
+    }
+
+    public function test_ipn_repetido_no_reenvia_el_email_de_confirmacion(): void
+    {
+        Mail::fake();
+        $producto = $this->producto(stock: 5);
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente());
+
+        $pedido = Pedido::sole();
+        $answer = $this->krAnswer($pedido->codigo, $pedido->total_centimos);
+        $firma = $this->firmar($answer, 'test-password-secreta');
+        $payload = [
+            'kr-answer' => $firma['kr-answer'],
+            'kr-hash' => $firma['kr-hash'],
+            'kr-hash-algorithm' => 'sha256_hmac',
+            'kr-hash-key' => 'password',
+        ];
+
+        $this->postJson(route('checkout.ipn'), $payload);
+        $this->postJson(route('checkout.ipn'), $payload);
+        $this->postJson(route('checkout.ipn'), $payload);
+
+        Mail::assertQueuedCount(1);
     }
 
     public function test_el_retorno_del_navegador_nunca_marca_pagado(): void

@@ -7,9 +7,12 @@ namespace App\Services;
 use App\Enums\EstadoEnvio;
 use App\Enums\EstadoPago;
 use App\Enums\MetodoPago;
+use App\Mail\PedidoPagadoAdmin;
+use App\Mail\PedidoPagadoCliente;
 use App\Models\Pedido;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Registra el resultado de un pago Izipay de un pedido (kr-answer ya
@@ -175,10 +178,29 @@ class PedidoPagoService
 
         if ($estado === EstadoPago::Pagado && $estadoAnterior !== EstadoPago::Pagado) {
             $this->moverStock($pedido, fn ($producto, $cantidad) => $this->stock->confirmar($producto, $cantidad, $pedido->codigo));
+            $this->enviarEmailsDeConfirmacion($pedido);
         }
 
         if (in_array($estado, self::ESTADOS_QUE_LIBERAN_STOCK, true)) {
             $this->moverStock($pedido, fn ($producto, $cantidad) => $this->stock->liberar($producto, $cantidad, $pedido->codigo));
+        }
+    }
+
+    /**
+     * Se llama solo desde el bloque que ya garantiza "primera vez que este
+     * pedido pasa a pagado" (ver aplicarEstado) - un estado final nunca se
+     * vuelve a tocar, así que esto corre como máximo una vez por pedido.
+     */
+    private function enviarEmailsDeConfirmacion(Pedido $pedido): void
+    {
+        $pedido->loadMissing('items');
+
+        Mail::to($pedido->email)->queue(new PedidoPagadoCliente($pedido));
+
+        $adminEmail = config('tienda.admin_email');
+
+        if (! empty($adminEmail)) {
+            Mail::to($adminEmail)->queue(new PedidoPagadoAdmin($pedido));
         }
     }
 
