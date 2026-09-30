@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Categoria;
-use App\Models\ImagenProducto;
-use App\Models\Marca;
 use App\Models\Producto;
 use App\Models\User;
 use App\Support\Producto as CatalogoProducto;
@@ -20,6 +18,27 @@ class AdminProductosTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function categoria(): Categoria
+    {
+        return Categoria::create(['nombre' => 'Tarjetas gráficas', 'slug' => 'tarjetas-graficas-'.uniqid()]);
+    }
+
+    /** Payload válido completo para el modal; los tests solo pisan lo que les importa. */
+    private function payload(array $overrides = []): array
+    {
+        return array_merge([
+            'categoria_id' => $this->categoria()->id,
+            'referencia' => 'REF-'.uniqid(),
+            'nombre' => 'Producto de prueba',
+            'descripcion' => '<p>Descripción de prueba.</p>',
+            'especificaciones' => json_encode([]),
+            'precio' => '149.90',
+            'stock' => 5,
+            'activo' => '1',
+            'imagen' => UploadedFile::fake()->image('foto.jpg'),
+        ], $overrides);
+    }
+
     public function test_invitado_es_redirigido_a_login(): void
     {
         $this->get(route('admin.productos.index'))->assertRedirect('/admin/login');
@@ -28,11 +47,17 @@ class AdminProductosTest extends TestCase
     public function test_las_rutas_de_productos_exigen_auth_de_forma_incondicional(): void
     {
         // Aqui se edita el precio real del checkout: no debe existir ningun
-        // camino que las deje sin autenticacion (dashboard y productos
-        // exigen 'auth' siempre, sin bypass). Se verifica el middleware
-        // registrado en vez de manipular env() en caliente, porque las
-        // rutas ya quedan fijadas al arrancar la aplicacion.
-        foreach (['admin.productos.index', 'admin.productos.create', 'admin.productos.store'] as $nombre) {
+        // camino que las deje sin autenticacion.
+        $nombres = [
+            'admin.productos.index',
+            'admin.productos.store',
+            'admin.productos.show',
+            'admin.productos.update',
+            'admin.productos.alternar-activo',
+            'admin.productos.verificar-referencia',
+        ];
+
+        foreach ($nombres as $nombre) {
             $ruta = Route::getRoutes()->getByName($nombre);
             $this->assertContains('auth', $ruta->gatherMiddleware(), "La ruta {$nombre} debe exigir 'auth' siempre.");
         }
@@ -50,68 +75,107 @@ class AdminProductosTest extends TestCase
 
     public function test_crea_un_producto_convirtiendo_soles_a_centimos(): void
     {
+        Storage::fake('public');
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('admin.productos.store'), [
+        $response = $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
             'nombre' => 'Plan Nuevo',
-            'descripcion' => 'Descripción de prueba.',
             'precio' => '149.90',
-            'features' => "Feature uno\nFeature dos",
-            'orden' => 5,
-            'activo' => '1',
-        ]);
+        ]), ['Accept' => 'application/json']);
 
-        $response->assertRedirect(route('admin.productos.index'));
+        $response->assertCreated();
 
         $producto = Producto::where('nombre', 'Plan Nuevo')->first();
         $this->assertNotNull($producto);
         $this->assertSame(14990, $producto->precio_centimos);
         $this->assertSame('plan-nuevo', $producto->slug);
-        $this->assertSame(['Feature uno', 'Feature dos'], $producto->features);
         $this->assertTrue($producto->activo);
+        $this->assertNotNull($producto->imagen);
     }
 
     public function test_no_permite_precio_en_cero_o_negativo(): void
     {
+        Storage::fake('public');
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post(route('admin.productos.store'), [
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
             'nombre' => 'Plan Gratis',
-            'descripcion' => 'x',
             'precio' => '0',
-        ])->assertSessionHasErrors('precio');
+        ]), ['Accept' => 'application/json'])->assertJsonValidationErrors('precio');
 
         $this->assertDatabaseMissing('productos', ['nombre' => 'Plan Gratis']);
     }
 
+    public function test_exige_categoria_referencia_e_imagen(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('admin.productos.store'), [
+            'nombre' => 'Sin nada',
+            'descripcion' => 'x',
+            'precio' => '10.00',
+        ], ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['categoria_id', 'referencia', 'imagen']);
+    }
+
     public function test_actualiza_el_precio_de_un_producto_existente(): void
     {
+        Storage::fake('public');
         $user = User::factory()->create();
         $producto = Producto::where('slug', 'plan-web-basico')->first();
 
-        $this->actingAs($user)->put(route('admin.productos.update', $producto), [
-            'nombre' => $producto->nombre,
-            'descripcion' => $producto->descripcion,
-            'precio' => '75.00',
-            'orden' => $producto->orden,
-            'activo' => '1',
-        ])->assertRedirect(route('admin.productos.index'));
+        $response = $this->actingAs($user)->post(
+            route('admin.productos.update', $producto),
+            array_merge($this->payload([
+                'nombre' => $producto->nombre,
+                'referencia' => $producto->referencia,
+                'precio' => '75.00',
+            ]), ['_method' => 'PUT']),
+            ['Accept' => 'application/json']
+        );
 
+        $response->assertOk();
         $this->assertSame(7500, $producto->fresh()->precio_centimos);
+    }
+
+    public function test_actualizar_sin_nueva_imagen_conserva_la_existente(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $producto->update(['imagen' => 'productos/existente.webp']);
+
+        $payload = $this->payload([
+            'nombre' => $producto->nombre,
+            'referencia' => $producto->referencia,
+        ]);
+        unset($payload['imagen']);
+
+        $this->actingAs($user)->post(
+            route('admin.productos.update', $producto),
+            array_merge($payload, ['_method' => 'PUT']),
+            ['Accept' => 'application/json']
+        )->assertOk();
+
+        $this->assertSame('productos/existente.webp', $producto->fresh()->imagen);
     }
 
     public function test_el_checkout_usa_el_precio_actualizado_desde_el_admin(): void
     {
+        Storage::fake('public');
         $user = User::factory()->create();
         $producto = Producto::where('slug', 'plan-web-basico')->first();
 
-        $this->actingAs($user)->put(route('admin.productos.update', $producto), [
-            'nombre' => $producto->nombre,
-            'descripcion' => $producto->descripcion,
-            'precio' => '55.00',
-            'orden' => $producto->orden,
-            'activo' => '1',
-        ]);
+        $this->actingAs($user)->post(
+            route('admin.productos.update', $producto),
+            array_merge($this->payload([
+                'nombre' => $producto->nombre,
+                'referencia' => $producto->referencia,
+                'precio' => '55.00',
+            ]), ['_method' => 'PUT']),
+            ['Accept' => 'application/json']
+        );
 
         $item = CatalogoProducto::find('plan-web-basico');
         $this->assertSame(5500, $item['precio_centimos']);
@@ -160,78 +224,65 @@ class AdminProductosTest extends TestCase
         $this->assertArrayHasKey('plan-web-basico', CatalogoProducto::items());
     }
 
-    public function test_crea_un_producto_con_categoria_marca_sku_stock_y_especificaciones(): void
+    public function test_crea_un_producto_con_categoria_referencia_stock_y_especificaciones(): void
     {
+        Storage::fake('public');
         $user = User::factory()->create();
         $categoria = Categoria::create(['nombre' => 'Tarjetas gráficas', 'slug' => 'tarjetas-graficas']);
-        $marca = Marca::create(['nombre' => 'NVIDIA', 'slug' => 'nvidia']);
 
-        $this->actingAs($user)->post(route('admin.productos.store'), [
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
             'categoria_id' => $categoria->id,
-            'marca_id' => $marca->id,
-            'sku' => 'GPU-001',
+            'referencia' => 'GPU-001',
             'nombre' => 'RTX de prueba',
-            'descripcion' => 'x',
-            'especificaciones' => "Socket: AM5\nVRAM: 8GB",
-            'precio' => '10.00',
             'stock' => 5,
-        ])->assertRedirect(route('admin.productos.index'));
+            'especificaciones' => json_encode([
+                ['clave' => 'Socket', 'valor' => 'AM5'],
+                ['clave' => 'VRAM', 'valor' => '8GB'],
+            ]),
+        ]), ['Accept' => 'application/json'])->assertCreated();
 
-        $producto = Producto::where('sku', 'GPU-001')->first();
+        $producto = Producto::where('referencia', 'GPU-001')->first();
         $this->assertNotNull($producto);
         $this->assertSame($categoria->id, $producto->categoria_id);
-        $this->assertSame($marca->id, $producto->marca_id);
         $this->assertSame(5, $producto->stock);
-        $this->assertSame(['Socket' => 'AM5', 'VRAM' => '8GB'], $producto->especificaciones);
+        $this->assertSame([
+            ['clave' => 'Socket', 'valor' => 'AM5'],
+            ['clave' => 'VRAM', 'valor' => '8GB'],
+        ], $producto->especificaciones);
     }
 
-    public function test_no_permite_dos_productos_con_el_mismo_sku(): void
-    {
-        $user = User::factory()->create();
-        Producto::create([
-            'slug' => 'existente', 'nombre' => 'Existente', 'descripcion' => 'x',
-            'precio_centimos' => 1000, 'sku' => 'DUP-001', 'activo' => true,
-        ]);
-
-        $this->actingAs($user)->post(route('admin.productos.store'), [
-            'sku' => 'DUP-001',
-            'nombre' => 'Otro producto',
-            'descripcion' => 'x',
-            'precio' => '10.00',
-        ])->assertSessionHasErrors('sku');
-
-        $this->assertDatabaseMissing('productos', ['nombre' => 'Otro producto']);
-    }
-
-    public function test_dos_productos_pueden_tener_sku_vacio(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)->post(route('admin.productos.store'), [
-            'nombre' => 'Sin SKU uno', 'descripcion' => 'x', 'precio' => '10.00',
-        ])->assertRedirect(route('admin.productos.index'));
-
-        $this->actingAs($user)->post(route('admin.productos.store'), [
-            'nombre' => 'Sin SKU dos', 'descripcion' => 'x', 'precio' => '10.00',
-        ])->assertSessionDoesntHaveErrors('sku');
-    }
-
-    public function test_sube_imagenes_al_crear_un_producto(): void
+    public function test_descarta_filas_de_especificaciones_sin_clave(): void
     {
         Storage::fake('public');
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post(route('admin.productos.store'), [
-            'nombre' => 'Con imagenes', 'descripcion' => 'x', 'precio' => '10.00',
-            'imagenes' => [
-                UploadedFile::fake()->image('foto1.jpg'),
-                UploadedFile::fake()->image('foto2.png'),
-            ],
-        ])->assertRedirect(route('admin.productos.index'));
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'nombre' => 'Con specs a medias',
+            'especificaciones' => json_encode([
+                ['clave' => 'Socket', 'valor' => 'AM5'],
+                ['clave' => '  ', 'valor' => 'se descarta'],
+            ]),
+        ]), ['Accept' => 'application/json'])->assertCreated();
 
-        $producto = Producto::where('nombre', 'Con imagenes')->first();
-        $this->assertSame(2, $producto->imagenes()->count());
-        Storage::disk('public')->assertExists($producto->imagenes()->first()->ruta);
+        $producto = Producto::where('nombre', 'Con specs a medias')->first();
+        $this->assertSame([['clave' => 'Socket', 'valor' => 'AM5']], $producto->especificaciones);
+    }
+
+    public function test_no_permite_dos_productos_con_la_misma_referencia(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        Producto::create([
+            'slug' => 'existente', 'nombre' => 'Existente', 'descripcion' => 'x',
+            'precio_centimos' => 1000, 'referencia' => 'DUP-001', 'activo' => true,
+        ]);
+
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'referencia' => 'DUP-001',
+            'nombre' => 'Otro producto',
+        ]), ['Accept' => 'application/json'])->assertJsonValidationErrors('referencia');
+
+        $this->assertDatabaseMissing('productos', ['nombre' => 'Otro producto']);
     }
 
     public function test_rechaza_un_archivo_que_no_es_imagen(): void
@@ -239,60 +290,89 @@ class AdminProductosTest extends TestCase
         Storage::fake('public');
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post(route('admin.productos.store'), [
-            'nombre' => 'Con archivo malo', 'descripcion' => 'x', 'precio' => '10.00',
-            'imagenes' => [UploadedFile::fake()->create('virus.exe', 100)],
-        ])->assertSessionHasErrors('imagenes.0');
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'nombre' => 'Con archivo malo',
+            'imagen' => UploadedFile::fake()->create('virus.exe', 100),
+        ]), ['Accept' => 'application/json'])->assertJsonValidationErrors('imagen');
 
         $this->assertDatabaseMissing('productos', ['nombre' => 'Con archivo malo']);
     }
 
-    public function test_elimina_una_imagen_existente_al_editar(): void
+    public function test_procesa_la_imagen_a_webp_y_genera_miniatura(): void
     {
         Storage::fake('public');
         $user = User::factory()->create();
-        $producto = Producto::where('slug', 'plan-web-basico')->first();
-        $imagen = ImagenProducto::create([
-            'producto_id' => $producto->id,
-            'ruta' => UploadedFile::fake()->image('vieja.jpg')->store('productos', 'public'),
-            'orden' => 1,
-        ]);
 
-        $this->actingAs($user)->put(route('admin.productos.update', $producto), [
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'nombre' => 'Con imagen',
+            'imagen' => UploadedFile::fake()->image('foto.jpg', 2000, 1500),
+        ]), ['Accept' => 'application/json'])->assertCreated();
+
+        $producto = Producto::where('nombre', 'Con imagen')->first();
+        $this->assertNotNull($producto->imagen);
+        $this->assertStringEndsWith('.webp', $producto->imagen);
+        Storage::disk('public')->assertExists($producto->imagen);
+        Storage::disk('public')->assertExists(str_replace('productos/', 'productos/thumbs/', $producto->imagen));
+    }
+
+    public function test_borra_la_imagen_anterior_al_reemplazarla(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'nombre' => 'Con imagen a reemplazar',
+        ]), ['Accept' => 'application/json'])->assertCreated();
+
+        $producto = Producto::where('nombre', 'Con imagen a reemplazar')->first();
+        $rutaVieja = $producto->imagen;
+        $rutaMiniaturaVieja = str_replace('productos/', 'productos/thumbs/', $rutaVieja);
+
+        $payload = $this->payload([
             'nombre' => $producto->nombre,
-            'descripcion' => $producto->descripcion,
-            'precio' => '99.00',
-            'eliminar_imagenes' => [$imagen->id],
-        ])->assertRedirect(route('admin.productos.index'));
-
-        $this->assertDatabaseMissing('imagenes_producto', ['id' => $imagen->id]);
-        Storage::disk('public')->assertMissing($imagen->ruta);
-    }
-
-    public function test_renderiza_el_form_de_crear(): void
-    {
-        $user = User::factory()->create();
-        Categoria::create(['nombre' => 'Tarjetas gráficas', 'slug' => 'tarjetas-graficas']);
-
-        $this->actingAs($user)->get(route('admin.productos.create'))
-            ->assertOk()
-            ->assertSee('Tarjetas gráficas')
-            ->assertSee('SKU');
-    }
-
-    public function test_renderiza_el_form_de_editar_con_imagenes_existentes(): void
-    {
-        Storage::fake('public');
-        $user = User::factory()->create();
-        $producto = Producto::where('slug', 'plan-web-basico')->first();
-        ImagenProducto::create([
-            'producto_id' => $producto->id,
-            'ruta' => UploadedFile::fake()->image('actual.jpg')->store('productos', 'public'),
-            'orden' => 1,
+            'referencia' => $producto->referencia,
+            'imagen' => UploadedFile::fake()->image('nueva.jpg'),
         ]);
 
-        $this->actingAs($user)->get(route('admin.productos.edit', $producto))
+        $this->actingAs($user)->post(
+            route('admin.productos.update', $producto),
+            array_merge($payload, ['_method' => 'PUT']),
+            ['Accept' => 'application/json']
+        )->assertOk();
+
+        Storage::disk('public')->assertMissing($rutaVieja);
+        Storage::disk('public')->assertMissing($rutaMiniaturaVieja);
+        Storage::disk('public')->assertExists($producto->fresh()->imagen);
+    }
+
+    public function test_muestra_los_datos_de_un_producto_en_json_para_el_modal_de_edicion(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)->getJson(route('admin.productos.show', $producto))
             ->assertOk()
-            ->assertSee('Eliminar');
+            ->assertJson(['id' => $producto->id, 'nombre' => $producto->nombre, 'referencia' => $producto->referencia]);
+    }
+
+    public function test_verifica_disponibilidad_de_referencia(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)
+            ->getJson(route('admin.productos.verificar-referencia', ['referencia' => $producto->referencia]))
+            ->assertOk()
+            ->assertJson(['disponible' => false]);
+
+        $this->actingAs($user)
+            ->getJson(route('admin.productos.verificar-referencia', ['referencia' => $producto->referencia, 'producto_id' => $producto->id]))
+            ->assertOk()
+            ->assertJson(['disponible' => true]);
+
+        $this->actingAs($user)
+            ->getJson(route('admin.productos.verificar-referencia', ['referencia' => 'NUEVA-REF-XYZ']))
+            ->assertOk()
+            ->assertJson(['disponible' => true]);
     }
 }

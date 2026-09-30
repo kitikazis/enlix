@@ -71,7 +71,7 @@ class PedidoService
                 ItemPedido::create([
                     'pedido_id' => $pedido->id,
                     'producto_id' => $producto->id,
-                    'sku' => $producto->sku,
+                    'sku' => $producto->referencia,
                     'nombre' => $producto->nombre,
                     'precio_unitario_centimos' => $precioActual,
                     'cantidad' => $item->cantidad,

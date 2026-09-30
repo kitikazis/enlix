@@ -40,7 +40,7 @@ class CheckoutTest extends TestCase
             'slug' => 'gpu-checkout-test',
             'nombre' => 'GPU de prueba',
             'descripcion' => 'x',
-            'sku' => 'GPU-TEST-01',
+            'referencia' => 'GPU-TEST-01',
             'precio_centimos' => $precioCentimos,
             'stock' => $stock,
             'activo' => true,

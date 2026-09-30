@@ -31,7 +31,7 @@ class ProductoSeeder extends Seeder
         $categoriaPruebas = Categoria::where('slug', 'pruebas')->first();
 
         Producto::firstOrCreate(
-            ['sku' => 'TEST-001'],
+            ['referencia' => 'TEST-001'],
             [
                 'categoria_id' => $categoriaPruebas?->id,
                 'marca_id' => null,

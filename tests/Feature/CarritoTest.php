@@ -17,6 +17,7 @@ class CarritoTest extends TestCase
     {
         return Producto::create([
             'slug' => 'gpu-test',
+            'referencia' => 'GPU-TEST',
             'nombre' => 'GPU de prueba',
             'descripcion' => 'x',
             'precio_centimos' => 150000,

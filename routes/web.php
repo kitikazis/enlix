@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoriasController as AdminCategoriasController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\PedidosController as AdminPedidosController;
@@ -92,11 +93,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware('auth')->prefix('productos')->name('productos.')->group(function () {
         Route::get('/', [AdminProductosController::class, 'index'])->name('index');
-        Route::get('/crear', [AdminProductosController::class, 'create'])->name('create');
+        Route::get('/verificar-referencia', [AdminProductosController::class, 'verificarReferencia'])->name('verificar-referencia');
         Route::post('/', [AdminProductosController::class, 'store'])->name('store');
-        Route::get('/{producto}/editar', [AdminProductosController::class, 'edit'])->name('edit');
+        Route::get('/{producto}', [AdminProductosController::class, 'show'])->name('show');
         Route::put('/{producto}', [AdminProductosController::class, 'update'])->name('update');
         Route::patch('/{producto}/alternar-activo', [AdminProductosController::class, 'alternarActivo'])->name('alternar-activo');
+    });
+
+    Route::middleware('auth')->prefix('categorias')->name('categorias.')->group(function () {
+        Route::post('/', [AdminCategoriasController::class, 'store'])->name('store');
     });
 });
 

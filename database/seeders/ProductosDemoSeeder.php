@@ -25,7 +25,7 @@ class ProductosDemoSeeder extends Seeder
     private const DESCRIPCION = 'Este producto se creó como dato de prueba para validar el catálogo. '
         .'Reemplaza esta descripción, precio y stock con la información real desde el panel admin antes de activarlo.';
 
-    /** [nombre, sku, categoria_slug, marca_slug, precio_soles, stock] */
+    /** [nombre, referencia, categoria_slug, marca_slug, precio_soles, stock] */
     private const PRODUCTOS = [
         ['NVIDIA GeForce RTX 4060', 'GPU-001', 'tarjetas-graficas', 'nvidia', 1500.00, 10],
         ['NVIDIA GeForce RTX 4070', 'GPU-002', 'tarjetas-graficas', 'nvidia', 2500.00, 10],
@@ -51,9 +51,9 @@ class ProductosDemoSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (self::PRODUCTOS as [$nombre, $sku, $categoriaSlug, $marcaSlug, $precioSoles, $stock]) {
+        foreach (self::PRODUCTOS as [$nombre, $referencia, $categoriaSlug, $marcaSlug, $precioSoles, $stock]) {
             Producto::firstOrCreate(
-                ['sku' => $sku],
+                ['referencia' => $referencia],
                 [
                     'categoria_id' => Categoria::where('slug', $categoriaSlug)->value('id'),
                     'marca_id' => Marca::where('slug', $marcaSlug)->value('id'),
