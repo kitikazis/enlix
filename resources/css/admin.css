@@ -62,3 +62,26 @@
 [x-cloak] {
     display: none !important;
 }
+
+@keyframes enlix-loading-bar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+}
+
+/* Contenedores con scroll interno propio (tablas/listas dentro de una
+ * tarjeta): scrollbar delgada para que no compita visualmente con el
+ * contenido en pantallas donde el dashboard no hace scroll de página. */
+.dash-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+.dash-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.dash-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 9999px;
+}
