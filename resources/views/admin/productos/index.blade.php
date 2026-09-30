@@ -241,9 +241,12 @@
             </div>
         </div>
 
-        {{-- Modal anidado: crear categoría rápida --}}
+        {{-- Modal anidado: crear categoría rápida. El fondo va casi transparente
+             porque se abre sobre el modal de producto, que ya oscureció la
+             página con su propio bg-black/40 (sumar otro bg-black/50 dejaba
+             todo casi negro). --}}
         <div x-show="categoriaModalAbierto" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-black/50" @click="categoriaModalAbierto = false"></div>
+            <div class="absolute inset-0 bg-black/10" @click="categoriaModalAbierto = false"></div>
             <div class="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
                 <h3 class="mb-3 text-sm font-semibold text-text-primary">Nueva categoría</h3>
                 <input
