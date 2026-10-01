@@ -95,11 +95,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth')->prefix('productos')->name('productos.')->group(function () {
         Route::get('/', [AdminProductosController::class, 'index'])->name('index');
         Route::get('/verificar-referencia', [AdminProductosController::class, 'verificarReferencia'])->name('verificar-referencia');
+        // /papelera antes de /{producto}: si no, la ruta comodin la atraparia
+        // como si "papelera" fuera un {producto} (id/slug) y nunca llegaria aqui.
+        Route::get('/papelera', [AdminProductosController::class, 'papelera'])->name('papelera');
         Route::post('/', [AdminProductosController::class, 'store'])->name('store');
         Route::get('/{producto}', [AdminProductosController::class, 'show'])->name('show');
         Route::put('/{producto}', [AdminProductosController::class, 'update'])->name('update');
         Route::patch('/{producto}/alternar-activo', [AdminProductosController::class, 'alternarActivo'])->name('alternar-activo');
         Route::delete('/{producto}', [AdminProductosController::class, 'destroy'])->name('destroy');
+        // withTrashed(): el binding implicito de Laravel excluye soft-deleted
+        // por defecto: sin esto, restaurar un producto eliminado dar 404
+        // (el {producto} de la ruta nunca lo encontraria).
+        Route::patch('/{producto}/restaurar', [AdminProductosController::class, 'restaurar'])->name('restaurar')->withTrashed();
     });
 
     Route::middleware('auth')->prefix('categorias')->name('categorias.')->group(function () {

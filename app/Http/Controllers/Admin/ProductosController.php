@@ -39,6 +39,17 @@ class ProductosController extends Controller
         return view('admin.productos.index', [
             'productos' => $productos,
             'categorias' => Categoria::orderBy('nombre')->get(),
+            'totalEliminados' => Producto::onlyTrashed()->count(),
+        ]);
+    }
+
+    /** Papelera: productos eliminados (soft delete), para poder recuperarlos. */
+    public function papelera(): View
+    {
+        $productos = Producto::onlyTrashed()->with('categoria')->orderByDesc('deleted_at')->get();
+
+        return view('admin.productos.papelera', [
+            'productos' => $productos,
         ]);
     }
 
@@ -130,6 +141,20 @@ class ProductosController extends Controller
         CatalogoProducto::limpiarCache();
 
         return redirect()->route('admin.productos.index')->with('exito', 'Producto eliminado.');
+    }
+
+    /**
+     * Recupera un producto eliminado (deshace destroy()). Queda inactivo a
+     * proposito: el admin decide cuando volver a publicarlo con "Activar"
+     * desde el listado normal, en vez de que reaparezca ya visible en
+     * /productos sin que nadie lo haya revisado.
+     */
+    public function restaurar(Producto $producto): RedirectResponse
+    {
+        $producto->restore();
+        CatalogoProducto::limpiarCache();
+
+        return redirect()->route('admin.productos.papelera')->with('exito', 'Producto recuperado. Sigue inactivo hasta que lo actives desde el listado.');
     }
 
     /** Chequeo en vivo (fetch) mientras el admin escribe la Referencia en el modal. */

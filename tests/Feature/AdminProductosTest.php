@@ -56,6 +56,8 @@ class AdminProductosTest extends TestCase
             'admin.productos.alternar-activo',
             'admin.productos.verificar-referencia',
             'admin.productos.destroy',
+            'admin.productos.papelera',
+            'admin.productos.restaurar',
         ];
 
         foreach ($nombres as $nombre) {
@@ -281,6 +283,51 @@ class AdminProductosTest extends TestCase
             'phone_number' => '+51999999999',
             'identity_code' => '12345678',
         ])->assertStatus(404);
+    }
+
+    public function test_la_papelera_muestra_productos_eliminados(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $this->actingAs($user)->delete(route('admin.productos.destroy', $producto));
+
+        $this->actingAs($user)
+            ->get(route('admin.productos.papelera'))
+            ->assertOk()
+            ->assertSee($producto->nombre);
+    }
+
+    public function test_la_papelera_no_muestra_productos_activos(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)
+            ->get(route('admin.productos.papelera'))
+            ->assertDontSee($producto->nombre);
+    }
+
+    public function test_recuperar_devuelve_el_producto_al_listado_pero_inactivo(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $this->actingAs($user)->delete(route('admin.productos.destroy', $producto));
+
+        $this->actingAs($user)
+            ->patch(route('admin.productos.restaurar', $producto))
+            ->assertRedirect(route('admin.productos.papelera'));
+
+        $recuperado = Producto::find($producto->id);
+        $this->assertNotNull($recuperado, 'El producto debe volver a aparecer en consultas normales.');
+        $this->assertNull($recuperado->deleted_at);
+        // Inactivo a proposito: el admin decide cuando volver a publicarlo.
+        $this->assertFalse($recuperado->activo);
+        $this->assertArrayNotHasKey($producto->slug, CatalogoProducto::items());
+
+        $this->actingAs($user)
+            ->get(route('admin.productos.index'))
+            ->assertOk()
+            ->assertSee($producto->nombre);
     }
 
     public function test_un_producto_eliminado_sigue_apareciendo_en_pagos_historicos(): void

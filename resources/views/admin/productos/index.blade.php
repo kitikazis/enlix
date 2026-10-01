@@ -18,9 +18,17 @@
 
         <div class="flex shrink-0 flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <h1 class="text-2xl font-semibold text-text-primary md:text-[28px]">Productos</h1>
-            <button type="button" @click="abrirCrear()" class="inline-flex h-10 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover">
-                + Nuevo producto
-            </button>
+            <div class="flex items-center gap-3">
+                @if ($totalEliminados > 0)
+                    <a href="{{ route('admin.productos.papelera') }}" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-nav border border-border bg-card px-4 text-sm font-medium text-text-secondary hover:bg-page">
+                        Eliminados
+                        <span class="rounded-full bg-page px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">{{ $totalEliminados }}</span>
+                    </a>
+                @endif
+                <button type="button" @click="abrirCrear()" class="inline-flex h-10 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover">
+                    + Nuevo producto
+                </button>
+            </div>
         </div>
 
         @if (session('exito'))
