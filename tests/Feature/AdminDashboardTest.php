@@ -20,6 +20,30 @@ class AdminDashboardTest extends TestCase
         $this->get(route('admin.dashboard'))->assertRedirect('/admin/login');
     }
 
+    public function test_csp_permite_unsafe_eval_porque_la_pagina_usa_alpine(): void
+    {
+        // Sin esto, Alpine.js no puede evaluar x-model/x-show/@click (todas
+        // sus expresiones usan new Function()) y se rompe en silencio: los
+        // modales quedan siempre abiertos y los inputs no reciben texto.
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('admin.dashboard'));
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString('unsafe-eval', $csp);
+    }
+
+    public function test_csp_del_login_admin_no_tiene_unsafe_eval(): void
+    {
+        // admin.login no carga Alpine (es un formulario plano): no necesita
+        // el CSP mas permisivo.
+        $csp = $this->get(route('admin.login'))->headers->get('Content-Security-Policy');
+
+        $this->assertNotNull($csp);
+        $this->assertStringNotContainsString('unsafe-eval', $csp);
+    }
+
     private function crearPago(EstadoPago $estado, int $monto, string $producto = 'plan-web-basico'): Pago
     {
         return Pago::create([

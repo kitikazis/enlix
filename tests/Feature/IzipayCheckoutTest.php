@@ -374,6 +374,11 @@ class IzipayCheckoutTest extends TestCase
         preg_match("/'nonce-([a-zA-Z0-9]+)'/", $csp, $m);
         $this->assertNotEmpty($m, 'El CSP debe declarar un nonce para script-src.');
         $response->assertSee('nonce="'.$m[1].'"', false);
+
+        // 'unsafe-eval' es solo para las paginas admin que cargan Alpine.js
+        // (ver SecurityHeaders): el sitio publico/checkout no debe aflojar
+        // el CSP sin necesitarlo.
+        $this->assertStringNotContainsString('unsafe-eval', $csp);
     }
 
     public function test_comando_expira_pagos_pendientes_de_mas_de_24_horas(): void
