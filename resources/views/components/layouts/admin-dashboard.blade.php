@@ -13,17 +13,16 @@
     @stack('head')
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
     <script nonce="{{ $cspNonce }}">
-        // Alpine global: fade inferior en listas/tablas con scroll interno
-        // propio (ver .dash-scroll-fade en admin.css). Solo se activa cuando
-        // de verdad queda contenido por debajo del borde visible.
-        function scrollFade() {
-            return {
-                desbordado: false,
-                actualizarFade() {
-                    const el = this.$el;
-                    this.desbordado = el.scrollHeight - el.scrollTop - el.clientHeight > 4;
-                },
-            };
+        // Fade inferior en listas/tablas con scroll interno propio (ver
+        // .dash-scroll-fade en admin.css). Funcion global PLANA a proposito,
+        // no un componente Alpine (x-data): si fuera x-data, cualquier
+        // elemento interactivo adentro (ej. el boton "Editar" de la tabla
+        // de productos) quedaria en un scope anidado nuevo, y @click ahi
+        // dejaba de encontrar los metodos del x-data raiz de la pagina.
+        // Esto solo usa $el (magic de Alpine, no depende de ningun scope) y
+        // una funcion de window comun, asi que no crea ningun scope nuevo.
+        function actualizarScrollFade(el) {
+            el.classList.toggle('dash-scroll-fade', el.scrollHeight - el.scrollTop - el.clientHeight > 4);
         }
     </script>
 </head>

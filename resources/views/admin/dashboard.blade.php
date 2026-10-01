@@ -192,8 +192,7 @@
                 </div>
 
                 <ul
-                    x-data="scrollFade()" x-init="actualizarFade()" @scroll="actualizarFade()" @resize.window="actualizarFade()"
-                    :class="{ 'dash-scroll-fade': desbordado }"
+                    x-init="actualizarScrollFade($el)" @scroll="actualizarScrollFade($el)" @resize.window="actualizarScrollFade($el)"
                     class="dash-scroll divide-y divide-border md:min-h-0 md:flex-1 md:overflow-y-auto"
                 >
                     @forelse ($ultimosPagos as $pago)

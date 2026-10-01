@@ -10,8 +10,15 @@
         </div>
     @endif
 
+    {{--
+        Sin x-data aqui a propósito: si el contenido de adentro necesita
+        llamar a un método del x-data raíz de la página (ej. abrirEditar()
+        en la tabla de productos), un x-data anidado nuevo rompe esa
+        resolución de scope. actualizarScrollFade() es una función global
+        plana (ver admin-dashboard.blade.php), no crea ningún scope.
+    --}}
     <div
-        @if ($scroll) x-data="scrollFade()" x-init="actualizarFade()" @scroll="actualizarFade()" @resize.window="actualizarFade()" :class="{ 'dash-scroll-fade': desbordado }" @endif
+        @if ($scroll) x-init="actualizarScrollFade($el)" @scroll="actualizarScrollFade($el)" @resize.window="actualizarScrollFade($el)" @endif
         @class(['p-[clamp(0.875rem,1.5vh,1.25rem)]' => $padded, 'dash-scroll md:min-h-0 md:flex-1 md:overflow-y-auto' => $scroll])
     >
         {{ $slot }}
