@@ -1,8 +1,14 @@
 <x-layouts.admin-dashboard :titulo="'Productos - Enlix Admin'">
 
     @push('head')
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.6/quill.snow.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.6/quill.min.js"></script>
+        {{-- jsdelivr, no cdnjs: es el unico CDN de terceros que el CSP
+             (app/Http/Middleware/SecurityHeaders.php) ya permite en
+             script-src/style-src. cdnjs.cloudflare.com no esta en la lista
+             y el navegador bloqueaba silenciosamente el CSS y el JS de
+             Quill, dejando el editor (y el resto del modal, por el error
+             de Alpine al no existir `Quill`) roto. --}}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.snow.css">
+        <script src="https://cdn.jsdelivr.net/npm/quill@1.3.6/dist/quill.min.js"></script>
     @endpush
 
     <div
