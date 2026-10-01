@@ -44,6 +44,21 @@ class AdminDashboardTest extends TestCase
         $this->assertStringNotContainsString('unsafe-eval', $csp);
     }
 
+    public function test_el_script_inline_del_layout_lleva_el_nonce_del_csp(): void
+    {
+        // Sin nonce, el CSP bloquea el <script> inline entero (no solo
+        // eval()): scrollFade() quedaria sin definir y cualquier tarjeta
+        // con scroll (x-data="scrollFade()") rompe el scope de Alpine para
+        // todo lo que tenga adentro (ver admin-dashboard.blade.php).
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->get(route('admin.dashboard'));
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        preg_match("/'nonce-([a-zA-Z0-9]+)'/", $csp, $m);
+        $this->assertNotEmpty($m, 'El CSP debe declarar un nonce para script-src.');
+        $response->assertSee('<script nonce="'.$m[1].'">', false);
+    }
+
     private function crearPago(EstadoPago $estado, int $monto, string $producto = 'plan-web-basico'): Pago
     {
         return Pago::create([

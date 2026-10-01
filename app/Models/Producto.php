@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Mews\Purifier\Facades\Purifier;
@@ -18,9 +19,17 @@ use Mews\Purifier\Facades\Purifier;
  * El precio (precio_centimos) es la única fuente de verdad del monto a
  * cobrar: IzipayController::formToken() lo lee de aquí, nunca del
  * navegador, así nadie puede alterar el monto desde el cliente.
+ *
+ * SoftDeletes a propósito: "eliminar" en el admin no borra la fila (el
+ * historial de pedidos/pagos no depende de ella, pero items_pedido.producto_id
+ * sigue apuntando aqui con nullOnDelete por si acaso). Eloquent ya excluye
+ * los soft-deleted de todas las consultas normales (admin, catálogo
+ * público, dashboard) sin tocar nada mas.
  */
 class Producto extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'productos';
 
     /**

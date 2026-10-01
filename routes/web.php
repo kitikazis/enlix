@@ -99,6 +99,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/{producto}', [AdminProductosController::class, 'show'])->name('show');
         Route::put('/{producto}', [AdminProductosController::class, 'update'])->name('update');
         Route::patch('/{producto}/alternar-activo', [AdminProductosController::class, 'alternarActivo'])->name('alternar-activo');
+        Route::delete('/{producto}', [AdminProductosController::class, 'destroy'])->name('destroy');
     });
 
     Route::middleware('auth')->prefix('categorias')->name('categorias.')->group(function () {

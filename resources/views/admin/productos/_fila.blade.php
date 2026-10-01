@@ -34,5 +34,30 @@
                 {{ $producto->activo ? 'Desactivar' : 'Activar' }}
             </button>
         </form>
+        {{--
+            @submit, no onsubmit: el CSP del sitio no tiene 'unsafe-inline'
+            en script-src, asi que un atributo onsubmit nativo quedaria
+            bloqueado en silencio (el boton no haria nada). @submit de
+            Alpine si funciona porque pasa por new Function(), que ya esta
+            permitido para estas paginas (ver SecurityHeaders::$usaAlpineAdmin).
+            El mensaje se arma entero en PHP y se pasa UNA sola vez por @js:
+            concatenar el resultado de @js() dentro de otro string JS a mano
+            rompe la sintaxis si el nombre trae comillas.
+        --}}
+        @php
+            $mensajeEliminar = '¿Eliminar "'.$producto->nombre.'"? Desaparece del catálogo y del listado; no se puede deshacer desde aquí.';
+        @endphp
+        <form
+            method="POST"
+            action="{{ route('admin.productos.destroy', $producto) }}"
+            class="inline"
+            @submit="if (! confirm(@js($mensajeEliminar))) $event.preventDefault()"
+        >
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="ml-3 text-xs font-medium text-rechazado-text hover:underline">
+                Eliminar
+            </button>
+        </form>
     </td>
 </tr>

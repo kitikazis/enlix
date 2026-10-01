@@ -12,7 +12,7 @@
     @vite('resources/css/admin.css')
     @stack('head')
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
-    <script>
+    <script nonce="{{ $cspNonce }}">
         // Alpine global: fade inferior en listas/tablas con scroll interno
         // propio (ver .dash-scroll-fade en admin.css). Solo se activa cuando
         // de verdad queda contenido por debajo del borde visible.

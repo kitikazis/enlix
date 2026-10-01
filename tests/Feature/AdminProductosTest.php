@@ -55,6 +55,7 @@ class AdminProductosTest extends TestCase
             'admin.productos.update',
             'admin.productos.alternar-activo',
             'admin.productos.verificar-referencia',
+            'admin.productos.destroy',
         ];
 
         foreach ($nombres as $nombre) {
@@ -71,6 +72,27 @@ class AdminProductosTest extends TestCase
             ->get(route('admin.productos.index'))
             ->assertOk()
             ->assertSee('Plan Web Básico');
+    }
+
+    public function test_el_script_de_productosapp_lleva_el_nonce_del_csp(): void
+    {
+        // Sin nonce, el CSP bloquea TODO el <script> inline que define
+        // productosApp(): el modal queda "roto" (abrirEditar, toastMensaje,
+        // etc. salen "is not defined" en consola) aunque el HTML se vea bien.
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->get(route('admin.productos.index'));
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        preg_match("/'nonce-([a-zA-Z0-9]+)'/", $csp, $m);
+        $this->assertNotEmpty($m, 'El CSP debe declarar un nonce para script-src.');
+
+        // No solo que el nonce aparezca en la pagina (el layout ya trae el
+        // suyo propio): que sea justo el <script> de productosApp el que lo
+        // lleve.
+        $this->assertMatchesRegularExpression(
+            '/<script nonce="'.preg_quote($m[1], '/').'">\s*function productosApp/',
+            $response->getContent()
+        );
     }
 
     public function test_crea_un_producto_convirtiendo_soles_a_centimos(): void
@@ -222,6 +244,95 @@ class AdminProductosTest extends TestCase
 
         $this->assertTrue($producto->fresh()->activo);
         $this->assertArrayHasKey('plan-web-basico', CatalogoProducto::items());
+    }
+
+    public function test_eliminar_hace_soft_delete_y_lo_saca_del_catalogo_publico(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)
+            ->delete(route('admin.productos.destroy', $producto))
+            ->assertRedirect(route('admin.productos.index'));
+
+        // Soft delete: la fila sigue en la base de datos...
+        $this->assertDatabaseHas('productos', ['id' => $producto->id]);
+        $this->assertNotNull($producto->fresh()->deleted_at);
+        $this->assertFalse($producto->fresh()->activo);
+        // ...pero desaparece de las consultas normales (admin, catálogo).
+        $this->assertArrayNotHasKey('plan-web-basico', CatalogoProducto::items());
+        $this->assertNull(Producto::find($producto->id));
+    }
+
+    public function test_no_se_puede_iniciar_una_compra_de_un_producto_eliminado(): void
+    {
+        // Aunque "eliminar" no es lo mismo que "desactivar", alguien con el
+        // slug a mano no debe poder iniciar una compra nueva (ver
+        // ProductosController::destroy()).
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $this->actingAs($user)->delete(route('admin.productos.destroy', $producto));
+
+        $this->postJson(route('izipay.form-token'), [
+            'producto' => 'plan-web-basico',
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
+            'email' => 'juan@example.com',
+            'phone_number' => '+51999999999',
+            'identity_code' => '12345678',
+        ])->assertStatus(404);
+    }
+
+    public function test_un_producto_eliminado_sigue_apareciendo_en_pagos_historicos(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $nombreOriginal = $producto->nombre;
+
+        \App\Models\Pago::create([
+            'producto' => 'plan-web-basico',
+            'email' => 'historico@gmail.com',
+            'monto' => 9900,
+            'moneda' => 'PEN',
+            'izipay_order_id' => 'ENX-HIST-'.uniqid(),
+            'estado' => \App\Enums\EstadoPago::Pagado,
+        ]);
+
+        $this->actingAs($user)->delete(route('admin.productos.destroy', $producto));
+
+        $this->actingAs($user)
+            ->get(route('admin.pagos'))
+            ->assertOk()
+            ->assertSee($nombreOriginal);
+    }
+
+    public function test_eliminar_la_imagen_existente_la_borra_de_verdad(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)->post(route('admin.productos.update', $producto), array_merge(
+            $this->payload(['nombre' => $producto->nombre, 'referencia' => $producto->referencia]),
+            ['_method' => 'PUT']
+        ), ['Accept' => 'application/json'])->assertOk();
+
+        $rutaImagen = $producto->fresh()->imagen;
+        $this->assertNotNull($rutaImagen);
+        Storage::disk('public')->assertExists($rutaImagen);
+
+        $payload = $this->payload(['nombre' => $producto->nombre, 'referencia' => $producto->referencia]);
+        unset($payload['imagen']);
+        $payload['eliminar_imagen'] = '1';
+
+        $this->actingAs($user)->post(
+            route('admin.productos.update', $producto),
+            array_merge($payload, ['_method' => 'PUT']),
+            ['Accept' => 'application/json']
+        )->assertOk();
+
+        $this->assertNull($producto->fresh()->imagen);
+        Storage::disk('public')->assertMissing($rutaImagen);
     }
 
     public function test_crea_un_producto_con_categoria_referencia_stock_y_especificaciones(): void

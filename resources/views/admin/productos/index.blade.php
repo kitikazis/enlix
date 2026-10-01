@@ -169,7 +169,11 @@
                             </div>
                             <div class="mt-2 flex gap-3" x-show="imagenPreviewUrl">
                                 <button type="button" @click.stop="$refs.inputImagen.click()" class="text-xs font-medium text-accent hover:text-accent-hover">Cambiar</button>
-                                <button type="button" @click.stop="quitarImagenNueva()" class="text-xs font-medium text-text-secondary hover:text-text-primary">Quitar</button>
+                                <button
+                                    type="button" @click.stop="quitarImagen()"
+                                    class="text-xs font-medium text-rechazado-text hover:underline"
+                                    x-text="imagenArchivo ? 'Deshacer' : 'Eliminar imagen'"
+                                ></button>
                             </div>
                             <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-page" x-show="guardando && subiendoProgreso > 0">
                                 <div class="h-full bg-accent transition-all" :style="`width: ${subiendoProgreso}%`"></div>
@@ -278,7 +282,7 @@
     </div>
 
     @push('scripts')
-        <script>
+        <script nonce="{{ $cspNonce }}">
             function productosApp(categoriasIniciales) {
                 const rutaProductos = @js(route('admin.productos.index'));
                 const rutaVerificarReferencia = @js(route('admin.productos.verificar-referencia'));
@@ -310,6 +314,7 @@
                     imagenArchivo: null,
                     imagenPreviewUrl: null,
                     imagenExistenteUrl: null,
+                    eliminarImagenExistente: false,
 
                     referenciaEstado: null,
                     referenciaCheckTimer: null,
@@ -387,6 +392,7 @@
                         this.imagenArchivo = null;
                         this.imagenPreviewUrl = null;
                         this.imagenExistenteUrl = null;
+                        this.eliminarImagenExistente = false;
                         this.referenciaEstado = null;
                         if (this.quill) {
                             this.quill.setText('');
@@ -401,6 +407,7 @@
                         this.productoId = id;
                         this.slugTocado = true;
                         this.referenciaEstado = null;
+                        this.eliminarImagenExistente = false;
                         this.modalAbierto = true;
 
                         const respuesta = await fetch(`${rutaProductos}/${id}`, { headers: { Accept: 'application/json' } });
@@ -479,11 +486,24 @@
                         this.errores = resto;
                         this.imagenArchivo = archivo;
                         this.imagenPreviewUrl = URL.createObjectURL(archivo);
+                        this.eliminarImagenExistente = false;
                     },
 
-                    quitarImagenNueva() {
-                        this.imagenArchivo = null;
-                        this.imagenPreviewUrl = this.imagenExistenteUrl || null;
+                    /**
+                     * Con un archivo nuevo ya seleccionado, lo cancela y
+                     * vuelve a la imagen guardada. Sin archivo nuevo (se ve
+                     * la imagen guardada tal cual), la elimina de verdad: al
+                     * guardar, el backend borra el archivo y el producto
+                     * queda sin imagen.
+                     */
+                    quitarImagen() {
+                        if (this.imagenArchivo) {
+                            this.imagenArchivo = null;
+                            this.imagenPreviewUrl = this.imagenExistenteUrl || null;
+                            return;
+                        }
+                        this.imagenPreviewUrl = null;
+                        this.eliminarImagenExistente = true;
                     },
 
                     verificarReferencia() {
@@ -581,6 +601,7 @@
                         if (this.imagenArchivo) {
                             datos.append('imagen', this.imagenArchivo);
                         }
+                        datos.append('eliminar_imagen', this.eliminarImagenExistente ? '1' : '0');
 
                         const url = this.modoEdicion ? `${rutaProductos}/${this.productoId}` : rutaProductos;
                         if (this.modoEdicion) {

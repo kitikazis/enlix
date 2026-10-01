@@ -86,6 +86,9 @@ class ProductosController extends Controller
         if ($request->hasFile('imagen')) {
             $this->eliminarImagen($producto->imagen);
             $datos['imagen'] = $this->procesarImagen($request->file('imagen'));
+        } elseif ($request->boolean('eliminar_imagen') && $producto->imagen !== null) {
+            $this->eliminarImagen($producto->imagen);
+            $datos['imagen'] = null;
         }
 
         $producto->update($datos);
@@ -95,9 +98,8 @@ class ProductosController extends Controller
     }
 
     /**
-     * No se borra nunca un producto: pagos históricos guardan su slug como
-     * texto (sin llave foránea) y deben poder seguir mostrándose. Desactivar
-     * lo saca de /productos sin perder el historial.
+     * Desactivar saca el producto de /productos sin tocar nada mas (sigue
+     * en el listado admin, se puede reactivar). No confundir con destroy().
      */
     public function alternarActivo(Producto $producto): RedirectResponse
     {
@@ -107,6 +109,27 @@ class ProductosController extends Controller
         $mensaje = $producto->activo ? 'Producto activado.' : 'Producto desactivado.';
 
         return redirect()->route('admin.productos.index')->with('exito', $mensaje);
+    }
+
+    /**
+     * Soft delete (Producto usa SoftDeletes): desaparece del listado admin y
+     * del catálogo público, pero la fila sigue en la base de datos. No se
+     * borra nunca de verdad ni se tocan sus imágenes - items_pedido.producto_id
+     * ya es nullOnDelete pensando en esto, y cada línea de pedido guarda su
+     * propio snapshot de nombre/precio, así que el historial no depende de
+     * que el producto siga vivo.
+     */
+    public function destroy(Producto $producto): RedirectResponse
+    {
+        // activo=false tambien: find() (App\Support\Producto) sigue
+        // encontrando productos eliminados a proposito (ver su docblock),
+        // asi que sin esto alguien con el slug a mano podria iniciar una
+        // compra NUEVA de un producto ya "eliminado" via formToken().
+        $producto->update(['activo' => false]);
+        $producto->delete();
+        CatalogoProducto::limpiarCache();
+
+        return redirect()->route('admin.productos.index')->with('exito', 'Producto eliminado.');
     }
 
     /** Chequeo en vivo (fetch) mientras el admin escribe la Referencia en el modal. */

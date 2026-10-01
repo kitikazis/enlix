@@ -64,7 +64,9 @@ class DashboardController extends Controller
 
         [$desdeHoy, $hastaHoy] = $this->limitesDeRango('hoy');
 
-        $nombresProducto = Producto::pluck('nombre', 'slug');
+        // withTrashed(): un pago historico de un producto ya eliminado
+        // (soft delete) debe seguir mostrando su nombre, no el slug crudo.
+        $nombresProducto = Producto::withTrashed()->pluck('nombre', 'slug');
 
         $productos = Producto::orderBy('orden')->get()->map(function (Producto $producto) use ($excluirPrueba) {
             $base = fn () => Pago::where('producto', $producto->slug)
@@ -152,7 +154,7 @@ class DashboardController extends Controller
 
         return view('admin.pagos', [
             'pagos' => $pagos,
-            'nombresProducto' => Producto::pluck('nombre', 'slug'),
+            'nombresProducto' => Producto::withTrashed()->pluck('nombre', 'slug'),
             'estados' => EstadoPago::cases(),
             'filtros' => $filtros,
             'excluirPrueba' => $excluirPrueba,
@@ -169,7 +171,7 @@ class DashboardController extends Controller
             ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()))
             ->orderBy('created_at')
             ->get();
-        $nombresProducto = Producto::pluck('nombre', 'slug');
+        $nombresProducto = Producto::withTrashed()->pluck('nombre', 'slug');
         $nombreArchivo = 'pagos-'.$rango.'-'.CarbonImmutable::now(self::ZONA)->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($pagos, $nombresProducto) {

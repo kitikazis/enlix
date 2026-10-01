@@ -39,13 +39,14 @@ class Producto
 
     /**
      * Un producto por su slug (incluye el slug en el array), o null si no
-     * existe. A diferencia de items(), SÍ devuelve productos inactivos: un
-     * pago que ya estaba en curso cuando se desactivó el producto debe poder
-     * seguir validándose (ver PagoService::coincideConLaOrden).
+     * existe. A diferencia de items(), SÍ devuelve productos inactivos o
+     * eliminados (soft delete): un pago que ya estaba en curso cuando se
+     * desactivó/elimino el producto debe poder seguir validándose (ver
+     * PagoService::coincideConLaOrden).
      */
     public static function find(string $slug): ?array
     {
-        $producto = ProductoModel::where('slug', $slug)->first();
+        $producto = ProductoModel::withTrashed()->where('slug', $slug)->first();
 
         return $producto ? self::aArray($producto) : null;
     }
