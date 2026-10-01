@@ -1,4 +1,4 @@
-<x-layouts.admin-dashboard :titulo="'Productos - Enlix Admin'">
+<x-layouts.admin-dashboard :titulo="'Productos - Enlix Admin'" :sin-scroll="true">
 
     @push('head')
         {{-- jsdelivr, no cdnjs: es el unico CDN de terceros que el CSP
@@ -13,10 +13,10 @@
 
     <div
         x-data="productosApp(@js($categorias->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre])->all()))"
-        class="mx-auto flex max-w-6xl flex-col gap-6"
+        class="mx-auto flex w-full max-w-6xl flex-col gap-4 md:h-full md:min-h-0 md:gap-6"
     >
 
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div class="flex shrink-0 flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <h1 class="text-2xl font-semibold text-text-primary md:text-[28px]">Productos</h1>
             <button type="button" @click="abrirCrear()" class="inline-flex h-10 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover">
                 + Nuevo producto
@@ -24,12 +24,12 @@
         </div>
 
         @if (session('exito'))
-            <div class="rounded-nav bg-pagado-bg px-4 py-3 text-sm font-medium text-pagado-text">
+            <div class="shrink-0 rounded-nav bg-pagado-bg px-4 py-3 text-sm font-medium text-pagado-text">
                 {{ session('exito') }}
             </div>
         @endif
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
             <input
                 type="text"
                 x-model="busqueda"
@@ -45,18 +45,18 @@
             </select>
         </div>
 
-        <x-admin.card :padded="false">
+        <x-admin.card :padded="false" class="md:min-h-0 md:flex-1" scroll>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="border-b border-border text-xs text-text-caption">
-                            <th class="py-3 pl-5 pr-3 font-medium">Imagen</th>
-                            <th class="py-3 pr-3 font-medium">Producto</th>
-                            <th class="py-3 pr-3 font-medium">Referencia</th>
-                            <th class="py-3 pr-3 font-medium">Categoría</th>
-                            <th class="py-3 pr-3 font-medium">Especificaciones</th>
-                            <th class="py-3 pr-3 font-medium">Estado</th>
-                            <th class="py-3 pr-5 text-right font-medium"></th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pl-5 pr-3 font-medium">Imagen</th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Producto</th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Referencia</th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Categoría</th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Especificaciones</th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Estado</th>
+                            <th class="sticky top-0 z-10 bg-card py-3 pr-5 text-right font-medium"></th>
                         </tr>
                     </thead>
                     <tbody id="tabla-productos-cuerpo" class="divide-y divide-border">
@@ -326,17 +326,25 @@
                     quill: null,
 
                     init() {
-                        this.quill = new Quill(this.$refs.editor, {
-                            theme: 'snow',
-                            modules: {
-                                toolbar: [
-                                    ['bold', 'italic'],
-                                    [{ list: 'ordered' }, { list: 'bullet' }],
-                                    ['link'],
-                                    ['clean'],
-                                ],
-                            },
-                        });
+                        // Si Quill no cargo (CDN caido, bloqueador de
+                        // anuncios, etc.) esto NO debe tumbar el resto del
+                        // componente: guardar/editar/toast siguen
+                        // funcionando sin el editor de texto enriquecido.
+                        try {
+                            this.quill = new Quill(this.$refs.editor, {
+                                theme: 'snow',
+                                modules: {
+                                    toolbar: [
+                                        ['bold', 'italic'],
+                                        [{ list: 'ordered' }, { list: 'bullet' }],
+                                        ['link'],
+                                        ['clean'],
+                                    ],
+                                },
+                            });
+                        } catch (e) {
+                            console.error('No se pudo inicializar el editor de descripcion (Quill):', e);
+                        }
                     },
 
                     formVacio() {
