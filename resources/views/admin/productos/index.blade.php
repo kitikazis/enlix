@@ -311,6 +311,29 @@
                     especificaciones: ['especificaciones'],
                 };
 
+                // Funcion plana (no metodo del objeto): "form: this.formVacio()"
+                // de abajo se evalua MIENTRAS el objeto x-data todavia se esta
+                // construyendo, antes de que exista como tal - ahi "this" no es
+                // el componente (es undefined/window), asi que this.formVacio()
+                // reventaba con un TypeError en cuanto Alpine evaluaba
+                // x-data="productosApp(...)", dejando TODA la pagina sin datos
+                // (de ahi los "X is not defined" en cualquier parte, no solo en
+                // el formulario).
+                function formVacio() {
+                    return {
+                        categoria_id: '',
+                        referencia: '',
+                        nombre: '',
+                        slug: '',
+                        descripcion: '',
+                        precio: '',
+                        stock: 0,
+                        orden: 0,
+                        activo: true,
+                        destacado: false,
+                    };
+                }
+
                 return {
                     categorias: categoriasIniciales,
                     busqueda: '',
@@ -325,7 +348,7 @@
                     errores: {},
                     slugTocado: false,
 
-                    form: this.formVacio(),
+                    form: formVacio(),
                     especificaciones: [],
                     arrastrando: null,
 
@@ -379,21 +402,6 @@
                         }
                     },
 
-                    formVacio() {
-                        return {
-                            categoria_id: '',
-                            referencia: '',
-                            nombre: '',
-                            slug: '',
-                            descripcion: '',
-                            precio: '',
-                            stock: 0,
-                            orden: 0,
-                            activo: true,
-                            destacado: false,
-                        };
-                    },
-
                     csrfToken() {
                         return document.querySelector('meta[name="csrf-token"]').content;
                     },
@@ -414,7 +422,7 @@
                         this.errores = {};
                         this.tabActiva = 'general';
                         this.slugTocado = false;
-                        this.form = this.formVacio();
+                        this.form = formVacio();
                         this.especificaciones = [];
                         this.imagenArchivo = null;
                         this.imagenPreviewUrl = null;
