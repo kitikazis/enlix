@@ -17,8 +17,18 @@
     box-shadow: 0 12px 32px rgba(0, 0, 0, .08);
     transform: translateY(-3px);
   }
+  .prod-card-img {
+    width: calc(100% + 56px);
+    margin: -28px -28px 20px -28px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px 8px 0 0;
+    background: #f5f4f0;
+  }
   .prod-card-title { font-size: 20px; margin: 0 0 8px; color: var(--enlix-ink); }
   .prod-card-desc  { color: var(--enlix-muted); font-size: 14px; line-height: 1.6; margin: 0; }
+  .prod-card-desc p { margin: 0 0 0.5em; }
+  .prod-card-desc p:last-child { margin-bottom: 0; }
   .prod-card-list  { list-style: none; padding: 0; margin: 16px 0 20px; }
   .prod-card-list li {
     font-size: 14px; padding: 6px 0 6px 24px; position: relative; color: var(--enlix-ink);
@@ -46,8 +56,13 @@
       @foreach ($productos as $slug => $p)
         <div class="col-md-6 col-lg-4">
           <div class="prod-card">
+            <img src="{{ $p['imagen_url'] }}" alt="{{ $p['nombre'] }}" class="prod-card-img" loading="lazy">
             <h3 class="prod-card-title">{{ $p['nombre'] }}</h3>
-            <p class="prod-card-desc">{{ $p['descripcion'] }}</p>
+            {{-- descripcion ya pasa por HTMLPurifier al guardarse (ver
+                 Producto::descripcion() en el modelo, solo permite
+                 p/br/strong/b/em/i/u/ul/ol/li/a), por eso es seguro
+                 mostrarla como HTML en vez de texto escapado. --}}
+            <div class="prod-card-desc">{!! $p['descripcion'] !!}</div>
 
             @if (! empty($p['features']))
               <ul class="prod-card-list">

@@ -63,6 +63,7 @@ class Producto
             'slug' => $p->slug,
             'nombre' => $p->nombre,
             'descripcion' => $p->descripcion,
+            'imagen_url' => $p->imagen_url,
             'precio_centimos' => $p->precio_centimos,
             'features' => $p->features ?? [],
             'activo' => $p->activo,
