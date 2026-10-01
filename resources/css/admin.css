@@ -48,10 +48,22 @@
     --color-rechazado-text: #8e2a24;
     --color-rechazado-dot: #c2413a;
 
+    /* Genéricos reutilizados fuera de EstadoPago (ej. badge "Inactivo" de
+     * Producto en _fila.blade.php): no tocar, no son del estado de pago. */
     --color-anulado-bg: #ecedef;
     --color-anulado-text: #4b5160;
     --color-anulado-dot: #6b7280;
 
+    /* Estado de pago "Anulado": slate oscuro, token propio (no el genérico
+     * de arriba) para no afectar el badge "Inactivo" de Producto, que
+     * reutiliza --color-anulado-*. Antes era casi el mismo gris que
+     * Expirado y no se distinguían de un vistazo. */
+    --color-pago-anulado-bg: #384152;
+    --color-pago-anulado-text: #f1f3f7;
+    --color-pago-anulado-dot: #94a3b8;
+
+    /* Gris claro + borde punteado (ver EstadoPago::bordeClasses()) para que
+     * Expirado se distinga de Anulado sin depender solo del color. */
     --color-expirado-bg: #f1f1f2;
     --color-expirado-text: #5e6270;
     --color-expirado-dot: #a8adb7;
@@ -84,4 +96,12 @@
 .dash-scroll::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
     border-radius: 9999px;
+}
+
+/* Fade inferior: solo se activa (via Alpine, ver scrollFade() en
+ * dashboard.blade.php) cuando de verdad queda contenido por debajo, para
+ * nunca cortar una fila a la mitad sin avisar. */
+.dash-scroll-fade {
+    mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
 }

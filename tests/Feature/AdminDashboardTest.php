@@ -24,7 +24,9 @@ class AdminDashboardTest extends TestCase
     {
         return Pago::create([
             'producto' => $producto,
-            'email' => 'cliente@example.com',
+            // No @example.com: el dashboard excluye datos de prueba por
+            // defecto (Pago::esPrueba()) y estos pagos deben contar.
+            'email' => 'cliente@gmail.com',
             'monto' => $monto,
             'moneda' => 'PEN',
             'izipay_order_id' => 'ENX-DASH-'.uniqid(),
@@ -101,15 +103,15 @@ class AdminDashboardTest extends TestCase
     public function test_filtro_por_estado_solo_muestra_esos_pagos(): void
     {
         $user = User::factory()->create();
-        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'pagado@example.com']);
-        $this->crearPago(EstadoPago::Rechazado, 9900)->update(['email' => 'rechazado@example.com']);
+        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'pagado@gmail.com']);
+        $this->crearPago(EstadoPago::Rechazado, 9900)->update(['email' => 'rechazado@gmail.com']);
 
         $response = $this->actingAs($user)
             ->get(route('admin.dashboard', ['estado' => EstadoPago::Pagado->value]));
 
         $response->assertOk();
-        $response->assertSee('pagado@example.com');
-        $response->assertDontSee('rechazado@example.com');
+        $response->assertSee('pagado@gmail.com');
+        $response->assertDontSee('rechazado@gmail.com');
     }
 
     public function test_calcula_la_tasa_de_rechazo(): void
@@ -128,9 +130,9 @@ class AdminDashboardTest extends TestCase
 
     public function test_un_pago_fuera_del_rango_de_30_dias_no_cuenta_en_los_kpis(): void
     {
-        // La tabla completa de abajo no depende del rango (tiene su propio
-        // filtro), asi que el pago si aparece ahi; lo que no debe pasar es
-        // que ingresosRango (el KPI de arriba) lo cuente.
+        // El listado completo (/admin/pagos) no depende del rango del
+        // dashboard; lo que no debe pasar es que ingresosRango (el KPI de
+        // arriba) cuente un pago fuera de los ultimos 30 dias.
         $user = User::factory()->create();
         $viejo = $this->crearPago(EstadoPago::Pagado, 50000);
         $viejo->forceFill(['created_at' => now()->subDays(40)])->save();
@@ -176,14 +178,14 @@ class AdminDashboardTest extends TestCase
     public function test_exportar_csv_incluye_los_pagos_del_rango(): void
     {
         $user = User::factory()->create();
-        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'export@example.com']);
+        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'export@gmail.com']);
 
         $response = $this->actingAs($user)->get(route('admin.dashboard.exportar', ['rango' => '30d']));
 
         $response->assertOk();
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
         $contenido = $response->streamedContent();
-        $this->assertStringContainsString('export@example.com', $contenido);
+        $this->assertStringContainsString('export@gmail.com', $contenido);
         $this->assertStringContainsString('Plan Web Básico', $contenido);
     }
 

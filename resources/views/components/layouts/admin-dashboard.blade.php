@@ -12,13 +12,27 @@
     @vite('resources/css/admin.css')
     @stack('head')
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+    <script>
+        // Alpine global: fade inferior en listas/tablas con scroll interno
+        // propio (ver .dash-scroll-fade en admin.css). Solo se activa cuando
+        // de verdad queda contenido por debajo del borde visible.
+        function scrollFade() {
+            return {
+                desbordado: false,
+                actualizarFade() {
+                    const el = this.$el;
+                    this.desbordado = el.scrollHeight - el.scrollTop - el.clientHeight > 4;
+                },
+            };
+        }
+    </script>
 </head>
 <body class="h-full bg-page font-sans text-text-primary antialiased {{ ($sinScroll ?? false) ? 'overflow-hidden' : '' }}">
 
 @php
     $enlacesMenu = [
         ['url' => route('admin.dashboard'), 'activo' => request()->routeIs('admin.dashboard'), 'label' => 'Dashboard', 'icono' => 'dashboard'],
-        ['url' => route('admin.dashboard').'#pagos', 'activo' => false, 'label' => 'Pagos', 'badge' => $badgeAtencion ?? null, 'icono' => 'pagos'],
+        ['url' => route('admin.pagos'), 'activo' => request()->routeIs('admin.pagos'), 'label' => 'Pagos', 'badge' => $badgeAtencion ?? null, 'icono' => 'pagos'],
         ['url' => route('admin.pedidos.index'), 'activo' => request()->routeIs('admin.pedidos.*'), 'label' => 'Pedidos', 'icono' => 'pedidos'],
         ['url' => route('admin.productos.index'), 'activo' => request()->routeIs('admin.productos.*'), 'label' => 'Productos', 'icono' => 'productos'],
     ];

@@ -112,7 +112,9 @@ enum EstadoPago: string
             self::EnVerificacion => 'bg-verificacion-bg text-verificacion-text',
             self::Pagado => 'bg-pagado-bg text-pagado-text',
             self::Rechazado => 'bg-rechazado-bg text-rechazado-text',
-            self::Anulado => 'bg-anulado-bg text-anulado-text',
+            // Token propio (bg-pago-anulado-*, no bg-anulado-*): ese otro lo
+            // reutiliza el badge "Inactivo" de Producto y no debe cambiar.
+            self::Anulado => 'bg-pago-anulado-bg text-pago-anulado-text',
             self::Expirado => 'bg-expirado-bg text-expirado-text',
         };
     }
@@ -125,8 +127,38 @@ enum EstadoPago: string
             self::EnVerificacion => 'bg-verificacion-dot',
             self::Pagado => 'bg-pagado-dot',
             self::Rechazado => 'bg-rechazado-dot',
-            self::Anulado => 'bg-anulado-dot',
+            self::Anulado => 'bg-pago-anulado-dot',
             self::Expirado => 'bg-expirado-dot',
+        };
+    }
+
+    /**
+     * Borde del badge: Expirado y Anulado usan tonos de gris muy parecidos,
+     * así que Expirado lleva además un borde punteado para no depender solo
+     * del color (accesibilidad + daltonismo).
+     */
+    public function bordeClasses(): string
+    {
+        return match ($this) {
+            self::Expirado => 'border border-dashed border-expirado-dot',
+            default => '',
+        };
+    }
+
+    /**
+     * Estilo de la tarjeta de "Pagos por estado" cuando está seleccionada
+     * (filtro activo): tinte propio del estado, nunca un gris genérico -
+     * eso se leía como "deshabilitada" incluso para Pagado.
+     */
+    public function seleccionadoClasses(): string
+    {
+        return match ($this) {
+            self::Pendiente => 'border-pendiente-dot bg-pendiente-bg ring-1 ring-pendiente-dot',
+            self::EnVerificacion => 'border-verificacion-dot bg-verificacion-bg ring-1 ring-verificacion-dot',
+            self::Pagado => 'border-pagado-dot bg-pagado-bg ring-1 ring-pagado-dot',
+            self::Rechazado => 'border-rechazado-dot bg-rechazado-bg ring-1 ring-rechazado-dot',
+            self::Anulado => 'border-pago-anulado-dot bg-pago-anulado-bg ring-1 ring-pago-anulado-dot',
+            self::Expirado => 'border-expirado-dot bg-expirado-bg ring-1 ring-expirado-dot',
         };
     }
 

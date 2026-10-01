@@ -69,4 +69,14 @@ class Pago extends Model
 
         return mb_substr($usuario, 0, 2).'•••@'.$dominio;
     }
+
+    /**
+     * Tiempo relativo único para todo el panel admin ("hace 3 días"): un solo
+     * punto de cálculo evita que dos pantallas muestren un texto distinto
+     * para la misma fecha por usar diffForHumans() con parámetros distintos.
+     */
+    public function tiempoRelativo(): string
+    {
+        return 'hace '.$this->created_at->locale('es')->diffForHumans(null, true);
+    }
 }

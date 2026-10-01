@@ -9,21 +9,26 @@ use App\Http\Controllers\Controller;
 use App\Models\Pago;
 use App\Models\Producto;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Dashboard + listado de pagos en una sola pantalla (antes eran dos
- * paginas separadas). No expone ninguna accion de escritura sobre pagos:
- * el estado solo lo cambian IzipayController::validar()/ipn() (ver
- * PagoService).
+ * Dashboard de metricas + "/admin/pagos" (listado completo con filtros, ver
+ * pagos()). No expone ninguna accion de escritura sobre pagos: el estado
+ * solo lo cambian IzipayController::validar()/ipn() (ver PagoService).
  *
- * Dos filtros conviven aqui y son independientes: "rango" (Hoy/7
- * dias/30 dias/Mes) mueve las metricas y "Ultimos pagos"; el filtro de
- * la tabla completa (estado/desde/hasta) es el que ya existia, para
- * busquedas precisas sin depender del rango.
+ * Dos filtros conviven en el dashboard y son independientes: "rango" (Hoy/7
+ * dias/30 dias/Mes) mueve las metricas y "Ultimos pagos"; "estado" resalta
+ * una tarjeta de "Pagos por estado" y filtra "Ultimos pagos" sin moverse de
+ * la pagina. El filtro con fechas propias (desde/hasta) vive solo en
+ * /admin/pagos.
+ *
+ * "excluir_prueba" (activo por defecto) es el toggle global de datos de
+ * prueba: se aplica a todas las metricas y listados de ambas pantallas via
+ * Pago::scopeEsPrueba().
  */
 class DashboardController extends Controller
 {
@@ -37,14 +42,16 @@ class DashboardController extends Controller
     {
         $rango = $this->resolverRango($request);
         [$desde, $hasta] = $this->limitesDeRango($rango);
+        $excluirPrueba = $request->boolean('excluir_prueba', true);
 
-        $datosTabla = $request->validate([
+        $filtros = $request->validate([
             'estado' => ['nullable', Rule::enum(EstadoPago::class)],
-            'desde' => ['nullable', 'date'],
-            'hasta' => ['nullable', 'date'],
         ]);
+        $estadoFiltro = $filtros['estado'] ?? null;
 
-        $enRango = fn () => Pago::query()->whereBetween('created_at', [$desde, $hasta]);
+        $enRango = fn () => Pago::query()
+            ->whereBetween('created_at', [$desde, $hasta])
+            ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()));
 
         $porEstado = $enRango()
             ->selectRaw('estado, count(*) as total')
@@ -59,8 +66,9 @@ class DashboardController extends Controller
 
         $nombresProducto = Producto::pluck('nombre', 'slug');
 
-        $productos = Producto::orderBy('orden')->get()->map(function (Producto $producto) {
-            $base = fn () => Pago::where('producto', $producto->slug);
+        $productos = Producto::orderBy('orden')->get()->map(function (Producto $producto) use ($excluirPrueba) {
+            $base = fn () => Pago::where('producto', $producto->slug)
+                ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()));
 
             return (object) [
                 'producto' => $producto,
@@ -72,22 +80,20 @@ class DashboardController extends Controller
             ];
         });
 
-        $pagos = Pago::query()
-            ->when($datosTabla['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
-            ->when($datosTabla['desde'] ?? null, fn ($q, $desde) => $q->whereDate('created_at', '>=', $desde))
-            ->when($datosTabla['hasta'] ?? null, fn ($q, $hasta) => $q->whereDate('created_at', '<=', $hasta))
-            ->orderByDesc('created_at')
-            ->paginate(30)
-            ->withQueryString();
-
         return view('admin.dashboard', [
             'rango' => $rango,
             'fechaLarga' => CarbonImmutable::now(self::ZONA)->locale('es')->translatedFormat('l d \d\e F \d\e Y'),
+            'excluirPrueba' => $excluirPrueba,
+            'estadoFiltro' => $estadoFiltro,
 
             'ingresosRango' => (int) $enRango()->where('estado', EstadoPago::Pagado)->sum('monto'),
             'ingresosHoy' => (int) Pago::where('estado', EstadoPago::Pagado)
-                ->whereBetween('created_at', [$desdeHoy, $hastaHoy])->sum('monto'),
-            'ingresosTotal' => (int) Pago::where('estado', EstadoPago::Pagado)->sum('monto'),
+                ->whereBetween('created_at', [$desdeHoy, $hastaHoy])
+                ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()))
+                ->sum('monto'),
+            'ingresosTotal' => (int) Pago::where('estado', EstadoPago::Pagado)
+                ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()))
+                ->sum('monto'),
 
             'intentos' => $intentos,
             // avg() puede devolver string segun el driver de base de datos;
@@ -109,24 +115,47 @@ class DashboardController extends Controller
             'ultimosPruebaCount' => Pago::query()->latest('created_at')->limit(10)->get()
                 ->filter(fn (Pago $pago) => $pago->esPrueba())->count(),
 
-            // Cuando ya hay un filtro de estado activo (por ejemplo, clic en
-            // una fila de "Pagos por estado"), "Ultimos pagos" tambien lo
-            // respeta: si no, el resumen de arriba y la tabla de abajo
-            // mostrarian cosas distintas para el mismo filtro.
+            // Cuando ya hay un filtro de estado activo (clic en una tarjeta
+            // de "Pagos por estado"), "Ultimos pagos" tambien lo respeta.
             'ultimosPagos' => $enRango()
-                ->when($datosTabla['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
+                ->when($estadoFiltro, fn ($q, $estado) => $q->where('estado', $estado))
                 ->orderByDesc('created_at')
                 ->limit(10)
                 ->get(),
             'nombresProducto' => $nombresProducto,
 
             'productos' => $productos,
-            'maxIntentosRecientes' => max(1, (int) $productos->max('intentosRecientes')),
             'totalProductosActivos' => Producto::where('activo', true)->count(),
             'totalProductos' => Producto::count(),
+        ]);
+    }
 
+    /** "/admin/pagos": listado completo con filtros propios (estado/desde/hasta). */
+    public function pagos(Request $request): View
+    {
+        $excluirPrueba = $request->boolean('excluir_prueba', true);
+
+        $filtros = $request->validate([
+            'estado' => ['nullable', Rule::enum(EstadoPago::class)],
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date'],
+        ]);
+
+        $pagos = Pago::query()
+            ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()))
+            ->when($filtros['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
+            ->when($filtros['desde'] ?? null, fn ($q, $desde) => $q->whereDate('created_at', '>=', $desde))
+            ->when($filtros['hasta'] ?? null, fn ($q, $hasta) => $q->whereDate('created_at', '<=', $hasta))
+            ->orderByDesc('created_at')
+            ->paginate(30)
+            ->withQueryString();
+
+        return view('admin.pagos', [
             'pagos' => $pagos,
-            'filtros' => $datosTabla,
+            'nombresProducto' => Producto::pluck('nombre', 'slug'),
+            'estados' => EstadoPago::cases(),
+            'filtros' => $filtros,
+            'excluirPrueba' => $excluirPrueba,
         ]);
     }
 
@@ -134,8 +163,12 @@ class DashboardController extends Controller
     {
         $rango = $this->resolverRango($request);
         [$desde, $hasta] = $this->limitesDeRango($rango);
+        $excluirPrueba = $request->boolean('excluir_prueba', true);
 
-        $pagos = Pago::whereBetween('created_at', [$desde, $hasta])->orderBy('created_at')->get();
+        $pagos = Pago::whereBetween('created_at', [$desde, $hasta])
+            ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()))
+            ->orderBy('created_at')
+            ->get();
         $nombresProducto = Producto::pluck('nombre', 'slug');
         $nombreArchivo = 'pagos-'.$rango.'-'.CarbonImmutable::now(self::ZONA)->format('Y-m-d').'.csv';
 

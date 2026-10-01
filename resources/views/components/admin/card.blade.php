@@ -10,7 +10,10 @@
         </div>
     @endif
 
-    <div @class(['p-[clamp(0.875rem,1.5vh,1.25rem)]' => $padded, 'dash-scroll md:min-h-0 md:flex-1 md:overflow-y-auto' => $scroll])>
+    <div
+        @if ($scroll) x-data="scrollFade()" x-init="actualizarFade()" @scroll="actualizarFade()" @resize.window="actualizarFade()" :class="{ 'dash-scroll-fade': desbordado }" @endif
+        @class(['p-[clamp(0.875rem,1.5vh,1.25rem)]' => $padded, 'dash-scroll md:min-h-0 md:flex-1 md:overflow-y-auto' => $scroll])
+    >
         {{ $slot }}
     </div>
 </div>
