@@ -272,6 +272,24 @@
             </div>
         </div>
 
+        {{-- Confirmación (eliminar / activar / desactivar): reemplaza al confirm() nativo del navegador. --}}
+        <div x-show="confirmacion.abierta" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/40" @click="confirmacion.abierta = false"></div>
+            <div class="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
+                <h3 class="mb-2 text-sm font-semibold text-text-primary" x-text="confirmacion.titulo"></h3>
+                <p class="mb-4 text-sm text-text-secondary" x-text="confirmacion.mensaje"></p>
+                <div class="flex justify-end gap-3">
+                    <button type="button" @click="confirmacion.abierta = false" class="inline-flex h-9 items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page">Cancelar</button>
+                    <button
+                        type="button" @click="confirmarAccion()"
+                        class="inline-flex h-9 items-center justify-center rounded-nav px-3 text-sm font-medium text-white"
+                        :class="confirmacion.peligroso ? 'bg-danger-strong hover:opacity-90' : 'bg-accent hover:bg-accent-hover'"
+                        x-text="confirmacion.textoBoton"
+                    ></button>
+                </div>
+            </div>
+        </div>
+
         {{-- Lightbox de imagen --}}
         <div x-show="lightboxUrl" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" @click.self="lightboxUrl = null">
             <img :src="lightboxUrl" alt="" class="max-h-full max-w-full rounded-nav">
@@ -327,6 +345,15 @@
                     lightboxUrl: null,
                     toastMensaje: null,
                     toastError: false,
+
+                    confirmacion: {
+                        abierta: false,
+                        titulo: '',
+                        mensaje: '',
+                        textoBoton: '',
+                        peligroso: false,
+                        accion: null,
+                    },
 
                     quill: null,
 
@@ -533,6 +560,19 @@
                         this.categoriaNombre = '';
                         this.categoriaError = null;
                         this.categoriaModalAbierto = true;
+                    },
+
+                    /** Modal de confirmación compartido para Eliminar/Activar/Desactivar. */
+                    pedirConfirmacion({ titulo, mensaje, textoBoton, peligroso = false, accion }) {
+                        this.confirmacion = { abierta: true, titulo, mensaje, textoBoton, peligroso, accion };
+                    },
+
+                    confirmarAccion() {
+                        const accion = this.confirmacion.accion;
+                        this.confirmacion.abierta = false;
+                        if (accion) {
+                            accion();
+                        }
                     },
 
                     async crearCategoria() {

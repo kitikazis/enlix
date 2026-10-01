@@ -27,35 +27,48 @@
     </td>
     <td class="whitespace-nowrap py-2.5 pr-5 text-right">
         <button type="button" class="text-xs font-medium text-accent hover:text-accent-hover" @click="abrirEditar({{ $producto->id }})">Editar</button>
-        <form method="POST" action="{{ route('admin.productos.alternar-activo', $producto) }}" class="inline">
+
+        {{--
+            Los forms quedan igual (POST+@method spoof de siempre), pero ya
+            no se auto-envian: el boton es type="button" y pide confirmacion
+            en el modal compartido (confirmacion.*) antes de enviar el form
+            via $refs. Nada de onsubmit/confirm() nativo: el CSP del sitio
+            no tiene 'unsafe-inline' y lo bloquearia en silencio.
+        --}}
+        <form method="POST" action="{{ route('admin.productos.alternar-activo', $producto) }}" class="inline" x-ref="formActivar{{ $producto->id }}">
             @csrf
             @method('PATCH')
-            <button type="submit" class="ml-3 text-xs font-medium text-text-secondary hover:text-text-primary">
+            <button
+                type="button"
+                class="ml-3 text-xs font-medium text-text-secondary hover:text-text-primary"
+                @click="pedirConfirmacion({
+                    titulo: {{ Illuminate\Support\Js::from($producto->activo ? 'Desactivar producto' : 'Activar producto') }},
+                    mensaje: {{ Illuminate\Support\Js::from($producto->activo
+                        ? '¿Desactivar "'.$producto->nombre.'"? Deja de verse en /productos; se puede reactivar cuando quieras.'
+                        : '¿Activar "'.$producto->nombre.'"? Vuelve a verse en /productos.') }},
+                    textoBoton: {{ Illuminate\Support\Js::from($producto->activo ? 'Desactivar' : 'Activar') }},
+                    peligroso: {{ $producto->activo ? 'true' : 'false' }},
+                    accion: () => $refs.{{ 'formActivar'.$producto->id }}.submit(),
+                })"
+            >
                 {{ $producto->activo ? 'Desactivar' : 'Activar' }}
             </button>
         </form>
-        {{--
-            @submit, no onsubmit: el CSP del sitio no tiene 'unsafe-inline'
-            en script-src, asi que un atributo onsubmit nativo quedaria
-            bloqueado en silencio (el boton no haria nada). @submit de
-            Alpine si funciona porque pasa por new Function(), que ya esta
-            permitido para estas paginas (ver SecurityHeaders::$usaAlpineAdmin).
-            El mensaje se arma entero en PHP y se pasa UNA sola vez por @js:
-            concatenar el resultado de @js() dentro de otro string JS a mano
-            rompe la sintaxis si el nombre trae comillas.
-        --}}
-        @php
-            $mensajeEliminar = '¿Eliminar "'.$producto->nombre.'"? Desaparece del catálogo y del listado; no se puede deshacer desde aquí.';
-        @endphp
-        <form
-            method="POST"
-            action="{{ route('admin.productos.destroy', $producto) }}"
-            class="inline"
-            @submit="if (! confirm(@js($mensajeEliminar))) $event.preventDefault()"
-        >
+
+        <form method="POST" action="{{ route('admin.productos.destroy', $producto) }}" class="inline" x-ref="formEliminar{{ $producto->id }}">
             @csrf
             @method('DELETE')
-            <button type="submit" class="ml-3 text-xs font-medium text-rechazado-text hover:underline">
+            <button
+                type="button"
+                class="ml-3 text-xs font-medium text-rechazado-text hover:underline"
+                @click="pedirConfirmacion({
+                    titulo: 'Eliminar producto',
+                    mensaje: {{ Illuminate\Support\Js::from('¿Eliminar "'.$producto->nombre.'"? Desaparece del catálogo y del listado; no se puede deshacer desde aquí.') }},
+                    textoBoton: 'Eliminar',
+                    peligroso: true,
+                    accion: () => $refs.{{ 'formEliminar'.$producto->id }}.submit(),
+                })"
+            >
                 Eliminar
             </button>
         </form>
