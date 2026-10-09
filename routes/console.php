@@ -36,3 +36,20 @@ Schedule::command('pedidos:liberar-reservas-expiradas')
 Schedule::command('izipay:reconcile')
     ->hourly()
     ->withoutOverlapping();
+
+// --- Housekeeping de disco (hosting compartido, cuota de 1 GB) ---
+
+// Único worker de colas: no hay proceso persistente en este hosting, así
+// que cada minuto se levanta un worker que procesa lo pendiente (hoy solo
+// los 2 mailables ShouldQueue de confirmación de pedido pagado) y termina
+// solo en vez de quedarse escuchando (--stop-when-empty evita acumular
+// procesos PHP colgados en el servidor compartido).
+Schedule::command('queue:work', ['--stop-when-empty' => true, '--max-time' => 50])
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('queue:prune-failed', ['--hours' => 168])->daily();
+Schedule::command('queue:prune-batches', ['--hours' => 48])->daily();
+Schedule::command('auth:clear-resets')->daily();
+Schedule::command('model:prune')->daily();
+Schedule::command('app:limpiar-temporales')->daily();
