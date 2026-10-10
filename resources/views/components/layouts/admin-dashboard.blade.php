@@ -1,5 +1,11 @@
+@php
+    // Debe calcularse antes del <html> de abajo: el atributo data-modo se usa
+    // para recolorear todo el panel (ver admin.css) y necesita el valor
+    // disponible desde la primera etiqueta, no desde el <body>.
+    $modoPrueba = (bool) session('admin_modo_prueba', false);
+@endphp
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es" class="h-full" data-modo="{{ $modoPrueba ? 'prueba' : 'real' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,15 +48,27 @@
         'pedidos' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5V6a3.75 3.75 0 1 1 7.5 0v1.5m-9.75 0h12l.75 12.75a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5L4.5 7.5Z" />',
         'productos' => '<path stroke-linecap="round" stroke-linejoin="round" d="m3.75 8.25 8.25-4.5 8.25 4.5-8.25 4.5-8.25-4.5Zm0 0v7.5l8.25 4.5m0-12v12m0-12 8.25-4.5m-8.25 16.5 8.25-4.5v-7.5" />',
         'sitio' => '<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-9 3L20.25 3m0 0h-5.5m5.5 0v5.5" />',
+        'modo' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5.5 14h13l-3.591-3.591a2.25 2.25 0 0 1-.659-1.591V3.104M8.25 3h7.5M5.5 14l-1.72 1.72a1.5 1.5 0 0 0 1.06 2.561h14.32a1.5 1.5 0 0 0 1.06-2.56L18.5 14" />',
     ];
 @endphp
 
-<div x-data="{ sidebarAbierto: false, navegando: false }" @click.capture="if ($event.target.closest('a[href]') && !$event.ctrlKey && !$event.metaKey) navegando = true" class="flex h-full">
+<div x-data="{ sidebarAbierto: false, navegando: false, modoModalAbierto: false }" @click.capture="if ($event.target.closest('a[href]') && !$event.ctrlKey && !$event.metaKey) navegando = true" class="flex h-full flex-col">
 
     {{-- Barra de progreso de navegación (evita sensación de página "congelada" al cambiar de rango/filtro) --}}
     <div x-show="navegando" x-cloak x-transition.opacity class="pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden bg-accent/15">
         <div class="h-full w-1/3 bg-accent" style="animation: enlix-loading-bar 0.9s ease-in-out infinite;"></div>
     </div>
+
+    {{-- Aviso de modo de prueba: visible en todas las pantallas del admin, no solo el dashboard --}}
+    @if ($modoPrueba)
+        <div class="flex h-9 shrink-0 items-center justify-center gap-2 bg-pendiente-dot px-4 text-center text-xs font-semibold text-white">
+            <span aria-hidden="true">●</span>
+            Modo de prueba activo: los datos incluyen pagos ficticios, no reales.
+            <button type="button" @click="modoModalAbierto = true" class="underline underline-offset-2 hover:no-underline">Cambiar</button>
+        </div>
+    @endif
+
+    <div class="flex min-h-0 flex-1">
 
     {{-- Sidebar desktop: expandida desde xl (1280px), colapsada a iconos entre lg y xl (1024-1279px) --}}
     <aside class="hidden lg:flex lg:w-16 xl:w-60 shrink-0 flex-col bg-sidebar px-2 xl:px-4 py-5">
@@ -81,6 +99,17 @@
         </nav>
 
         <div class="mt-auto flex flex-col gap-3 border-t border-white/10 pt-4">
+            <button
+                type="button"
+                @click="modoModalAbierto = true"
+                title="Modo: {{ $modoPrueba ? 'Prueba' : 'Real' }} · clic para cambiar"
+                class="group relative flex h-11 items-center justify-center gap-3 rounded-nav px-3 text-sm font-medium text-sidebar-item hover:text-white xl:justify-start"
+            >
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">{!! $iconosMenu['modo'] !!}</svg>
+                <span class="hidden xl:inline">Modo: {{ $modoPrueba ? 'Prueba' : 'Real' }}</span>
+                <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full {{ $modoPrueba ? 'bg-pendiente-dot' : 'bg-pagado-dot' }} xl:hidden" aria-hidden="true"></span>
+                <span class="ml-auto hidden h-2 w-2 shrink-0 rounded-full {{ $modoPrueba ? 'bg-pendiente-dot' : 'bg-pagado-dot' }} xl:inline" aria-hidden="true"></span>
+            </button>
             <a href="{{ route('inicio') }}" title="Ver sitio" class="flex h-11 items-center justify-center gap-3 rounded-nav px-3 text-sm font-medium text-sidebar-item hover:text-white xl:justify-start">
                 <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">{!! $iconosMenu['sitio'] !!}</svg>
                 <span class="hidden xl:inline">Ver sitio</span>
@@ -136,12 +165,24 @@
             @endforeach
         </nav>
 
-        <form method="POST" action="{{ route('admin.logout') }}" class="mt-auto border-t border-white/10 pt-4">
-            @csrf
-            <button type="submit" class="flex h-11 w-full items-center rounded-nav px-3 text-left text-sm font-medium text-sidebar-item hover:text-white">
-                Cerrar sesión
+        <div class="mt-auto flex flex-col gap-1 border-t border-white/10 pt-4">
+            <button
+                type="button"
+                @click="modoModalAbierto = true; sidebarAbierto = false"
+                class="flex h-11 items-center gap-3 rounded-nav px-3 text-left text-sm font-medium text-sidebar-item hover:text-white"
+            >
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">{!! $iconosMenu['modo'] !!}</svg>
+                <span class="flex-1">Modo: {{ $modoPrueba ? 'Prueba' : 'Real' }}</span>
+                <span class="h-2 w-2 shrink-0 rounded-full {{ $modoPrueba ? 'bg-pendiente-dot' : 'bg-pagado-dot' }}" aria-hidden="true"></span>
             </button>
-        </form>
+
+            <form method="POST" action="{{ route('admin.logout') }}">
+                @csrf
+                <button type="submit" class="flex h-11 w-full items-center rounded-nav px-3 text-left text-sm font-medium text-sidebar-item hover:text-white">
+                    Cerrar sesión
+                </button>
+            </form>
+        </div>
     </aside>
 
     <div class="flex min-w-0 flex-1 flex-col">
@@ -164,6 +205,56 @@
         <main class="flex min-h-0 flex-1 flex-col {{ ($sinScroll ?? false) ? 'overflow-y-auto p-3 sm:p-4 md:overflow-hidden md:p-5 lg:p-6' : 'overflow-y-auto px-4 py-6 md:px-8 md:py-8' }}">
             {{ $slot }}
         </main>
+    </div>
+
+    </div>
+
+    {{-- Modal: modo del panel (real/prueba). Cada opcion es su propio POST
+         (igual que "Cerrar sesión" arriba): recarga la pagina entera, asi el
+         data-modo del <html> y todo lo que depende de $excluirPrueba quedan
+         en sync sin necesitar JS adicional. --}}
+    <div x-show="modoModalAbierto" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40" @click="modoModalAbierto = false"></div>
+        <div class="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
+            <h3 class="mb-1 text-sm font-semibold text-text-primary">Modo del panel</h3>
+            <p class="mb-4 text-sm text-text-secondary">
+                Elige qué datos quieres ver. El modo se recuerda en esta sesión y cambia el color de todo el panel para que no confundas pruebas con datos reales.
+            </p>
+
+            <form method="POST" action="{{ route('admin.modo.actualizar') }}" class="mb-3">
+                @csrf
+                <input type="hidden" name="modo" value="real">
+                <button type="submit" class="flex w-full items-start gap-3 rounded-nav border p-3 text-left {{ ! $modoPrueba ? 'border-accent bg-accent/10' : 'border-border hover:bg-page' }}">
+                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-pagado-dot" aria-hidden="true"></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-sm font-medium text-text-primary">Modo real</span>
+                        <span class="block text-xs text-text-caption">Solo pagos y métricas reales. Recomendado para el uso diario.</span>
+                    </span>
+                    @if (! $modoPrueba)
+                        <span class="shrink-0 self-center text-xs font-medium text-accent">Activo</span>
+                    @endif
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('admin.modo.actualizar') }}" class="mb-4">
+                @csrf
+                <input type="hidden" name="modo" value="prueba">
+                <button type="submit" class="flex w-full items-start gap-3 rounded-nav border p-3 text-left {{ $modoPrueba ? 'border-accent bg-accent/10' : 'border-border hover:bg-page' }}">
+                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-pendiente-dot" aria-hidden="true"></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-sm font-medium text-text-primary">Modo de prueba</span>
+                        <span class="block text-xs text-text-caption">Incluye pagos de prueba (@example.com o montos ≤ S/ 1.00) en todas las vistas y métricas. Útil para certificar el checkout.</span>
+                    </span>
+                    @if ($modoPrueba)
+                        <span class="shrink-0 self-center text-xs font-medium text-accent">Activo</span>
+                    @endif
+                </button>
+            </form>
+
+            <div class="flex justify-end">
+                <button type="button" @click="modoModalAbierto = false" class="inline-flex h-9 items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page">Cerrar</button>
+            </div>
+        </div>
     </div>
 </div>
 

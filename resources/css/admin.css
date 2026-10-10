@@ -75,6 +75,16 @@
     display: none !important;
 }
 
+/* Modo de prueba (ver ModoController y admin-dashboard.blade.php): recolorea
+ * todo el panel a ámbar para que sea imposible confundirlo de un vistazo con
+ * el modo real. Solo pisa las variables de color, la estructura no cambia. */
+html[data-modo='prueba'] {
+    --color-accent: #b45309;
+    --color-accent-hover: #92400e;
+    --color-sidebar: #2e1a05;
+    --color-sidebar-active: #4a2c0a;
+}
+
 @keyframes enlix-loading-bar {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(300%); }

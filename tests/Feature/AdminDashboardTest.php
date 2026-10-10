@@ -232,4 +232,47 @@ class AdminDashboardTest extends TestCase
     {
         $this->get(route('admin.dashboard.exportar'))->assertRedirect('/admin/login');
     }
+
+    public function test_sin_modo_de_prueba_en_sesion_el_panel_usa_el_tema_real(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('data-modo="real"', false);
+        $response->assertDontSee('Modo de prueba activo');
+    }
+
+    public function test_con_modo_de_prueba_en_sesion_el_panel_cambia_de_tema_y_excluye_prueba_se_apaga(): void
+    {
+        $user = User::factory()->create();
+        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'prueba@example.com']);
+
+        $response = $this->actingAs($user)
+            ->withSession(['admin_modo_prueba' => true])
+            ->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('data-modo="prueba"', false);
+        $response->assertSee('Modo de prueba activo');
+        // El modo de sesion es el default, pero el pago de prueba debe verse
+        // en "Ultimos pagos" (excluir_prueba sigue a la sesion, no a 'true' fijo).
+        $response->assertSee('pr•••@example.com');
+    }
+
+    public function test_un_query_explicito_sigue_pudiendo_pisar_el_modo_de_sesion(): void
+    {
+        // El enlace "Excluir" de la tarjeta "Requiere tu atención" fuerza
+        // excluir_prueba=1 para esta vista puntual sin tocar el modo global.
+        $user = User::factory()->create();
+        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => 'prueba@example.com']);
+
+        $response = $this->actingAs($user)
+            ->withSession(['admin_modo_prueba' => true])
+            ->get(route('admin.dashboard', ['excluir_prueba' => '1']));
+
+        $response->assertOk();
+        $response->assertDontSee('pr•••@example.com');
+    }
 }

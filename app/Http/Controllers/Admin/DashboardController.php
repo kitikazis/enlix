@@ -26,9 +26,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * la pagina. El filtro con fechas propias (desde/hasta) vive solo en
  * /admin/pagos.
  *
- * "excluir_prueba" (activo por defecto) es el toggle global de datos de
- * prueba: se aplica a todas las metricas y listados de ambas pantallas via
- * Pago::scopeEsPrueba().
+ * "excluir_prueba" (activo por defecto) es el toggle de datos de prueba: se
+ * aplica a todas las metricas y listados de ambas pantallas via
+ * Pago::scopeEsPrueba(). Su default ya no es fijo: sigue al "modo" del panel
+ * (sesion 'admin_modo_prueba', ver ModoController), y un query param
+ * explicito sigue pudiendo pisarlo para una vista puntual (ej. el enlace
+ * "Excluir" del dashboard) sin cambiar el modo global.
  */
 class DashboardController extends Controller
 {
@@ -42,7 +45,7 @@ class DashboardController extends Controller
     {
         $rango = $this->resolverRango($request);
         [$desde, $hasta] = $this->limitesDeRango($rango);
-        $excluirPrueba = $request->boolean('excluir_prueba', true);
+        $excluirPrueba = $request->boolean('excluir_prueba', ! $this->modoPruebaDeSesion($request));
 
         $filtros = $request->validate([
             'estado' => ['nullable', Rule::enum(EstadoPago::class)],
@@ -135,7 +138,7 @@ class DashboardController extends Controller
     /** "/admin/pagos": listado completo con filtros propios (estado/desde/hasta). */
     public function pagos(Request $request): View
     {
-        $excluirPrueba = $request->boolean('excluir_prueba', true);
+        $excluirPrueba = $request->boolean('excluir_prueba', ! $this->modoPruebaDeSesion($request));
 
         $filtros = $request->validate([
             'estado' => ['nullable', Rule::enum(EstadoPago::class)],
@@ -165,7 +168,7 @@ class DashboardController extends Controller
     {
         $rango = $this->resolverRango($request);
         [$desde, $hasta] = $this->limitesDeRango($rango);
-        $excluirPrueba = $request->boolean('excluir_prueba', true);
+        $excluirPrueba = $request->boolean('excluir_prueba', ! $this->modoPruebaDeSesion($request));
 
         $pagos = Pago::whereBetween('created_at', [$desde, $hasta])
             ->when($excluirPrueba, fn (Builder $q) => $q->whereNot(fn (Builder $q2) => $q2->esPrueba()))
@@ -195,6 +198,11 @@ class DashboardController extends Controller
 
             fclose($salida);
         }, $nombreArchivo, ['Content-Type' => 'text/csv']);
+    }
+
+    private function modoPruebaDeSesion(Request $request): bool
+    {
+        return (bool) $request->session()->get('admin_modo_prueba', false);
     }
 
     private function resolverRango(Request $request): string

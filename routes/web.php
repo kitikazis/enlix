@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoriasController as AdminCategoriasController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
+use App\Http\Controllers\Admin\ModoController as AdminModoController;
 use App\Http\Controllers\Admin\PedidosController as AdminPedidosController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
 use App\Http\Controllers\CarritoController;
@@ -85,6 +86,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/exportar', [AdminDashboardController::class, 'exportarCsv'])->name('dashboard.exportar');
         Route::get('/pagos', [AdminDashboardController::class, 'pagos'])->name('pagos');
+        // Modo del panel (real/prueba, ver ModoController): preferencia de
+        // sesion disponible desde cualquier pantalla del admin.
+        Route::post('/modo', [AdminModoController::class, 'actualizar'])->name('modo.actualizar');
     });
 
     Route::middleware('auth')->prefix('pedidos')->name('pedidos.')->group(function () {

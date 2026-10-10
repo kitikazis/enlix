@@ -29,17 +29,15 @@
                     @endforeach
                 </div>
 
-                <a
-                    href="{{ request()->fullUrlWithQuery(['excluir_prueba' => $excluirPrueba ? '0' : '1']) }}"
-                    aria-pressed="{{ $excluirPrueba ? 'true' : 'false' }}"
-                    title="Excluir pagos de prueba (@example.com o montos ≤ S/ 1.00) de los KPIs y listas"
-                    class="inline-flex h-11 items-center gap-2 rounded-nav border px-3 text-sm font-medium {{ $excluirPrueba ? 'border-accent bg-accent/10 text-accent' : 'border-border bg-card text-text-secondary hover:bg-page' }}"
+                <button
+                    type="button"
+                    @click="modoModalAbierto = true"
+                    title="Cambiar el modo del panel (real/prueba)"
+                    class="inline-flex h-11 items-center gap-2 rounded-nav border px-3 text-sm font-medium {{ $excluirPrueba ? 'border-border bg-card text-text-secondary hover:bg-page' : 'border-accent bg-accent/10 text-accent' }}"
                 >
-                    <span class="flex h-4 w-7 shrink-0 items-center rounded-full px-0.5 transition-colors {{ $excluirPrueba ? 'justify-end bg-accent' : 'justify-start bg-border' }}">
-                        <span class="h-3 w-3 rounded-full bg-white shadow"></span>
-                    </span>
-                    Excluir datos de prueba
-                </a>
+                    <span class="h-2 w-2 shrink-0 rounded-full {{ $excluirPrueba ? 'bg-pagado-dot' : 'bg-pendiente-dot' }}" aria-hidden="true"></span>
+                    Modo: {{ $excluirPrueba ? 'Real' : 'Prueba' }}
+                </button>
 
                 <a
                     href="{{ route('admin.dashboard.exportar', ['rango' => $rango, 'excluir_prueba' => $excluirPrueba ? '1' : '0']) }}"
