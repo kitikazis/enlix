@@ -120,6 +120,28 @@ class CarritoTest extends TestCase
         $r->assertSee('Agotado');
     }
 
+    public function test_productos_no_muestra_un_producto_inactivo(): void
+    {
+        $producto = $this->producto();
+        $producto->update(['activo' => false]);
+
+        $r = $this->get('/productos');
+
+        $r->assertOk();
+        $r->assertDontSee('GPU de prueba');
+    }
+
+    public function test_no_se_puede_agregar_al_carrito_un_producto_inactivo_por_peticion_directa(): void
+    {
+        $producto = $this->producto();
+        $producto->update(['activo' => false]);
+
+        $r = $this->postJson(route('carrito.items.store'), ['producto_id' => $producto->id, 'cantidad' => 1]);
+
+        $r->assertStatus(404);
+        $r->assertJson(['ok' => false]);
+    }
+
     public function test_carrito_vacio_renderiza(): void
     {
         $r = $this->get('/carrito');
