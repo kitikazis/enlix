@@ -65,6 +65,7 @@ class Producto
             'descripcion' => $p->descripcion,
             'imagen_url' => $p->imagen_url,
             'precio_centimos' => $p->precio_centimos,
+            'precio_comparacion_centimos' => $p->precio_comparacion_centimos,
             'features' => $p->features ?? [],
             'activo' => $p->activo,
             'stock_disponible' => $p->stockDisponible(),

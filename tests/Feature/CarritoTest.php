@@ -140,4 +140,41 @@ class CarritoTest extends TestCase
         $r->assertSee('GPU de prueba');
         $r->assertSee('S/ 3,000.00', false);
     }
+
+    public function test_el_modal_de_carrito_agregado_esta_disponible_en_productos(): void
+    {
+        // Un solo componente, incluido en el layout público: debe estar
+        // presente aunque todavía no se haya agregado nada (se abre con JS
+        // via el evento 'cart:added', nunca server-side).
+        $this->producto();
+
+        $r = $this->get('/productos');
+
+        $r->assertOk();
+        $r->assertSee('data-modal-carrito', false);
+        $r->assertSee('role="dialog"', false);
+        $r->assertSee('aria-labelledby="enlixModalCarritoTitulo"', false);
+    }
+
+    public function test_el_boton_agregar_expone_imagen_y_precio_anterior_para_el_modal(): void
+    {
+        $producto = $this->producto();
+        $producto->update(['precio_comparacion_centimos' => 199900]);
+
+        $r = $this->get('/productos');
+
+        $r->assertOk();
+        $r->assertSee('data-imagen-url="'.$producto->imagen_url.'"', false);
+        $r->assertSee('data-precio-comparacion-centimos="199900"', false);
+    }
+
+    public function test_el_boton_agregar_no_expone_precio_anterior_si_no_tiene(): void
+    {
+        $this->producto();
+
+        $r = $this->get('/productos');
+
+        $r->assertOk();
+        $r->assertDontSee('data-precio-comparacion-centimos', false);
+    }
 }

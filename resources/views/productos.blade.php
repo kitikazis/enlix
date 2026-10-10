@@ -79,7 +79,9 @@
             @if ($p['stock_disponible'] > 0)
               <button type="button"
                       class="btn btn-primary-enlix w-100 btn-agregar-carrito"
-                      data-producto-id="{{ $p['id'] }}">
+                      data-producto-id="{{ $p['id'] }}"
+                      data-imagen-url="{{ $p['imagen_url'] }}"
+                      @if ($p['precio_comparacion_centimos']) data-precio-comparacion-centimos="{{ $p['precio_comparacion_centimos'] }}" @endif>
                 Agregar al carrito
               </button>
             @else
@@ -119,6 +121,28 @@
         }
 
         actualizarBadgeCarrito(data.cantidad_total);
+
+        // El modal (ver initModalCarrito() en enlix.js) solo se abre si
+        // encontramos el item recien agregado en la respuesta del servidor
+        // - nunca antes de confirmar el OK.
+        var productoId = parseInt(btn.dataset.productoId, 10);
+        var item = data.items.find(function (i) { return i.producto_id === productoId; });
+        if (item) {
+          window.dispatchEvent(new CustomEvent('cart:added', {
+            detail: {
+              itemId: item.id,
+              nombre: item.nombre,
+              imagenUrl: btn.dataset.imagenUrl,
+              precioUnitarioCentimos: item.precio_unitario_centimos,
+              precioComparacionCentimos: btn.dataset.precioComparacionCentimos
+                ? parseInt(btn.dataset.precioComparacionCentimos, 10)
+                : null,
+              cantidad: item.cantidad,
+              stockDisponible: item.stock_disponible,
+              botonOrigen: btn,
+            },
+          }));
+        }
 
         // Feedback de "agregado" durante 1.5s, como pide el diseño.
         btn.textContent = '✓ Agregado';
