@@ -40,8 +40,12 @@ class CheckoutCrearRequest extends FormRequest
                     $fail('El RUC debe tener 11 dígitos.');
                 }
             }],
-            'tipo_comprobante' => ['required', 'in:boleta,factura'],
-            'razon_social' => ['required_if:tipo_comprobante,factura', 'nullable', 'string', 'max:150'],
+            // Factura se quitó del checkout: la emite el equipo de Enlix por
+            // fuera de la web, no el sitio. 'boleta' queda fijo (lo manda el
+            // JS), pero se sigue validando por si alguna integración vieja
+            // todavía posta 'factura'.
+            'tipo_comprobante' => ['required', 'in:boleta'],
+            'razon_social' => ['nullable', 'string', 'max:150'],
             'metodo_entrega' => ['required', 'in:envio,recojo'],
             'direccion' => ['required_if:metodo_entrega,envio', 'nullable', 'string', 'max:255'],
             'distrito' => ['required_if:metodo_entrega,envio', 'nullable', 'string', 'max:100'],

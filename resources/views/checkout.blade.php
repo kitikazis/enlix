@@ -84,15 +84,8 @@
           </div>
 
           <div class="checkout-seccion">
-            <h2>2. Comprobante</h2>
+            <h2>2. Documento</h2>
             <div class="row g-3">
-              <div class="col-sm-6">
-                <label class="form-label">Tipo de comprobante</label>
-                <select class="form-select" id="f_tipo_comprobante">
-                  <option value="boleta">Boleta</option>
-                  <option value="factura">Factura</option>
-                </select>
-              </div>
               <div class="col-sm-6">
                 <label class="form-label">Tipo de documento</label>
                 <select class="form-select" id="f_tipo_documento">
@@ -101,13 +94,9 @@
                   <option value="CE">Carné de extranjería</option>
                 </select>
               </div>
-              <div class="col-12">
+              <div class="col-sm-6">
                 <label class="form-label" id="label_numero_documento">Número de DNI</label>
                 <input type="text" class="form-control" id="f_numero_documento" maxlength="15">
-              </div>
-              <div class="col-12" id="grupo_razon_social" style="display: none;">
-                <label class="form-label">Razón social</label>
-                <input type="text" class="form-control" id="f_razon_social">
               </div>
             </div>
           </div>
@@ -213,20 +202,13 @@
   const btnContinuar = document.getElementById('btnContinuar');
   const btnContinuarTextoOriginal = btnContinuar.textContent;
 
-  // Mostrar/ocultar campos según tipo de comprobante y método de entrega.
-  const selTipoComprobante = document.getElementById('f_tipo_comprobante');
+  // Mostrar/ocultar campos según método de entrega. El comprobante ya no se
+  // pide aquí: siempre se emite boleta (ver CheckoutCrearRequest) y quien la
+  // emite es el equipo de Enlix por fuera del sistema, no la web.
   const selTipoDocumento = document.getElementById('f_tipo_documento');
-  const grupoRazonSocial = document.getElementById('grupo_razon_social');
   const labelNumeroDocumento = document.getElementById('label_numero_documento');
   const selMetodoEntrega = document.getElementById('f_metodo_entrega');
   const grupoEnvio = document.getElementById('grupo_envio');
-
-  function sincronizarComprobante() {
-    const esFactura = selTipoComprobante.value === 'factura';
-    grupoRazonSocial.style.display = esFactura ? '' : 'none';
-    selTipoDocumento.value = esFactura ? 'RUC' : 'DNI';
-    actualizarLabelDocumento();
-  }
 
   function actualizarLabelDocumento() {
     const etiquetas = { DNI: 'Número de DNI', RUC: 'Número de RUC', CE: 'Número de carné de extranjería' };
@@ -237,10 +219,9 @@
     grupoEnvio.style.display = selMetodoEntrega.value === 'envio' ? 'flex' : 'none';
   }
 
-  selTipoComprobante.addEventListener('change', sincronizarComprobante);
   selTipoDocumento.addEventListener('change', actualizarLabelDocumento);
   selMetodoEntrega.addEventListener('change', sincronizarEntrega);
-  sincronizarComprobante();
+  actualizarLabelDocumento();
   sincronizarEntrega();
 
   btnContinuar.addEventListener('click', function () {
@@ -251,8 +232,8 @@
       telefono: document.getElementById('f_telefono').value.trim(),
       tipo_documento: selTipoDocumento.value,
       numero_documento: document.getElementById('f_numero_documento').value.trim(),
-      tipo_comprobante: selTipoComprobante.value,
-      razon_social: document.getElementById('f_razon_social').value.trim(),
+      tipo_comprobante: 'boleta',
+      razon_social: '',
       metodo_entrega: selMetodoEntrega.value,
       direccion: document.getElementById('f_direccion').value.trim(),
       distrito: document.getElementById('f_distrito').value.trim(),
@@ -264,9 +245,6 @@
 
     if (!datos.first_name || !datos.last_name || !datos.email || !datos.telefono || !datos.numero_documento) {
       return mostrarErrorCheckout('Completa todos los campos obligatorios para continuar.');
-    }
-    if (datos.tipo_comprobante === 'factura' && !datos.razon_social) {
-      return mostrarErrorCheckout('La razón social es obligatoria para factura.');
     }
     if (datos.metodo_entrega === 'envio' && (!datos.direccion || !datos.distrito)) {
       return mostrarErrorCheckout('Completa la dirección y el distrito para el envío.');

@@ -564,6 +564,34 @@ class CheckoutTest extends TestCase
         $r->assertSee('Continuar al pago');
     }
 
+    public function test_checkout_ya_no_ofrece_factura_ni_razon_social(): void
+    {
+        // El negocio decidió emitir cualquier comprobante por fuera de la
+        // web; el checkout ya no debe mostrar esa opción.
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+
+        $r = $this->withCookie('carrito_session', $sessionId)->get('/checkout');
+
+        $r->assertOk();
+        $r->assertDontSee('Factura');
+        $r->assertDontSee('Razón social');
+        $r->assertDontSee('Tipo de comprobante');
+    }
+
+    public function test_crear_pedido_rechaza_tipo_comprobante_factura(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $r = $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['tipo_comprobante' => 'factura']));
+
+        $r->assertStatus(422)->assertJsonValidationErrors('tipo_comprobante');
+        Http::assertNothingSent();
+    }
+
     public function test_checkout_redirige_al_carrito_si_esta_vacio(): void
     {
         $r = $this->get('/checkout');
