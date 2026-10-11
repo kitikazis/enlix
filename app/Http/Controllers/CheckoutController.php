@@ -37,7 +37,7 @@ class CheckoutController extends Controller
 
     public function __construct(private readonly CarritoService $carritos) {}
 
-    public function index(): View|RedirectResponse
+    public function index(Request $request): View|RedirectResponse
     {
         $resumen = $this->carritos->resumen();
 
@@ -45,10 +45,25 @@ class CheckoutController extends Controller
             return redirect()->route('carrito.index');
         }
 
+        // 'items' (ids separados por coma) viene del checkbox de seleccion en
+        // /carrito: si viene, el resumen mostrado aqui (y lo que de verdad se
+        // cobra en crear()) se limita a esos items, no a todo el carrito.
+        $itemIds = $this->parseItemIds($request->query('items'));
+
+        if ($itemIds !== null) {
+            $resumen = $this->filtrarResumen($resumen, $itemIds);
+
+            if ($resumen['cantidad_total'] < 1) {
+                return redirect()->route('carrito.index')
+                    ->with('error', 'Selecciona al menos un producto para continuar.');
+            }
+        }
+
         return view('checkout', [
             'titulo' => 'Checkout - Enlix',
             'current' => 'productos',
             'resumen' => $resumen,
+            'items_seleccionados' => $itemIds,
             'izipay_public_key' => config('izipay.public_key'),
             'izipay_js_client_url' => config('izipay.js_client_url'),
         ]);
@@ -57,6 +72,7 @@ class CheckoutController extends Controller
     public function crear(CheckoutCrearRequest $request, PedidoService $pedidos, IzipayService $izipay): JsonResponse
     {
         $datos = $request->validated();
+        $itemIds = $this->parseItemIds($datos['items'] ?? null);
 
         $carrito = $this->carritos->actual();
 
@@ -78,7 +94,7 @@ class CheckoutController extends Controller
                 'distrito' => $datos['distrito'] ?? null,
                 'ciudad' => $datos['ciudad'] ?? null,
                 'referencia' => $datos['referencia'] ?? null,
-            ]);
+            ], $itemIds);
         } catch (\RuntimeException $e) {
             return response()->json(['ok' => false, 'mensaje' => $e->getMessage()], 422);
         }
@@ -105,8 +121,10 @@ class CheckoutController extends Controller
 
         // El carrito se vacía recién aquí (no dentro de PedidoService): si
         // Izipay hubiera fallado arriba, el cliente conserva su carrito
-        // intacto para reintentar sin tener que armarlo de nuevo.
-        $carrito->items()->delete();
+        // intacto para reintentar sin tener que armarlo de nuevo. Si vino con
+        // seleccion (checkbox de /carrito), solo se borran esos items - el
+        // resto queda para una compra posterior.
+        $carrito->items()->when($itemIds !== null, fn ($q) => $q->whereIn('id', $itemIds))->delete();
 
         return response()->json([
             'ok' => true,
@@ -218,5 +236,41 @@ class CheckoutController extends Controller
         $orderStatus = data_get($answer, 'orderStatus', 'DESCONOCIDO');
 
         return response('OK! OrderStatus is '.$orderStatus, 200);
+    }
+
+    /** "12,15,19" -> [12, 15, 19]. Vacio o ausente -> null (sin filtro, todo el carrito). */
+    private function parseItemIds(?string $items): ?array
+    {
+        if (! $items) {
+            return null;
+        }
+
+        $ids = array_filter(array_map('intval', explode(',', $items)));
+
+        return $ids === [] ? null : array_values($ids);
+    }
+
+    /**
+     * Recalcula 'items'/cantidad_total/subtotal_centimos/descuento_centimos
+     * del resumen ya resuelto, dejando solo los items cuyo id esta en
+     * $itemIds. No vuelve a tocar la base de datos.
+     */
+    private function filtrarResumen(array $resumen, array $itemIds): array
+    {
+        $items = $resumen['items']->whereIn('id', $itemIds)->values();
+        $disponibles = $items->where('disponible', true);
+
+        $descuentoCentimos = $disponibles->sum(function (array $item) {
+            $precioLista = $item['precio_comparacion_centimos'] ?? $item['precio_unitario_centimos'];
+
+            return max(0, $precioLista - $item['precio_unitario_centimos']) * $item['cantidad'];
+        });
+
+        return [
+            'cantidad_total' => (int) $disponibles->sum('cantidad'),
+            'subtotal_centimos' => (int) $disponibles->sum('subtotal_centimos'),
+            'descuento_centimos' => (int) $descuentoCentimos,
+            'items' => $items,
+        ];
     }
 }

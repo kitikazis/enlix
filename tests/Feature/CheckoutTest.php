@@ -147,6 +147,61 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Carrito::sole()->items()->count());
     }
 
+    public function test_crear_pedido_respeta_la_seleccion_de_items_y_deja_el_resto_en_el_carrito(): void
+    {
+        // Checkbox de selección en /carrito: si el cliente desmarca un
+        // producto y continúa, ese item no debe cobrarse ni salir del carrito.
+        $producto1 = $this->producto(stock: 10, precioCentimos: 150000);
+        $this->carritoConItem($producto1, 1);
+        $sessionId = Carrito::sole()->session_id;
+
+        $producto2 = Producto::create([
+            'slug' => 'gpu-checkout-test-2', 'nombre' => 'GPU de prueba 2', 'descripcion' => 'x',
+            'referencia' => 'GPU-TEST-02', 'precio_centimos' => 90000, 'stock' => 10, 'activo' => true,
+        ]);
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('carrito.items.store'), ['producto_id' => $producto2->id, 'cantidad' => 1]);
+
+        $itemSeleccionado = Carrito::sole()->items()->where('producto_id', $producto1->id)->sole();
+        $this->fakeFormToken();
+
+        $r = $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['items' => (string) $itemSeleccionado->id]));
+
+        $r->assertOk()->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('pedidos', ['total_centimos' => 150000]);
+        Http::assertSent(fn ($request) => $request['amount'] === 150000);
+
+        // El producto no seleccionado sigue en el carrito, sin reservar su stock.
+        $this->assertSame(1, Carrito::sole()->items()->count());
+        $this->assertSame(0, $producto2->fresh()->stock_reservado);
+    }
+
+    public function test_checkout_index_redirige_al_carrito_si_la_seleccion_queda_vacia(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+
+        $r = $this->withCookie('carrito_session', $sessionId)->get('/checkout?items=999999');
+
+        $r->assertRedirect(route('carrito.index'));
+    }
+
+    public function test_checkout_crear_bloquea_si_la_seleccion_queda_vacia(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $r = $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['items' => '999999']));
+
+        $r->assertStatus(422)->assertJson(['ok' => false]);
+        $this->assertDatabaseCount('pedidos', 0);
+        Http::assertNothingSent();
+    }
+
     public function test_crear_pedido_envia_ipn_target_url_absoluta_al_checkout(): void
     {
         $producto = $this->producto();

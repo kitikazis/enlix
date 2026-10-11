@@ -205,6 +205,9 @@
   const CSRF_TOKEN = @json(csrf_token());
   const URL_CREAR_PEDIDO = @json(route('checkout.crear'));
   const URL_VALIDAR = @json(route('checkout.validar'));
+  // Ids de los items que el cliente dejó marcados en /carrito (ver checkbox
+  // de selección); null = todo el carrito. Viajan tal cual al POST de abajo.
+  const ITEMS_SELECCIONADOS = @json(isset($items_seleccionados) ? implode(',', $items_seleccionados) : null);
 
   let intentoEnviado = false;
   const btnContinuar = document.getElementById('btnContinuar');
@@ -256,6 +259,7 @@
       ciudad: document.getElementById('f_ciudad').value.trim(),
       referencia: document.getElementById('f_referencia').value.trim(),
       terminos: document.getElementById('f_terminos').checked,
+      items: ITEMS_SELECCIONADOS,
     };
 
     if (!datos.first_name || !datos.last_name || !datos.email || !datos.telefono || !datos.numero_documento) {

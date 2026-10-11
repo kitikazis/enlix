@@ -48,6 +48,10 @@ class CheckoutCrearRequest extends FormRequest
             'ciudad' => ['nullable', 'string', 'max:100'],
             'referencia' => ['nullable', 'string', 'max:255'],
             'terminos' => ['accepted'],
+            // Ids de items del carrito a cobrar (checkbox de seleccion en
+            // /carrito), "12,15,19". Ausente = todo el carrito (ver
+            // CheckoutController::parseItemIds).
+            'items' => ['nullable', 'string'],
         ];
     }
 

@@ -50,10 +50,26 @@ class CarritoService
         return $this->carrito;
     }
 
-    /** Suma de cantidades de todos los items, para el contador del header. */
+    /**
+     * Suma de cantidades para el contador del header. Solo cuenta items
+     * "disponibles" (producto activo y con stock) - mismo criterio que
+     * resumen()['cantidad_total'], para que el badge nunca muestre un
+     * número distinto al título "Carrito (N productos)" de /carrito.
+     */
     public function cantidadTotal(): int
     {
-        return (int) ($this->actual()?->items()->sum('cantidad') ?? 0);
+        $carrito = $this->actual();
+
+        if ($carrito === null) {
+            return 0;
+        }
+
+        return (int) $carrito->items()->with('producto')->get()
+            ->filter(fn (ItemCarrito $item) => $item->producto !== null
+                && ! $item->producto->trashed()
+                && $item->producto->activo
+                && $item->producto->stockDisponible() > 0)
+            ->sum('cantidad');
     }
 
     /**
@@ -61,27 +77,55 @@ class CarritoService
      * CarritoController (JSON) como por CheckoutController (para mostrar el
      * pedido antes de pagar).
      *
-     * @return array{cantidad_total: int, subtotal_centimos: int, items: Collection}
+     * Solo cuenta (cantidad_total/subtotal_centimos) los items "disponibles"
+     * (producto activo y con stock): los agotados/desactivados se listan en
+     * 'items' igual (para la seccion "no disponibles" de /carrito) pero no
+     * suman al total ni deben pasar al checkout.
+     *
+     * @return array{cantidad_total: int, subtotal_centimos: int, descuento_centimos: int, items: Collection}
      */
     public function resumen(): array
     {
         $carrito = $this->actual();
-        $items = $carrito?->items()->with('producto')->get() ?? collect();
+        // withTrashed(): un producto eliminado (soft delete) debe poder
+        // seguir mostrando su nombre/imagen en la seccion "no disponibles"
+        // en vez de un item huerfano sin info.
+        $items = $carrito?->items()
+            ->with(['producto' => fn ($q) => $q->withTrashed()->with('marca', 'categoria')])
+            ->get() ?? collect();
 
-        $itemsData = $items->map(fn (ItemCarrito $item) => [
-            'id' => $item->id,
-            'producto_id' => $item->producto_id,
-            'nombre' => $item->producto?->nombre ?? '(producto ya no disponible)',
-            'slug' => $item->producto?->slug,
-            'cantidad' => $item->cantidad,
-            'precio_unitario_centimos' => $item->precio_unitario_centimos,
-            'subtotal_centimos' => $item->subtotalCentimos(),
-            'stock_disponible' => $item->producto?->stockDisponible() ?? 0,
-        ])->values();
+        $itemsData = $items->map(function (ItemCarrito $item) {
+            $producto = $item->producto;
+            $disponible = $producto !== null && ! $producto->trashed() && $producto->activo && $producto->stockDisponible() > 0;
+
+            return [
+                'id' => $item->id,
+                'producto_id' => $item->producto_id,
+                'nombre' => $producto?->nombre ?? '(producto ya no disponible)',
+                'slug' => $producto?->slug,
+                'imagen_url' => $producto?->imagen_thumb_url,
+                'marca_o_categoria' => $producto?->marca?->nombre ?? $producto?->categoria?->nombre,
+                'categoria_slug' => $producto?->categoria?->slug,
+                'cantidad' => $item->cantidad,
+                'precio_unitario_centimos' => $item->precio_unitario_centimos,
+                'precio_comparacion_centimos' => $producto?->precio_comparacion_centimos,
+                'subtotal_centimos' => $item->subtotalCentimos(),
+                'stock_disponible' => $producto?->stockDisponible() ?? 0,
+                'disponible' => $disponible,
+            ];
+        })->values();
+
+        $disponibles = $itemsData->where('disponible', true);
+        $descuentoCentimos = $disponibles->sum(function (array $item) {
+            $precioLista = $item['precio_comparacion_centimos'] ?? $item['precio_unitario_centimos'];
+
+            return max(0, $precioLista - $item['precio_unitario_centimos']) * $item['cantidad'];
+        });
 
         return [
-            'cantidad_total' => (int) $itemsData->sum('cantidad'),
-            'subtotal_centimos' => (int) $itemsData->sum('subtotal_centimos'),
+            'cantidad_total' => (int) $disponibles->sum('cantidad'),
+            'subtotal_centimos' => (int) $disponibles->sum('subtotal_centimos'),
+            'descuento_centimos' => (int) $descuentoCentimos,
             'items' => $itemsData,
         ];
     }

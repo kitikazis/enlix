@@ -29,16 +29,21 @@ class PedidoService
 
     /**
      * @param  array{nombre_cliente:string,email:string,telefono:string,tipo_documento:string,numero_documento:string,tipo_comprobante:string,razon_social:?string,metodo_entrega:string,direccion:?string,distrito:?string,ciudad:?string,referencia:?string}  $datosCliente
+     * @param  array<int>|null  $itemIds  Si se pasa, solo esos items del carrito entran al pedido
+     *                                    (ver checkbox de seleccion en /carrito); el resto queda
+     *                                    intacto en el carrito. Null = todo el carrito, como antes.
      *
-     * @throws RuntimeException si el carrito está vacío o algún producto no tiene stock suficiente
+     * @throws RuntimeException si no hay items que procesar o algún producto no tiene stock suficiente
      */
-    public function crearDesdeCarrito(Carrito $carrito, array $datosCliente): Pedido
+    public function crearDesdeCarrito(Carrito $carrito, array $datosCliente, ?array $itemIds = null): Pedido
     {
-        return DB::transaction(function () use ($carrito, $datosCliente) {
-            $items = $carrito->items()->with('producto')->get();
+        return DB::transaction(function () use ($carrito, $datosCliente, $itemIds) {
+            $items = $carrito->items()->with('producto')
+                ->when($itemIds !== null, fn ($q) => $q->whereIn('id', $itemIds))
+                ->get();
 
             if ($items->isEmpty()) {
-                throw new RuntimeException('Tu carrito está vacío.');
+                throw new RuntimeException('Selecciona al menos un producto para continuar.');
             }
 
             $codigo = $this->generarCodigo();

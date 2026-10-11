@@ -152,6 +152,10 @@ class CarritoTest extends TestCase
 
     public function test_carrito_con_items_renderiza(): void
     {
+        // El Total ahora lo calcula el JS en el navegador (depende de qué
+        // quede marcado con el checkbox), así que el servidor ya no imprime
+        // un "S/ 3,000.00" fijo: lo que sí debe venir en el HTML es el precio
+        // unitario y los data-* que ese cálculo necesita.
         $producto = $this->producto();
         $this->postJson(route('carrito.items.store'), ['producto_id' => $producto->id, 'cantidad' => 2]);
         $sessionId = Carrito::sole()->session_id;
@@ -160,7 +164,68 @@ class CarritoTest extends TestCase
 
         $r->assertOk();
         $r->assertSee('GPU de prueba');
-        $r->assertSee('S/ 3,000.00', false);
+        $r->assertSee('S/ 1,500.00', false);
+        $r->assertSee('data-precio-unitario-centimos="150000"', false);
+        $r->assertSee('Máx 5 unidades', false);
+    }
+
+    public function test_carrito_oculta_resumen_y_boton_de_pago_cuando_esta_vacio(): void
+    {
+        $r = $this->get('/carrito');
+
+        $r->assertOk();
+        $r->assertSee('Tu carrito está vacío.');
+        $r->assertSee('Ver productos');
+        $r->assertDontSee('Continuar compra');
+        $r->assertDontSee('Resumen de la orden');
+    }
+
+    public function test_el_contador_del_header_no_cuenta_items_no_disponibles(): void
+    {
+        // El badge del header (aria-label "Ver carrito (N productos)") y el
+        // título "Carrito (N productos)" de /carrito deben coincidir: ambos
+        // excluyen lo agotado/desactivado, no solo lo que sigue disponible.
+        $disponible = $this->producto(stock: 5);
+        $seAgota = Producto::create([
+            'slug' => 'gpu-badge-test', 'referencia' => 'GPU-BADGE', 'nombre' => 'GPU badge test',
+            'descripcion' => 'x', 'precio_centimos' => 90000, 'stock' => 2, 'activo' => true,
+        ]);
+
+        $this->postJson(route('carrito.items.store'), ['producto_id' => $disponible->id, 'cantidad' => 3]);
+        $sessionId = Carrito::sole()->session_id;
+        $this->withCookie('carrito_session', $sessionId)
+            ->postJson(route('carrito.items.store'), ['producto_id' => $seAgota->id, 'cantidad' => 2]);
+
+        $seAgota->update(['stock' => 0]);
+
+        $r = $this->withCookie('carrito_session', $sessionId)->get('/productos');
+
+        $r->assertOk();
+        $r->assertSee('Ver carrito (3 productos)', false);
+    }
+
+    public function test_carrito_separa_productos_no_disponibles_en_su_propia_seccion(): void
+    {
+        $disponible = $this->producto(stock: 5);
+        $seAgota = Producto::create([
+            'slug' => 'gpu-se-agota', 'referencia' => 'GPU-SE-AGOTA', 'nombre' => 'GPU que se agota',
+            'descripcion' => 'x', 'precio_centimos' => 90000, 'stock' => 2, 'activo' => true,
+        ]);
+
+        $this->postJson(route('carrito.items.store'), ['producto_id' => $disponible->id, 'cantidad' => 1]);
+        $sessionId = Carrito::sole()->session_id;
+        $this->withCookie('carrito_session', $sessionId)
+            ->postJson(route('carrito.items.store'), ['producto_id' => $seAgota->id, 'cantidad' => 1]);
+
+        // Se agota DESPUES de haberlo agregado (otro cliente compró lo que quedaba).
+        $seAgota->update(['stock' => 0]);
+
+        $r = $this->withCookie('carrito_session', $sessionId)->get('/carrito');
+
+        $r->assertOk();
+        $r->assertSee('Productos no disponibles (1)');
+        $r->assertSee('Agotado');
+        $r->assertSee('Ver productos similares');
     }
 
     public function test_el_modal_de_carrito_agregado_esta_disponible_en_productos(): void
