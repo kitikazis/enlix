@@ -4,19 +4,39 @@ use App\Http\Controllers\Admin\CategoriasController as AdminCategoriasController
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\ModoController as AdminModoController;
+use App\Http\Controllers\Admin\PaginasLegalesController as AdminPaginasLegalesController;
 use App\Http\Controllers\Admin\PedidosController as AdminPedidosController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
+use App\Http\Controllers\Admin\ReclamosController as AdminReclamosController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\IzipayController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ServicioController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PageController::class, 'inicio'])->name('inicio');
 Route::get('/nosotros', [PageController::class, 'nosotros'])->name('nosotros');
 Route::get('/contacto', [PageController::class, 'contacto'])->name('contacto');
-Route::get('/terminos', [PageController::class, 'terminos'])->name('terminos');
+
+// El nombre de ruta 'terminos' no cambia (checkout.blade.php y los tests ya
+// lo usan): solo se mueve el path a /terminos-y-condiciones. El /terminos
+// viejo queda como 301 por si hay enlaces o favoritos guardados.
+Route::get('/terminos-y-condiciones', [PageController::class, 'terminos'])->name('terminos');
+Route::redirect('/terminos', '/terminos-y-condiciones', 301);
+
+Route::get('/politica-de-privacidad', [PageController::class, 'politicaDePrivacidad'])->name('politica-privacidad');
+
+// Libro de Reclamaciones (obligatorio por ley). throttle:reclamos limita
+// el POST por IP para que no se pueda usar como spam/DoS - ver
+// AppServiceProvider.
+Route::prefix('libro-de-reclamaciones')->name('libro-reclamaciones.')->group(function () {
+    Route::get('/', [ReclamoController::class, 'index'])->name('index');
+    Route::post('/', [ReclamoController::class, 'store'])
+        ->middleware('throttle:reclamos')
+        ->name('store');
+});
 
 // Tienda
 Route::get('/productos', [IzipayController::class, 'index'])->name('productos');
@@ -115,6 +135,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware('auth')->prefix('categorias')->name('categorias.')->group(function () {
         Route::post('/', [AdminCategoriasController::class, 'store'])->name('store');
+    });
+
+    Route::middleware('auth')->prefix('reclamos')->name('reclamos.')->group(function () {
+        Route::get('/', [AdminReclamosController::class, 'index'])->name('index');
+        Route::get('/{reclamo}', [AdminReclamosController::class, 'show'])->name('show');
+        Route::patch('/{reclamo}/atender', [AdminReclamosController::class, 'atender'])->name('atender');
+    });
+
+    Route::middleware('auth')->prefix('paginas-legales')->name('paginas-legales.')->group(function () {
+        Route::get('/', [AdminPaginasLegalesController::class, 'index'])->name('index');
+        Route::get('/{pagina}/editar', [AdminPaginasLegalesController::class, 'edit'])->name('edit');
+        Route::put('/{pagina}', [AdminPaginasLegalesController::class, 'update'])->name('update');
     });
 });
 

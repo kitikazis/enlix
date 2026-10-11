@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaginaLegal;
 use Illuminate\View\View;
 
 /**
- * Páginas institucionales de Enlix (inicio, nosotros, contacto).
+ * Páginas institucionales de Enlix (inicio, nosotros, contacto, legales).
  */
 class PageController extends Controller
 {
@@ -35,9 +36,25 @@ class PageController extends Controller
 
     public function terminos(): View
     {
-        return view('terminos', [
-            'titulo' => 'Términos y condiciones - Enlix',
+        $pagina = PaginaLegal::obtener(PaginaLegal::SLUG_TERMINOS);
+
+        return view('legal.pagina', [
+            'titulo' => $pagina->meta_title ?? $pagina->titulo.' - Enlix',
+            'metaDescription' => $pagina->meta_description,
             'current' => 'terminos',
+            'pagina' => $pagina,
+        ]);
+    }
+
+    public function politicaDePrivacidad(): View
+    {
+        $pagina = PaginaLegal::obtener(PaginaLegal::SLUG_PRIVACIDAD);
+
+        return view('legal.pagina', [
+            'titulo' => $pagina->meta_title ?? $pagina->titulo.' - Enlix',
+            'metaDescription' => $pagina->meta_description,
+            'current' => 'privacidad',
+            'pagina' => $pagina,
         ]);
     }
 }

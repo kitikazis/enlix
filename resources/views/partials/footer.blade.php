@@ -8,7 +8,7 @@
     <div class="row gy-5">
 
       {{-- Marca --}}
-      <div class="col-12 col-lg-3">
+      <div class="col-12 col-lg-2">
         <img src="{{ asset('assets/img/enlix-logo.jpg') }}" alt="Enlix" class="footer-brand-img">
         <p class="footer-tag">
           Soluciones tecnológicas y servicios de TI que ayudan a las empresas a operar
@@ -56,8 +56,26 @@
         </ul>
       </div>
 
+      {{-- Legal --}}
+      <div class="col-12 col-sm-6 col-lg-2">
+        <h5>Legal</h5>
+        <ul>
+          <li><a href="{{ route('terminos') }}">Términos y condiciones</a></li>
+          <li><a href="{{ route('politica-privacidad') }}">Política de privacidad</a></li>
+          <li>
+            <a href="{{ route('libro-reclamaciones.index') }}" class="footer-libro-reclamaciones">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              Libro de Reclamaciones
+            </a>
+          </li>
+        </ul>
+      </div>
+
       {{-- Contacto --}}
-      <div class="col-12 col-sm-6 col-lg-3">
+      <div class="col-12 col-sm-6 col-lg-2">
         <h5>Contacto</h5>
         <p class="footer-info"><span>Celular</span>963 885 176</p>
         <p class="footer-info"><span>Correo</span><a href="mailto:servicios@enlix.pe" style="color:#fff;">servicios@enlix.pe</a></p>

@@ -1109,6 +1109,7 @@ a:hover { color: var(--enlix-blue-900); }
 .enlix-footer ul li { margin-bottom: 10px; font-size: 14.5px; }
 .enlix-footer ul li a { color: rgba(255,255,255,0.65); }
 .enlix-footer ul li a:hover { color: #fff; }
+.enlix-footer .footer-libro-reclamaciones { display: inline-flex; align-items: center; gap: 6px; }
 .enlix-footer .footer-brand {
   font-family: var(--font-heading);
   font-weight: 800;

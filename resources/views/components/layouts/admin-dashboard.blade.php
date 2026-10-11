@@ -40,12 +40,16 @@
         ['url' => route('admin.pagos'), 'activo' => request()->routeIs('admin.pagos'), 'label' => 'Pagos', 'badge' => $badgeAtencion ?? null, 'icono' => 'pagos'],
         ['url' => route('admin.pedidos.index'), 'activo' => request()->routeIs('admin.pedidos.*'), 'label' => 'Pedidos', 'icono' => 'pedidos'],
         ['url' => route('admin.productos.index'), 'activo' => request()->routeIs('admin.productos.*'), 'label' => 'Productos', 'icono' => 'productos'],
+        ['url' => route('admin.reclamos.index'), 'activo' => request()->routeIs('admin.reclamos.*'), 'label' => 'Reclamos', 'badge' => $reclamosPendientes ?: null, 'icono' => 'reclamos'],
+        ['url' => route('admin.paginas-legales.index'), 'activo' => request()->routeIs('admin.paginas-legales.*'), 'label' => 'Legal', 'icono' => 'legal'],
     ];
 
     $iconosMenu = [
         'dashboard' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1v4.5a1 1 0 0 1-1 1h-4.5a1 1 0 0 1-1-1v-4.5Zm0 8.5a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4.5a1 1 0 0 1-1-1v-2Zm9.5-8.5a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4.5a1 1 0 0 1-1-1v-2Zm0 5.5a1 1 0 0 1 1-1h4.5a1 1 0 0 1 1 1v4.5a1 1 0 0 1-1 1h-4.5a1 1 0 0 1-1-1v-4.5Z" />',
         'pagos' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M4.5 5.25h15a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25v-9A2.25 2.25 0 0 1 4.5 5.25Zm2 9.5h4" />',
         'pedidos' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5V6a3.75 3.75 0 1 1 7.5 0v1.5m-9.75 0h12l.75 12.75a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5L4.5 7.5Z" />',
+        'reclamos' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376C1.83 17.615 2.767 19.5 4.42 19.5h15.16c1.653 0 2.591-1.885 1.724-3.374L13.723 4.052c-.826-1.414-2.88-1.414-3.706 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />',
+        'legal' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />',
         'productos' => '<path stroke-linecap="round" stroke-linejoin="round" d="m3.75 8.25 8.25-4.5 8.25 4.5-8.25 4.5-8.25-4.5Zm0 0v7.5l8.25 4.5m0-12v12m0-12 8.25-4.5m-8.25 16.5 8.25-4.5v-7.5" />',
         'sitio' => '<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-9 3L20.25 3m0 0h-5.5m5.5 0v5.5" />',
         'modo' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5.5 14h13l-3.591-3.591a2.25 2.25 0 0 1-.659-1.591V3.104M8.25 3h7.5M5.5 14l-1.72 1.72a1.5 1.5 0 0 0 1.06 2.561h14.32a1.5 1.5 0 0 0 1.06-2.56L18.5 14" />',

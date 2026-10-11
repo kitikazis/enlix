@@ -89,6 +89,7 @@ class CheckoutController extends Controller
                 'numero_documento' => $datos['numero_documento'],
                 'tipo_comprobante' => $datos['tipo_comprobante'],
                 'razon_social' => $datos['razon_social'] ?? null,
+                'acepto_privacidad_en' => now(),
                 'metodo_entrega' => $datos['metodo_entrega'],
                 'direccion' => $datos['direccion'] ?? null,
                 'distrito' => $datos['distrito'] ?? null,

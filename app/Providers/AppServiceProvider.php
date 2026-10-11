@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Enums\EstadoReclamo;
+use App\Models\Reclamo;
 use App\Services\CarritoService;
 use App\Support\Catalogo;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -40,6 +42,14 @@ class AppServiceProvider extends ServiceProvider
             $view->with('carritoCantidad', app(CarritoService::class)->cantidadTotal());
         });
 
+        // Contador de reclamos pendientes para el badge del menu admin,
+        // igual que $badgeAtencion de Pagos. Va en un composer (no en cada
+        // controller) porque el layout admin es compartido por TODAS las
+        // pantallas del panel, no solo /admin/reclamos.
+        View::composer('components.layouts.admin-dashboard', function ($view) {
+            $view->with('reclamosPendientes', Reclamo::where('estado', EstadoReclamo::Pendiente)->count());
+        });
+
         // Form-token de Izipay: limitado por IP + email, no solo por IP.
         RateLimiter::for('izipay', function (Request $request) {
             $email = Str::lower((string) $request->input('email', ''));
@@ -57,6 +67,14 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(5)->by($request->ip().'|'.$email),
                 Limit::perMinute(10)->by('email|'.$email),
             ];
+        });
+
+        // Libro de Reclamaciones: formulario publico sin autenticacion, asi
+        // que solo se limita por IP (no hay email/sesion confiable todavia
+        // en ese punto). Bajo a proposito - un visitante legitimo no manda
+        // varios reclamos seguidos.
+        RateLimiter::for('reclamos', function (Request $request) {
+            return Limit::perHour(5)->by($request->ip());
         });
 
         if ($this->app->isProduction()) {

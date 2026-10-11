@@ -30,6 +30,7 @@ class Pedido extends Model
         'numero_documento',
         'tipo_comprobante',
         'razon_social',
+        'acepto_privacidad_en',
         'metodo_entrega',
         'direccion',
         'distrito',
@@ -61,6 +62,7 @@ class Pedido extends Model
         'metodo_pago' => MetodoPago::class,
         'respuesta' => 'array',
         'pagado_en' => 'datetime',
+        'acepto_privacidad_en' => 'datetime',
     ];
 
     public function usuario(): BelongsTo

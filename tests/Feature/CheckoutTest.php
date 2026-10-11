@@ -72,6 +72,7 @@ class CheckoutTest extends TestCase
             'ciudad' => '',
             'referencia' => '',
             'terminos' => true,
+            'acepta_privacidad' => true,
         ], $overrides);
     }
 
@@ -677,6 +678,32 @@ class CheckoutTest extends TestCase
         $r->assertStatus(422)->assertJsonValidationErrors('terminos');
         $this->assertDatabaseCount('pedidos', 0);
         Http::assertNothingSent();
+    }
+
+    public function test_no_deja_pagar_sin_aceptar_la_politica_de_privacidad(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $r = $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['acepta_privacidad' => false]));
+
+        $r->assertStatus(422)->assertJsonValidationErrors('acepta_privacidad');
+        $this->assertDatabaseCount('pedidos', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_guarda_la_fecha_de_aceptacion_de_privacidad_en_el_pedido(): void
+    {
+        $producto = $this->producto();
+        $sessionId = $this->carritoConItem($producto, 1);
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente());
+
+        $this->assertNotNull(Pedido::sole()->acepto_privacidad_en);
     }
 
     public function test_pagina_de_terminos_responde_ok(): void

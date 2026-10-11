@@ -28,7 +28,7 @@ class PedidoService
     public function __construct(private readonly StockService $stock) {}
 
     /**
-     * @param  array{nombre_cliente:string,email:string,telefono:string,tipo_documento:string,numero_documento:string,tipo_comprobante:string,razon_social:?string,metodo_entrega:string,direccion:?string,distrito:?string,ciudad:?string,referencia:?string}  $datosCliente
+     * @param  array{nombre_cliente:string,email:string,telefono:string,tipo_documento:string,numero_documento:string,tipo_comprobante:string,razon_social:?string,acepto_privacidad_en:\Illuminate\Support\Carbon,metodo_entrega:string,direccion:?string,distrito:?string,ciudad:?string,referencia:?string}  $datosCliente
      * @param  array<int>|null  $itemIds  Si se pasa, solo esos items del carrito entran al pedido
      *                                    (ver checkbox de seleccion en /carrito); el resto queda
      *                                    intacto en el carrito. Null = todo el carrito, como antes.

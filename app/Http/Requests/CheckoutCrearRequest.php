@@ -52,6 +52,9 @@ class CheckoutCrearRequest extends FormRequest
             'ciudad' => ['nullable', 'string', 'max:100'],
             'referencia' => ['nullable', 'string', 'max:255'],
             'terminos' => ['accepted'],
+            // Checkbox distinto del de "terminos": la fecha de aceptacion se
+            // guarda en pedidos.acepto_privacidad_en (ver CheckoutController).
+            'acepta_privacidad' => ['accepted'],
             // Ids de items del carrito a cobrar (checkbox de seleccion en
             // /carrito), "12,15,19". Ausente = todo el carrito (ver
             // CheckoutController::parseItemIds).
@@ -63,6 +66,7 @@ class CheckoutCrearRequest extends FormRequest
     {
         return [
             'terminos.accepted' => 'Debes aceptar los términos y condiciones para continuar.',
+            'acepta_privacidad.accepted' => 'Debes aceptar la política de privacidad para continuar.',
         ];
     }
 }

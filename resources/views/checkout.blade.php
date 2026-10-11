@@ -159,6 +159,13 @@
             </label>
           </div>
 
+          <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" id="f_privacidad">
+            <label class="form-check-label" for="f_privacidad" style="font-size: 13px;">
+              He leído y acepto la <a href="{{ route('politica-privacidad') }}" target="_blank" rel="noopener">política de privacidad</a>
+            </label>
+          </div>
+
           <button type="button" class="btn btn-primary-enlix w-100 mt-2" id="btnContinuar">Continuar al pago</button>
 
           {{-- Vacío a propósito: el kr-embedded/kr-popin de Krypton se
@@ -240,6 +247,7 @@
       ciudad: document.getElementById('f_ciudad').value.trim(),
       referencia: document.getElementById('f_referencia').value.trim(),
       terminos: document.getElementById('f_terminos').checked,
+      acepta_privacidad: document.getElementById('f_privacidad').checked,
       items: ITEMS_SELECCIONADOS,
     };
 
@@ -251,6 +259,9 @@
     }
     if (!datos.terminos) {
       return mostrarErrorCheckout('Debes aceptar los términos y condiciones para continuar.');
+    }
+    if (!datos.acepta_privacidad) {
+      return mostrarErrorCheckout('Debes aceptar la política de privacidad para continuar.');
     }
 
     ocultarErrorCheckout();
