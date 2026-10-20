@@ -83,21 +83,21 @@
         </x-admin.card>
 
         {{-- Modal de producto --}}
-        <div x-show="modalAbierto" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div x-show="modalAbierto" x-cloak class="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-4">
             <div class="absolute inset-0 bg-black/40" @click="cerrarModal()"></div>
 
-            <div class="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-card shadow-xl">
-                <div class="flex items-center justify-between border-b border-border px-6 py-4">
+            <div class="relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-card shadow-xl sm:max-h-[90vh] sm:rounded-2xl">
+                <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-4">
                     <h2 class="text-lg font-semibold text-text-primary" x-text="modoEdicion ? 'Editar producto' : 'Nuevo producto'"></h2>
-                    <button type="button" @click="cerrarModal()" class="flex h-8 w-8 items-center justify-center rounded-nav text-text-caption hover:bg-page" aria-label="Cerrar">✕</button>
+                    <button type="button" @click="cerrarModal()" class="flex h-11 w-11 items-center justify-center rounded-nav text-text-caption hover:bg-page" aria-label="Cerrar">✕</button>
                 </div>
 
-                <div class="flex gap-1 border-b border-border px-6 pt-3">
+                <div class="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-4 pt-2 [scrollbar-width:none] sm:px-6 sm:pt-3">
                     <template x-for="tab in [['general','General'],['descripcion','Descripción'],['especificaciones','Especificaciones']]" :key="tab[0]">
                         <button
                             type="button"
                             @click="tabActiva = tab[0]"
-                            class="relative flex items-center gap-1.5 rounded-t-nav px-3 py-2 text-sm font-medium"
+                            class="relative flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-t-nav px-3 py-2 text-sm font-medium"
                             :class="tabActiva === tab[0] ? 'border-b-2 border-accent text-accent' : 'text-text-secondary hover:text-text-primary'"
                         >
                             <span x-text="tab[1]"></span>
@@ -106,66 +106,86 @@
                     </template>
                 </div>
 
-                <div class="flex-1 overflow-y-auto px-6 py-5">
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
 
                     {{-- Tab: General --}}
                     <div x-show="tabActiva === 'general'" class="flex flex-col gap-4">
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Producto</label>
+                            <div class="min-w-0">
+                                <label for="producto-nombre" class="mb-1 block text-sm font-medium text-text-primary">Producto</label>
                                 <input
-                                    type="text" x-model="form.nombre" @input="onNombreInput()"
+                                    id="producto-nombre" type="text" x-model="form.nombre" @input="onNombreInput()"
                                     maxlength="150" required
-                                    class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm"
+                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
+                                    :class="errores.nombre ? 'border-rechazado-text' : 'border-border'"
                                 >
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.nombre" x-text="errores.nombre?.[0]"></p>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Slug <span class="font-normal text-text-caption">(editable)</span></label>
+                            <div class="min-w-0">
+                                <label for="producto-slug" class="mb-1 block text-sm font-medium text-text-primary">Slug <span class="font-normal text-text-caption">(editable)</span></label>
                                 <input
-                                    type="text" x-model="form.slug" @input="onSlugInput()"
-                                    maxlength="170"
-                                    class="h-10 w-full rounded-nav border border-border bg-card px-3 font-mono text-sm"
+                                    id="producto-slug" type="text" x-model="form.slug" @input="onSlugInput()"
+                                    maxlength="170" autocapitalize="none" spellcheck="false"
+                                    class="h-11 w-full rounded-nav border bg-card px-3 font-mono text-base sm:h-10 sm:text-sm"
+                                    :class="errores.slug ? 'border-rechazado-text' : 'border-border'"
                                 >
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.slug" x-text="errores.slug?.[0]"></p>
+                                <p class="mt-1 text-xs text-text-caption" x-show="!errores.slug">Si ya existe, se le agrega un sufijo (-2, -3…).</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Referencia</label>
+                            <div class="min-w-0">
+                                <label for="producto-referencia" class="mb-1 block text-sm font-medium text-text-primary">Referencia</label>
                                 <input
-                                    type="text" x-model="form.referencia" @input="verificarReferencia()"
-                                    maxlength="50" required
-                                    class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm"
+                                    id="producto-referencia" type="text" x-model="form.referencia" @input="verificarReferencia()"
+                                    maxlength="50" required autocapitalize="characters" spellcheck="false"
+                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base uppercase sm:h-10 sm:text-sm"
+                                    :class="errores.referencia || ['ocupada', 'eliminada'].includes(referenciaEstado) ? 'border-rechazado-text' : 'border-border'"
                                 >
-                                <p class="mt-1 text-xs" :class="referenciaEstado === 'ocupada' ? 'text-rechazado-text' : 'text-pagado-text'" x-show="referenciaEstado === 'ocupada' || referenciaEstado === 'disponible'">
-                                    <span x-show="referenciaEstado === 'ocupada'">Esa referencia ya está en uso.</span>
-                                    <span x-show="referenciaEstado === 'disponible'">Referencia disponible.</span>
-                                </p>
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.referencia" x-text="errores.referencia?.[0]"></p>
+                                <div x-show="!errores.referencia && referenciaEstado" class="mt-1 text-xs" aria-live="polite">
+                                    <p x-show="referenciaEstado === 'verificando'" class="text-text-caption">Verificando…</p>
+                                    <p x-show="referenciaEstado === 'disponible'" class="text-pagado-text">Referencia disponible.</p>
+                                    <p x-show="referenciaEstado === 'ocupada'" class="text-rechazado-text">
+                                        Ya existe un producto con esta referencia<span x-show="referenciaProducto?.nombre"> («<span x-text="referenciaProducto?.nombre"></span>»)</span>.
+                                    </p>
+                                    <div x-show="referenciaEstado === 'eliminada'" class="flex flex-col gap-2 rounded-nav bg-rechazado-bg p-2 text-rechazado-text sm:flex-row sm:items-center sm:justify-between">
+                                        <p class="min-w-0 break-words">Es de «<span x-text="referenciaProducto?.nombre"></span>», que está en la papelera.</p>
+                                        <button
+                                            type="button" @click="restaurarProductoEliminado()" :disabled="restaurando"
+                                            class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-nav border border-current px-3 text-xs font-medium hover:bg-card disabled:opacity-60 sm:min-h-[36px]"
+                                            x-text="restaurando ? 'Restaurando…' : 'Restaurar ese producto'"
+                                        ></button>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Categoría</label>
+                            <div class="min-w-0">
+                                <label for="producto-categoria" class="mb-1 block text-sm font-medium text-text-primary">Categoría</label>
                                 <div class="flex gap-2">
-                                    <select x-model="form.categoria_id" class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm">
+                                    <select
+                                        id="producto-categoria" x-model="form.categoria_id" @change="limpiarError('categoria_id')"
+                                        class="h-11 w-full min-w-0 rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
+                                        :class="errores.categoria_id ? 'border-rechazado-text' : 'border-border'"
+                                    >
                                         <option value="">Selecciona una categoría</option>
                                         <template x-for="cat in categorias" :key="cat.id">
                                             <option :value="cat.id" x-text="cat.nombre"></option>
                                         </template>
                                     </select>
-                                    <button type="button" @click="abrirCategoriaModal()" title="Crear categoría" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-nav border border-border text-text-secondary hover:bg-page">+</button>
+                                    <button type="button" @click="abrirCategoriaModal()" title="Crear categoría" aria-label="Crear categoría" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav border border-border text-text-secondary hover:bg-page sm:h-10 sm:w-10">+</button>
                                 </div>
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.categoria_id" x-text="errores.categoria_id?.[0]"></p>
                             </div>
                         </div>
 
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-text-primary">Imagen del producto</label>
+                            <label class="mb-1 block text-sm font-medium text-text-primary">Imagen del producto <span class="font-normal text-text-caption" x-show="modoEdicion">(opcional)</span></label>
                             <div
                                 @dragover.prevent @drop.prevent="procesarArchivo($event.dataTransfer.files[0])"
                                 @click="$refs.inputImagen.click()"
-                                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-nav border-2 border-dashed border-border bg-page px-4 py-6 text-center"
+                                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-nav border-2 border-dashed bg-page px-4 py-6 text-center"
+                                :class="errores.imagen ? 'border-rechazado-text' : 'border-border'"
                             >
                                 <template x-if="imagenPreviewUrl">
                                     <img :src="imagenPreviewUrl" alt="Vista previa" class="h-28 w-28 rounded-nav object-cover">
@@ -175,11 +195,11 @@
                                 </template>
                                 <input x-ref="inputImagen" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @click.stop @change="procesarArchivo($event.target.files[0])">
                             </div>
-                            <div class="mt-2 flex gap-3" x-show="imagenPreviewUrl">
-                                <button type="button" @click.stop="$refs.inputImagen.click()" class="text-xs font-medium text-accent hover:text-accent-hover">Cambiar</button>
+                            <div class="mt-2 flex gap-2" x-show="imagenPreviewUrl">
+                                <button type="button" @click.stop="$refs.inputImagen.click()" class="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-accent hover:text-accent-hover sm:min-h-0 sm:px-0">Cambiar</button>
                                 <button
                                     type="button" @click.stop="quitarImagen()"
-                                    class="text-xs font-medium text-rechazado-text hover:underline"
+                                    class="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-rechazado-text hover:underline sm:min-h-0 sm:px-0"
                                     x-text="imagenArchivo ? 'Deshacer' : 'Eliminar imagen'"
                                 ></button>
                             </div>
@@ -190,28 +210,45 @@
                         </div>
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Precio (S/)</label>
-                                <input type="number" x-model="form.precio" step="0.01" min="0.01" max="99999.99" required class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm">
+                            <div class="min-w-0">
+                                <label for="producto-precio" class="mb-1 block text-sm font-medium text-text-primary">Precio (S/)</label>
+                                <input
+                                    id="producto-precio" type="number" x-model="form.precio" @input="limpiarError('precio')"
+                                    step="0.01" min="0.01" max="99999.99" inputmode="decimal" required
+                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
+                                    :class="errores.precio ? 'border-rechazado-text' : 'border-border'"
+                                >
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.precio" x-text="errores.precio?.[0]"></p>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Stock</label>
-                                <input type="number" x-model="form.stock" min="0" class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm">
+                            <div class="min-w-0">
+                                <label for="producto-stock" class="mb-1 block text-sm font-medium text-text-primary">Stock</label>
+                                <input
+                                    id="producto-stock" type="number" x-model="form.stock" @input="limpiarError('stock')"
+                                    step="1" min="0" inputmode="numeric"
+                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
+                                    :class="errores.stock ? 'border-rechazado-text' : 'border-border'"
+                                >
+                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.stock" x-text="errores.stock?.[0]"></p>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-text-primary">Orden</label>
-                                <input type="number" x-model="form.orden" min="0" class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm">
+                            <div class="min-w-0">
+                                <label for="producto-orden" class="mb-1 block text-sm font-medium text-text-primary">Orden</label>
+                                <input
+                                    id="producto-orden" type="number" x-model="form.orden" @input="limpiarError('orden')"
+                                    step="1" min="0" inputmode="numeric"
+                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
+                                    :class="errores.orden ? 'border-rechazado-text' : 'border-border'"
+                                >
+                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.orden" x-text="errores.orden?.[0]"></p>
                             </div>
                         </div>
 
-                        <div class="flex gap-6">
-                            <label class="flex items-center gap-2 text-sm text-text-primary">
-                                <input type="checkbox" x-model="form.activo" class="h-4 w-4 rounded border-border">
+                        <div class="flex flex-col gap-1 sm:flex-row sm:gap-6">
+                            <label class="flex min-h-[44px] items-center gap-2 text-sm text-text-primary sm:min-h-0">
+                                <input type="checkbox" x-model="form.activo" class="h-5 w-5 rounded border-border sm:h-4 sm:w-4">
                                 Visible en /productos
                             </label>
-                            <label class="flex items-center gap-2 text-sm text-text-primary">
-                                <input type="checkbox" x-model="form.destacado" class="h-4 w-4 rounded border-border">
+                            <label class="flex min-h-[44px] items-center gap-2 text-sm text-text-primary sm:min-h-0">
+                                <input type="checkbox" x-model="form.destacado" class="h-5 w-5 rounded border-border sm:h-4 sm:w-4">
                                 Destacado
                             </label>
                         </div>
@@ -234,25 +271,28 @@
                                 @dragstart="arrastrando = i"
                                 @dragover.prevent
                                 @drop="moverFila(arrastrando, i)"
-                                class="flex items-center gap-2 rounded-nav border border-border bg-page p-2"
+                                class="flex items-start gap-2 rounded-nav border border-border bg-page p-2 sm:items-center"
                             >
-                                <span class="cursor-move px-1 text-text-caption" aria-hidden="true">⠿</span>
-                                <input type="text" x-model="fila.clave" placeholder="Clave" class="h-9 w-1/3 rounded-nav border border-border bg-card px-2 text-sm">
-                                <input type="text" x-model="fila.valor" placeholder="Valor" class="h-9 flex-1 rounded-nav border border-border bg-card px-2 text-sm">
-                                <button type="button" @click="especificaciones.splice(i, 1)" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-card" aria-label="Eliminar fila">✕</button>
+                                <span class="flex h-11 cursor-move items-center px-1 text-text-caption sm:h-9" aria-hidden="true">⠿</span>
+                                <div class="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr]">
+                                    <input type="text" x-model="fila.clave" placeholder="Clave" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
+                                    <input type="text" x-model="fila.valor" placeholder="Valor" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
+                                </div>
+                                <button type="button" @click="especificaciones.splice(i, 1)" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-card sm:h-9 sm:w-9" aria-label="Eliminar fila">✕</button>
                             </div>
                         </template>
 
-                        <button type="button" @click="especificaciones.push({ clave: '', valor: '' })" class="inline-flex h-9 w-fit items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page">
+                        <button type="button" @click="especificaciones.push({ clave: '', valor: '' })" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page sm:h-9 sm:min-h-0 sm:w-fit">
                             + Agregar fila
                         </button>
+                        <p class="text-xs text-rechazado-text" x-show="errores.especificaciones" x-text="errores.especificaciones?.[0]"></p>
                     </div>
 
                 </div>
 
-                <div class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
-                    <button type="button" @click="cerrarModal()" class="inline-flex h-10 items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page">Cancelar</button>
-                    <button type="button" @click="guardar()" :disabled="guardando" class="inline-flex h-10 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60">
+                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
+                    <button type="button" @click="cerrarModal()" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10 sm:min-h-0 sm:w-auto">Cancelar</button>
+                    <button type="button" @click="guardar()" :disabled="guardando" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60 sm:h-10 sm:min-h-0 sm:w-auto">
                         <span x-text="guardando ? 'Guardando…' : 'Guardar'"></span>
                     </button>
                 </div>
@@ -304,7 +344,7 @@
         </div>
 
         {{-- Toast --}}
-        <div x-show="toastMensaje" x-cloak x-transition class="fixed bottom-6 right-6 z-50 rounded-nav px-4 py-3 text-sm font-medium text-white shadow-lg" :class="toastError ? 'bg-danger-strong' : 'bg-sidebar-active'" x-text="toastMensaje"></div>
+        <div x-show="toastMensaje" x-cloak x-transition role="status" aria-live="polite" class="fixed inset-x-4 bottom-4 z-50 rounded-nav px-4 py-3 text-sm font-medium text-white shadow-lg sm:inset-x-auto sm:bottom-6 sm:right-6" :class="toastError ? 'bg-danger-strong' : 'bg-sidebar-active'" x-text="toastMensaje"></div>
     </div>
 
     @push('scripts')
@@ -366,7 +406,10 @@
                     eliminarImagenExistente: false,
 
                     referenciaEstado: null,
+                    referenciaProducto: null,
                     referenciaCheckTimer: null,
+                    referenciaAbort: null,
+                    restaurando: false,
 
                     categoriaModalAbierto: false,
                     categoriaNombre: '',
@@ -436,7 +479,7 @@
                         this.imagenPreviewUrl = null;
                         this.imagenExistenteUrl = null;
                         this.eliminarImagenExistente = false;
-                        this.referenciaEstado = null;
+                        this.reiniciarReferencia();
                         if (this.quill) {
                             this.quill.setText('');
                         }
@@ -449,7 +492,7 @@
                         this.modoEdicion = true;
                         this.productoId = id;
                         this.slugTocado = true;
-                        this.referenciaEstado = null;
+                        this.reiniciarReferencia();
                         this.eliminarImagenExistente = false;
                         this.modalAbierto = true;
 
@@ -480,17 +523,28 @@
                     },
 
                     cerrarModal() {
+                        this.reiniciarReferencia();
                         this.modalAbierto = false;
                     },
 
+                    limpiarError(campo) {
+                        if (this.errores[campo]) {
+                            const { [campo]: _, ...resto } = this.errores;
+                            this.errores = resto;
+                        }
+                    },
+
                     onNombreInput() {
+                        this.limpiarError('nombre');
                         if (!this.slugTocado) {
                             this.form.slug = this.slugify(this.form.nombre);
+                            this.limpiarError('slug');
                         }
                     },
 
                     onSlugInput() {
                         this.slugTocado = true;
+                        this.limpiarError('slug');
                     },
 
                     slugify(texto) {
@@ -549,11 +603,25 @@
                         this.eliminarImagenExistente = true;
                     },
 
-                    verificarReferencia() {
+                    reiniciarReferencia() {
                         clearTimeout(this.referenciaCheckTimer);
+                        this.referenciaAbort?.abort();
+                        this.referenciaAbort = null;
+                        this.referenciaEstado = null;
+                        this.referenciaProducto = null;
+                    },
+
+                    /**
+                     * Debounce de 400 ms + AbortController: cada tecla
+                     * cancela el chequeo anterior (temporizador y fetch en
+                     * vuelo), así una respuesta vieja nunca pisa el estado
+                     * de lo que el admin escribió después.
+                     */
+                    verificarReferencia() {
+                        this.reiniciarReferencia();
+                        this.limpiarError('referencia');
                         const valor = this.form.referencia.trim();
                         if (!valor) {
-                            this.referenciaEstado = null;
                             return;
                         }
                         this.referenciaEstado = 'verificando';
@@ -562,14 +630,55 @@
                             if (this.modoEdicion && this.productoId) {
                                 params.set('producto_id', this.productoId);
                             }
+                            const controlador = new AbortController();
+                            this.referenciaAbort = controlador;
                             try {
-                                const respuesta = await fetch(`${rutaVerificarReferencia}?${params}`, { headers: { Accept: 'application/json' } });
+                                const respuesta = await fetch(`${rutaVerificarReferencia}?${params}`, {
+                                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                                    signal: controlador.signal,
+                                });
+                                if (!respuesta.ok) {
+                                    throw new Error(`HTTP ${respuesta.status}`);
+                                }
                                 const datos = await respuesta.json();
-                                this.referenciaEstado = datos.disponible ? 'disponible' : 'ocupada';
+                                this.referenciaProducto = datos.producto;
+                                this.referenciaEstado = datos.disponible ? 'disponible' : (datos.eliminado ? 'eliminada' : 'ocupada');
                             } catch (e) {
-                                this.referenciaEstado = null;
+                                if (e.name !== 'AbortError') {
+                                    this.referenciaEstado = null;
+                                    this.referenciaProducto = null;
+                                }
                             }
                         }, 400);
+                    },
+
+                    async restaurarProductoEliminado() {
+                        const url = this.referenciaProducto?.url_restaurar;
+                        if (!url || this.restaurando) {
+                            return;
+                        }
+                        this.restaurando = true;
+                        try {
+                            const respuesta = await fetch(url, {
+                                method: 'PATCH',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                },
+                            });
+                            const datos = await respuesta.json().catch(() => ({}));
+                            if (!respuesta.ok) {
+                                throw new Error(datos.message || `HTTP ${respuesta.status}`);
+                            }
+                            this.insertarFila(datos.html);
+                            this.cerrarModal();
+                            this.mostrarToast(datos.mensaje || 'Producto recuperado.');
+                        } catch (e) {
+                            this.mostrarToast('No se pudo restaurar el producto. Intenta de nuevo.', true);
+                        } finally {
+                            this.restaurando = false;
+                        }
                     },
 
                     abrirCategoriaModal() {
@@ -668,6 +777,7 @@
                         xhr.open('POST', url);
                         xhr.setRequestHeader('X-CSRF-TOKEN', this.csrfToken());
                         xhr.setRequestHeader('Accept', 'application/json');
+                        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
                                 this.subiendoProgreso = Math.round((e.loaded / e.total) * 100);
@@ -686,7 +796,15 @@
                                 this.mostrarToast(respuesta.mensaje || 'Guardado.');
                             } else if (xhr.status === 422) {
                                 this.errores = respuesta.errors || {};
+                                if (this.errores.referencia) {
+                                    this.reiniciarReferencia();
+                                }
                                 this.tabActiva = this.primeraTabConError();
+                            } else if (xhr.status === 419) {
+                                this.mostrarToast('Tu sesión expiró. Recarga la página e intenta de nuevo.', true);
+                            } else if (xhr.status === 413) {
+                                this.errores = { imagen: ['La imagen es demasiado pesada. Máx. 2 MB.'] };
+                                this.tabActiva = 'general';
                             } else {
                                 this.mostrarToast('Ocurrió un error al guardar. Intenta de nuevo.', true);
                             }

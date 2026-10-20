@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProductoGuardarRequest;
 use App\Models\Categoria;
 use App\Models\Producto;
 use App\Support\Producto as CatalogoProducto;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Intervention\Image\ImageManager;
 
@@ -74,35 +76,54 @@ class ProductosController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse|RedirectResponse
+    public function store(ProductoGuardarRequest $request): JsonResponse
     {
-        $datos = $this->validado($request);
+        $datos = $this->datosProducto($request);
         $datos['slug'] = $this->slugUnico($request->input('slug') ?: $datos['nombre']);
+        $datos['imagen'] = $this->procesarImagen($request->file('imagen'));
 
-        if ($request->hasFile('imagen')) {
-            $datos['imagen'] = $this->procesarImagen($request->file('imagen'));
+        try {
+            $producto = Producto::create($datos);
+        } catch (UniqueConstraintViolationException $e) {
+            $this->eliminarImagen($datos['imagen']);
+
+            throw $this->errorDeUnicidad($e);
         }
 
-        $producto = Producto::create($datos);
         CatalogoProducto::limpiarCache();
 
         return $this->respuestaExito($producto->load('categoria'), 'Producto creado.', 201);
     }
 
-    public function update(Request $request, Producto $producto): JsonResponse|RedirectResponse
+    public function update(ProductoGuardarRequest $request, Producto $producto): JsonResponse
     {
-        $datos = $this->validado($request, $producto);
+        $datos = $this->datosProducto($request);
         $datos['slug'] = $this->slugUnico($request->input('slug') ?: $datos['nombre'], $producto);
+        $imagenAnterior = $producto->imagen;
 
         if ($request->hasFile('imagen')) {
-            $this->eliminarImagen($producto->imagen);
             $datos['imagen'] = $this->procesarImagen($request->file('imagen'));
-        } elseif ($request->boolean('eliminar_imagen') && $producto->imagen !== null) {
-            $this->eliminarImagen($producto->imagen);
+        } elseif ($request->boolean('eliminar_imagen')) {
             $datos['imagen'] = null;
         }
 
-        $producto->update($datos);
+        try {
+            $producto->update($datos);
+        } catch (UniqueConstraintViolationException $e) {
+            if ($request->hasFile('imagen')) {
+                $this->eliminarImagen($datos['imagen']);
+            }
+
+            throw $this->errorDeUnicidad($e);
+        }
+
+        // La imagen vieja se borra recién cuando el update ya se guardó: si
+        // fallara antes, el producto no se queda apuntando a un archivo que
+        // ya no existe.
+        if (array_key_exists('imagen', $datos) && $imagenAnterior !== $datos['imagen']) {
+            $this->eliminarImagen($imagenAnterior);
+        }
+
         CatalogoProducto::limpiarCache();
 
         return $this->respuestaExito($producto->load('categoria'), 'Producto actualizado.');
@@ -147,17 +168,28 @@ class ProductosController extends Controller
      * Recupera un producto eliminado (deshace destroy()). Queda inactivo a
      * proposito: el admin decide cuando volver a publicarlo con "Activar"
      * desde el listado normal, en vez de que reaparezca ya visible en
-     * /productos sin que nadie lo haya revisado.
+     * /productos sin que nadie lo haya revisado. Responde JSON cuando se
+     * restaura desde el modal (referencia que choca con la papelera).
      */
-    public function restaurar(Producto $producto): RedirectResponse
+    public function restaurar(Request $request, Producto $producto): JsonResponse|RedirectResponse
     {
         $producto->restore();
         CatalogoProducto::limpiarCache();
 
+        if ($request->expectsJson()) {
+            return $this->respuestaExito($producto->load('categoria'), 'Producto recuperado. Sigue inactivo hasta que lo actives.');
+        }
+
         return redirect()->route('admin.productos.papelera')->with('exito', 'Producto recuperado. Sigue inactivo hasta que lo actives desde el listado.');
     }
 
-    /** Chequeo en vivo (fetch) mientras el admin escribe la Referencia en el modal. */
+    /**
+     * Chequeo en vivo (fetch) mientras el admin escribe la Referencia en el
+     * modal. Usa Producto::conReferencia(), igual que ProductoGuardarRequest,
+     * así "disponible" aquí garantiza que el POST no devuelva 422 por la
+     * referencia. Si choca con un producto de la papelera, devuelve la URL
+     * para restaurarlo desde el mismo modal.
+     */
     public function verificarReferencia(Request $request): JsonResponse
     {
         $datos = $request->validate([
@@ -165,16 +197,22 @@ class ProductosController extends Controller
             'producto_id' => ['nullable', 'integer'],
         ]);
 
-        // withTrashed: el unique de BD y de validado() cuenta tambien los productos
-        // eliminados (papelera), asi que el chequeo en vivo debe verlos igual.
-        $disponible = ! Producto::withTrashed()->where('referencia', $datos['referencia'])
-            ->when($datos['producto_id'] ?? null, fn ($query, $id) => $query->where('id', '!=', $id))
-            ->exists();
+        $referencia = Producto::normalizarReferencia($datos['referencia']);
+        $existente = Producto::conReferencia($referencia, isset($datos['producto_id']) ? (int) $datos['producto_id'] : null);
 
-        return response()->json(['disponible' => $disponible]);
+        return response()->json([
+            'referencia' => $referencia,
+            'disponible' => $existente === null,
+            'eliminado' => $existente?->trashed() ?? false,
+            'producto' => $existente ? [
+                'id' => $existente->id,
+                'nombre' => $existente->nombre,
+                'url_restaurar' => $existente->trashed() ? route('admin.productos.restaurar', $existente) : null,
+            ] : null,
+        ]);
     }
 
-    private function respuestaExito(Producto $producto, string $mensaje, int $status = 200): JsonResponse|RedirectResponse
+    private function respuestaExito(Producto $producto, string $mensaje, int $status = 200): JsonResponse
     {
         return response()->json([
             'mensaje' => $mensaje,
@@ -182,50 +220,40 @@ class ProductosController extends Controller
         ], $status);
     }
 
-    private function validado(Request $request, ?Producto $producto = null): array
+    private function datosProducto(ProductoGuardarRequest $request): array
     {
-        $datos = $request->validate([
-            'categoria_id' => ['required', 'integer', 'exists:categorias,id'],
-            'referencia' => ['required', 'string', 'max:50', Rule::unique('productos', 'referencia')->ignore($producto?->id)],
-            'nombre' => ['required', 'string', 'max:150'],
-            'slug' => ['nullable', 'string', 'max:170', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
-            'descripcion' => ['required', 'string', 'max:20000'],
-            'especificaciones' => ['nullable', 'string'],
-            // El precio se escribe en soles en el formulario; aqui se pasa a
-            // centimos con bcmath para no arrastrar errores de coma flotante.
-            'precio' => ['required', 'numeric', 'min:0.01', 'max:99999.99'],
-            'stock' => ['nullable', 'integer', 'min:0', 'max:1000000'],
-            'orden' => ['nullable', 'integer', 'min:0'],
-            'activo' => ['nullable', 'boolean'],
-            'destacado' => ['nullable', 'boolean'],
-            'imagen' => [$producto?->exists ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-        ], [
-            'required' => 'Este campo es obligatorio.',
-            'referencia.unique' => 'Esa referencia ya está en uso (puede estar en la papelera).',
-            'slug.regex' => 'El slug solo admite minúsculas, números y guiones.',
-            'imagen.required' => 'Sube una imagen del producto.',
-            'imagen.image' => 'El archivo debe ser una imagen.',
-            'imagen.mimes' => 'La imagen debe ser JPG, PNG o WEBP.',
-            'imagen.max' => 'La imagen no puede pasar de 2 MB.',
-            'max' => 'El valor es demasiado largo.',
-            'numeric' => 'Debe ser un número.',
-            'integer' => 'Debe ser un número entero.',
-            'min' => 'El valor es demasiado bajo.',
-            'exists' => 'La opción seleccionada no es válida.',
-        ]);
+        $datos = $request->validated();
 
         return [
             'categoria_id' => $datos['categoria_id'],
-            'referencia' => trim($datos['referencia']),
+            'referencia' => $datos['referencia'],
             'nombre' => $datos['nombre'],
             'descripcion' => $datos['descripcion'],
             'especificaciones' => $this->especificaciones($datos['especificaciones'] ?? null),
+            // El precio se escribe en soles en el formulario; aqui se pasa a
+            // centimos con bcmath para no arrastrar errores de coma flotante.
             'precio_centimos' => (int) bcmul((string) $datos['precio'], '100'),
             'stock' => (int) ($datos['stock'] ?? 0),
             'orden' => (int) ($datos['orden'] ?? 0),
             'activo' => $request->boolean('activo'),
             'destacado' => $request->boolean('destacado'),
         ];
+    }
+
+    /**
+     * Dos admins guardando a la vez pueden pasar ambos la validación con la
+     * misma referencia/slug; el índice único de la BD frena al segundo y
+     * aquí se convierte en un 422 normal en vez de un 500.
+     */
+    private function errorDeUnicidad(UniqueConstraintViolationException $e): ValidationException
+    {
+        $campo = str_contains($e->getMessage(), 'slug') ? 'slug' : 'referencia';
+
+        return ValidationException::withMessages([
+            $campo => $campo === 'slug'
+                ? 'Otro producto acaba de tomar este slug. Vuelve a guardar.'
+                : 'Otro producto acaba de tomar esta referencia. Usa otra.',
+        ]);
     }
 
     /** El repeater del modal manda un JSON con [{clave, valor}, ...]; se descarta cualquier fila sin clave. */
@@ -288,13 +316,19 @@ class ProductosController extends Controller
         Storage::disk('public')->delete(Str::replaceFirst('productos/', 'productos/thumbs/', $ruta));
     }
 
-    private function slugUnico(string $nombre, ?Producto $producto = null): string
+    /**
+     * Slug a partir del nombre (o del slug editado a mano) con sufijo
+     * incremental si ya existe. withTrashed: el índice productos_slug_unique
+     * también cuenta los productos de la papelera, sin esto un slug de un
+     * producto eliminado terminaba en un 500 al insertar.
+     */
+    private function slugUnico(string $texto, ?Producto $producto = null): string
     {
-        $base = Str::slug($nombre);
+        $base = trim(Str::limit(Str::slug($texto), 160, ''), '-') ?: 'producto';
         $slug = $base;
         $sufijo = 1;
 
-        while (Producto::where('slug', $slug)->when($producto?->id, fn ($q, $id) => $q->where('id', '!=', $id))->exists()) {
+        while (Producto::withTrashed()->where('slug', $slug)->when($producto?->id, fn ($q, $id) => $q->whereKeyNot($id))->exists()) {
             $slug = $base.'-'.(++$sufijo);
         }
 

@@ -533,4 +533,104 @@ class AdminProductosTest extends TestCase
             ->assertOk()
             ->assertJson(['disponible' => true]);
     }
+
+    public function test_referencia_de_producto_en_papelera_no_figura_disponible_y_el_post_da_422_en_espanol(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $eliminado = Producto::create([
+            'slug' => 'eliminado', 'nombre' => 'Eliminado', 'descripcion' => 'x',
+            'precio_centimos' => 1000, 'referencia' => 'PAP-001', 'activo' => false,
+        ]);
+        $eliminado->delete();
+
+        $this->actingAs($user)
+            ->getJson(route('admin.productos.verificar-referencia', ['referencia' => ' pap-001 ']))
+            ->assertOk()
+            ->assertJson([
+                'disponible' => false,
+                'eliminado' => true,
+                'producto' => ['id' => $eliminado->id, 'url_restaurar' => route('admin.productos.restaurar', $eliminado)],
+            ]);
+
+        $this->actingAs($user)
+            ->post(route('admin.productos.store'), $this->payload(['referencia' => 'pap-001']), ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['referencia' => 'papelera']);
+    }
+
+    public function test_verificar_y_guardar_coinciden_ignorando_mayusculas_y_espacios(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson(route('admin.productos.verificar-referencia', ['referencia' => '  gpu-777 ']))
+            ->assertJson(['disponible' => true, 'referencia' => 'GPU-777']);
+
+        $this->actingAs($user)
+            ->post(route('admin.productos.store'), $this->payload(['referencia' => '  gpu-777 ']), ['Accept' => 'application/json'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('productos', ['referencia' => 'GPU-777']);
+
+        $this->actingAs($user)
+            ->getJson(route('admin.productos.verificar-referencia', ['referencia' => 'GPU-777']))
+            ->assertJson(['disponible' => false, 'eliminado' => false]);
+
+        $this->actingAs($user)
+            ->post(route('admin.productos.store'), $this->payload(['referencia' => 'Gpu-777']), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['referencia' => 'Ya existe']);
+    }
+
+    public function test_restaurar_desde_el_modal_responde_json_con_la_fila(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $producto->delete();
+
+        $this->actingAs($user)
+            ->patchJson(route('admin.productos.restaurar', $producto))
+            ->assertOk()
+            ->assertJsonStructure(['mensaje', 'html']);
+
+        $this->assertNull($producto->fresh()->deleted_at);
+    }
+
+    public function test_el_slug_de_un_producto_en_papelera_recibe_sufijo_en_vez_de_un_500(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        Producto::create([
+            'slug' => 'monitor-gamer', 'nombre' => 'Monitor gamer', 'descripcion' => 'x',
+            'precio_centimos' => 1000, 'referencia' => 'MON-OLD', 'activo' => false,
+        ])->delete();
+
+        $this->actingAs($user)
+            ->post(route('admin.productos.store'), $this->payload(['nombre' => 'Monitor Gamer']), ['Accept' => 'application/json'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('productos', ['nombre' => 'Monitor Gamer', 'slug' => 'monitor-gamer-2']);
+    }
+
+    public function test_imagen_obligatoria_al_crear_con_mensaje_en_espanol(): void
+    {
+        $user = User::factory()->create();
+        $payload = $this->payload();
+        unset($payload['imagen']);
+
+        $this->actingAs($user)
+            ->post(route('admin.productos.store'), $payload, ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['imagen' => 'Sube una imagen']);
+    }
+
+    public function test_stock_y_orden_negativos_dan_error_por_campo(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('admin.productos.store'), $this->payload(['stock' => -1, 'orden' => 'abc']), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['stock' => 'negativo', 'orden' => 'entero']);
+    }
 }

@@ -7,9 +7,9 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Único FormRequest del proyecto (el resto valida inline en el controller,
- * ver docblock de Admin\ProductosController) - se pidió explícitamente
- * para este formulario porque junta bastantes reglas condicionales
+ * La mayoría de formularios valida inline en el controller; este (y
+ * ProductoGuardarRequest) se pidieron explícitamente como FormRequest
+ * porque juntan bastantes reglas condicionales
  * (factura/boleta, envío/recojo, DNI/RUC) y el checkbox de términos.
  */
 class CheckoutCrearRequest extends FormRequest

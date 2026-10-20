@@ -83,6 +83,35 @@ class Producto extends Model
         'destacado' => 'boolean',
     ];
 
+    /**
+     * Forma canónica de la referencia (sin espacios en los extremos, en
+     * mayúsculas). La usan el mutator, el FormRequest y el chequeo en vivo,
+     * así "gpu-001 " y "GPU-001" son siempre la misma referencia.
+     */
+    public static function normalizarReferencia(mixed $referencia): string
+    {
+        return mb_strtoupper(trim((string) $referencia));
+    }
+
+    /**
+     * Producto que ya usa esa referencia, INCLUIDOS los de la papelera: es
+     * el mismo criterio que el índice único productos_referencia_unique.
+     */
+    public static function conReferencia(string $referencia, ?int $ignorarId = null): ?self
+    {
+        return static::withTrashed()
+            ->where('referencia', static::normalizarReferencia($referencia))
+            ->when($ignorarId, fn ($query, $id) => $query->whereKeyNot($id))
+            ->first();
+    }
+
+    protected function referencia(): Attribute
+    {
+        return Attribute::make(
+            set: fn (mixed $valor) => $valor !== null ? static::normalizarReferencia($valor) : null,
+        );
+    }
+
     protected function descripcion(): Attribute
     {
         return Attribute::make(
