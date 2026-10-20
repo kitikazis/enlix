@@ -165,7 +165,9 @@ class ProductosController extends Controller
             'producto_id' => ['nullable', 'integer'],
         ]);
 
-        $disponible = ! Producto::where('referencia', $datos['referencia'])
+        // withTrashed: el unique de BD y de validado() cuenta tambien los productos
+        // eliminados (papelera), asi que el chequeo en vivo debe verlos igual.
+        $disponible = ! Producto::withTrashed()->where('referencia', $datos['referencia'])
             ->when($datos['producto_id'] ?? null, fn ($query, $id) => $query->where('id', '!=', $id))
             ->exists();
 
@@ -197,6 +199,19 @@ class ProductosController extends Controller
             'activo' => ['nullable', 'boolean'],
             'destacado' => ['nullable', 'boolean'],
             'imagen' => [$producto?->exists ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ], [
+            'required' => 'Este campo es obligatorio.',
+            'referencia.unique' => 'Esa referencia ya está en uso (puede estar en la papelera).',
+            'slug.regex' => 'El slug solo admite minúsculas, números y guiones.',
+            'imagen.required' => 'Sube una imagen del producto.',
+            'imagen.image' => 'El archivo debe ser una imagen.',
+            'imagen.mimes' => 'La imagen debe ser JPG, PNG o WEBP.',
+            'imagen.max' => 'La imagen no puede pasar de 2 MB.',
+            'max' => 'El valor es demasiado largo.',
+            'numeric' => 'Debe ser un número.',
+            'integer' => 'Debe ser un número entero.',
+            'min' => 'El valor es demasiado bajo.',
+            'exists' => 'La opción seleccionada no es válida.',
         ]);
 
         return [
