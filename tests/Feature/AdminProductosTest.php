@@ -35,7 +35,7 @@ class AdminProductosTest extends TestCase
             'precio' => '149.90',
             'stock' => 5,
             'activo' => '1',
-            'imagen' => UploadedFile::fake()->image('foto.jpg'),
+            'imagen' => UploadedFile::fake()->image('foto.jpg', 400, 400),
         ], $overrides);
     }
 
@@ -409,7 +409,7 @@ class AdminProductosTest extends TestCase
         ], $producto->especificaciones);
     }
 
-    public function test_descarta_filas_de_especificaciones_sin_clave(): void
+    public function test_descarta_filas_de_especificaciones_totalmente_vacias(): void
     {
         Storage::fake('public');
         $user = User::factory()->create();
@@ -418,12 +418,87 @@ class AdminProductosTest extends TestCase
             'nombre' => 'Con specs a medias',
             'especificaciones' => json_encode([
                 ['clave' => 'Socket', 'valor' => 'AM5'],
-                ['clave' => '  ', 'valor' => 'se descarta'],
+                ['clave' => '  ', 'valor' => ''],
             ]),
         ]), ['Accept' => 'application/json'])->assertCreated();
 
         $producto = Producto::where('nombre', 'Con specs a medias')->first();
         $this->assertSame([['clave' => 'Socket', 'valor' => 'AM5']], $producto->especificaciones);
+    }
+
+    public function test_un_valor_de_especificacion_sin_clave_no_se_pierde_en_silencio(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs(User::factory()->create())->post(route('admin.productos.store'), $this->payload([
+            'especificaciones' => json_encode([['clave' => '', 'valor' => 'AM5']]),
+        ]), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['especificaciones' => 'Fila 1: falta la clave.']);
+    }
+
+    public function test_especificaciones_con_claves_repetidas_o_json_roto_dan_422(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'especificaciones' => json_encode([['clave' => 'Socket', 'valor' => 'AM5'], ['clave' => 'socket', 'valor' => 'AM4']]),
+        ]), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['especificaciones' => 'Fila 2: la clave «socket» ya está en la fila 1.']);
+
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'especificaciones' => '{no es json',
+        ]), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['especificaciones' => 'No se pudieron leer']);
+
+        $this->actingAs($user)->post(route('admin.productos.store'), $this->payload([
+            'especificaciones' => json_encode([['clave' => str_repeat('a', 101), 'valor' => 'x']]),
+        ]), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['especificaciones' => 'no puede pasar de 100']);
+    }
+
+    public function test_precio_en_notacion_cientifica_o_con_tres_decimales_da_422_y_no_500(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        foreach (['1e3', '10.555', '-5', 'abc'] as $precio) {
+            $this->actingAs($user)->post(route('admin.productos.store'), $this->payload(['precio' => $precio]), ['Accept' => 'application/json'])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('precio');
+        }
+    }
+
+    public function test_acepta_precio_con_coma_decimal(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs(User::factory()->create())->post(route('admin.productos.store'), $this->payload([
+            'nombre' => 'Con coma', 'precio' => '149,90',
+        ]), ['Accept' => 'application/json'])->assertCreated();
+
+        $this->assertSame(14990, Producto::where('nombre', 'Con coma')->first()->precio_centimos);
+    }
+
+    public function test_descripcion_vacia_del_editor_o_que_el_saneado_deja_vacia_da_422(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        foreach (['<p><br></p>', '<p>&nbsp;</p>', '<script>alert(1)</script>'] as $descripcion) {
+            $this->actingAs($user)->post(route('admin.productos.store'), $this->payload(['descripcion' => $descripcion]), ['Accept' => 'application/json'])
+                ->assertJsonValidationErrors(['descripcion' => 'Escribe una descripción']);
+        }
+    }
+
+    public function test_rechaza_imagenes_menores_a_200px(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs(User::factory()->create())->post(route('admin.productos.store'), $this->payload([
+            'imagen' => UploadedFile::fake()->image('mini.png', 150, 400),
+        ]), ['Accept' => 'application/json'])
+            ->assertJsonValidationErrors(['imagen' => '200 × 200']);
     }
 
     public function test_no_permite_dos_productos_con_la_misma_referencia(): void
@@ -489,7 +564,7 @@ class AdminProductosTest extends TestCase
         $payload = $this->payload([
             'nombre' => $producto->nombre,
             'referencia' => $producto->referencia,
-            'imagen' => UploadedFile::fake()->image('nueva.jpg'),
+            'imagen' => UploadedFile::fake()->image('nueva.jpg', 400, 400),
         ]);
 
         $this->actingAs($user)->post(

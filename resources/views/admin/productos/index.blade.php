@@ -275,8 +275,8 @@
                             >
                                 <span class="flex h-11 cursor-move items-center px-1 text-text-caption sm:h-9" aria-hidden="true">⠿</span>
                                 <div class="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr]">
-                                    <input type="text" x-model="fila.clave" placeholder="Clave" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
-                                    <input type="text" x-model="fila.valor" placeholder="Valor" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
+                                    <input type="text" x-model="fila.clave" @input="limpiarError('especificaciones')" placeholder="Clave" maxlength="100" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
+                                    <input type="text" x-model="fila.valor" @input="limpiarError('especificaciones')" placeholder="Valor" maxlength="500" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
                                 </div>
                                 <button type="button" @click="especificaciones.splice(i, 1)" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-card sm:h-9 sm:w-9" aria-label="Eliminar fila">✕</button>
                             </div>
@@ -285,7 +285,11 @@
                         <button type="button" @click="especificaciones.push({ clave: '', valor: '' })" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page sm:h-9 sm:min-h-0 sm:w-fit">
                             + Agregar fila
                         </button>
-                        <p class="text-xs text-rechazado-text" x-show="errores.especificaciones" x-text="errores.especificaciones?.[0]"></p>
+                        <ul class="flex flex-col gap-0.5 text-xs text-rechazado-text" x-show="errores.especificaciones">
+                            <template x-for="mensaje in (errores.especificaciones || [])" :key="mensaje">
+                                <li x-text="mensaje"></li>
+                            </template>
+                        </ul>
                     </div>
 
                 </div>
@@ -579,11 +583,24 @@
                             this.errores = { ...this.errores, imagen: ['La imagen no debe superar 2 MB.'] };
                             return;
                         }
-                        const { imagen, ...resto } = this.errores;
-                        this.errores = resto;
-                        this.imagenArchivo = archivo;
-                        this.imagenPreviewUrl = URL.createObjectURL(archivo);
-                        this.eliminarImagenExistente = false;
+                        const url = URL.createObjectURL(archivo);
+                        const img = new Image();
+                        img.onload = () => {
+                            if (img.naturalWidth < 200 || img.naturalHeight < 200) {
+                                URL.revokeObjectURL(url);
+                                this.errores = { ...this.errores, imagen: ['La imagen debe medir al menos 200 × 200 px.'] };
+                                return;
+                            }
+                            this.limpiarError('imagen');
+                            this.imagenArchivo = archivo;
+                            this.imagenPreviewUrl = url;
+                            this.eliminarImagenExistente = false;
+                        };
+                        img.onerror = () => {
+                            URL.revokeObjectURL(url);
+                            this.errores = { ...this.errores, imagen: ['No se pudo leer la imagen. Prueba con otro archivo.'] };
+                        };
+                        img.src = url;
                     },
 
                     /**
@@ -743,9 +760,64 @@
                         return this.tabActiva;
                     },
 
+                    /**
+                     * Espejo de ProductoGuardarRequest para avisar antes de
+                     * enviar. No reemplaza al servidor: este sigue validando
+                     * todo y sus 422 se muestran igual.
+                     */
+                    validarEnCliente() {
+                        const errores = {};
+                        const precio = String(this.form.precio ?? '').trim().replace(/^(\d+),(\d{1,2})$/, '$1.$2');
+                        if (precio === '') {
+                            errores.precio = ['El campo precio es obligatorio.'];
+                        } else if (!/^\d{1,5}(\.\d{1,2})?$/.test(precio)) {
+                            errores.precio = ['Escribe el precio con hasta 2 decimales, por ejemplo 149.90.'];
+                        } else if (Number(precio) < 0.01) {
+                            errores.precio = ['El precio debe ser mayor a S/ 0.00.'];
+                        }
+
+                        const textoDescripcion = this.quill ? this.quill.getText().trim() : String(this.form.descripcion || '').replace(/<[^>]*>/g, '').trim();
+                        if (!textoDescripcion) {
+                            errores.descripcion = ['Escribe una descripción del producto.'];
+                        }
+
+                        const specs = [];
+                        const vistas = {};
+                        this.especificaciones.forEach((fila, i) => {
+                            const n = i + 1;
+                            const clave = String(fila.clave || '').trim();
+                            const valor = String(fila.valor || '').trim();
+                            if (!clave && valor) {
+                                specs.push(`Fila ${n}: falta la clave.`);
+                            }
+                            if (clave) {
+                                const normalizada = clave.toLowerCase();
+                                if (vistas[normalizada]) {
+                                    specs.push(`Fila ${n}: la clave «${clave}» ya está en la fila ${vistas[normalizada]}.`);
+                                } else {
+                                    vistas[normalizada] = n;
+                                }
+                            }
+                        });
+                        if (this.especificaciones.length > 50) {
+                            specs.push('Máximo 50 filas de especificaciones.');
+                        }
+                        if (specs.length) {
+                            errores.especificaciones = specs;
+                        }
+
+                        return errores;
+                    },
+
                     guardar() {
                         if (this.quill) {
                             this.form.descripcion = this.quill.root.innerHTML;
+                        }
+                        const erroresCliente = this.validarEnCliente();
+                        if (Object.keys(erroresCliente).length) {
+                            this.errores = erroresCliente;
+                            this.tabActiva = this.primeraTabConError();
+                            return;
                         }
                         this.errores = {};
                         this.guardando = true;

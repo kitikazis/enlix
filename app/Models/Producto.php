@@ -105,6 +105,19 @@ class Producto extends Model
             ->first();
     }
 
+    /**
+     * true si la descripción conserva texto visible DESPUÉS del saneado
+     * del mutator: el editor vacío manda "<p><br></p>" y un "<script>" lo
+     * elimina el Purifier, y en ambos casos se guardaría vacía.
+     */
+    public static function descripcionTieneTexto(?string $html): bool
+    {
+        $limpio = Purifier::clean((string) $html, self::CONFIG_DESCRIPCION_HTML);
+        $texto = html_entity_decode(strip_tags($limpio), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim(str_replace("\u{00A0}", ' ', $texto)) !== '';
+    }
+
     protected function referencia(): Attribute
     {
         return Attribute::make(
