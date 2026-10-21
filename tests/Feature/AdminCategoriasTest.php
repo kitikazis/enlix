@@ -33,22 +33,43 @@ class AdminCategoriasTest extends TestCase
         $this->assertDatabaseHas('categorias', ['nombre' => 'Monitores', 'slug' => 'monitores']);
     }
 
-    public function test_exige_nombre(): void
+    public function test_exige_nombre_con_mensaje_en_espanol(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)->postJson(route('admin.categorias.store'), [])
-            ->assertJsonValidationErrors('nombre');
+            ->assertJsonValidationErrors(['nombre' => 'Escribe un nombre.']);
     }
 
-    public function test_genera_slugs_distintos_para_nombres_repetidos(): void
+    public function test_no_permite_categorias_repetidas_sin_importar_mayusculas(): void
     {
         $user = User::factory()->create();
         Categoria::create(['nombre' => 'Monitores', 'slug' => 'monitores']);
 
-        $this->actingAs($user)->postJson(route('admin.categorias.store'), ['nombre' => 'Monitores'])
+        foreach (['Monitores', 'MONITORES', '  monitores '] as $nombre) {
+            $this->actingAs($user)->postJson(route('admin.categorias.store'), ['nombre' => $nombre])
+                ->assertJsonValidationErrors(['nombre' => 'Ya existe la categoría «Monitores».']);
+        }
+
+        $this->assertSame(1, Categoria::whereRaw('LOWER(nombre) = ?', ['monitores'])->count());
+    }
+
+    public function test_nombres_distintos_con_el_mismo_slug_reciben_sufijo(): void
+    {
+        $user = User::factory()->create();
+        Categoria::create(['nombre' => 'Monitores', 'slug' => 'monitores']);
+
+        $this->actingAs($user)->postJson(route('admin.categorias.store'), ['nombre' => 'Monitores!'])
             ->assertCreated();
 
-        $this->assertDatabaseHas('categorias', ['nombre' => 'Monitores', 'slug' => 'monitores-2']);
+        $this->assertDatabaseHas('categorias', ['nombre' => 'Monitores!', 'slug' => 'monitores-2']);
+    }
+
+    public function test_un_nombre_sin_letras_no_deja_el_slug_vacio(): void
+    {
+        $this->actingAs(User::factory()->create())->postJson(route('admin.categorias.store'), ['nombre' => '!!!'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('categorias', ['nombre' => '!!!', 'slug' => 'categoria']);
     }
 }
