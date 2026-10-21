@@ -708,4 +708,70 @@ class AdminProductosTest extends TestCase
             ->post(route('admin.productos.store'), $this->payload(['stock' => -1, 'orden' => 'abc']), ['Accept' => 'application/json'])
             ->assertJsonValidationErrors(['stock' => 'negativo', 'orden' => 'entero']);
     }
+
+    public function test_eliminar_por_fetch_responde_json_con_el_total_de_la_papelera(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)->deleteJson(route('admin.productos.destroy', $producto))
+            ->assertOk()
+            ->assertJson([
+                'id' => $producto->id,
+                'total_eliminados' => 1,
+                'url_restaurar' => route('admin.productos.restaurar', $producto),
+            ]);
+
+        $this->assertSoftDeleted($producto);
+        $this->assertFalse(Producto::withTrashed()->find($producto->id)->activo);
+    }
+
+    public function test_activar_por_fetch_devuelve_la_fila_actualizada(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $estabaActivo = $producto->activo;
+
+        $respuesta = $this->actingAs($user)->patchJson(route('admin.productos.alternar-activo', $producto))
+            ->assertOk()
+            ->assertJsonStructure(['mensaje', 'html']);
+
+        $this->assertSame(! $estabaActivo, $producto->fresh()->activo);
+        $this->assertStringContainsString('fila-producto-'.$producto->id, $respuesta->json('html'));
+        $this->assertStringContainsString($estabaActivo ? 'Inactivo' : 'Activo', $respuesta->json('html'));
+    }
+
+    public function test_sin_fetch_eliminar_y_activar_siguen_redirigiendo(): void
+    {
+        $user = User::factory()->create();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+
+        $this->actingAs($user)->patch(route('admin.productos.alternar-activo', $producto))
+            ->assertRedirect(route('admin.productos.index'));
+        $this->actingAs($user)->delete(route('admin.productos.destroy', $producto))
+            ->assertRedirect(route('admin.productos.index'));
+    }
+
+    public function test_vista_rapida_incluye_el_nombre_de_la_categoria(): void
+    {
+        $user = User::factory()->create();
+        $categoria = $this->categoria();
+        $producto = Producto::where('slug', 'plan-web-basico')->first();
+        $producto->update(['categoria_id' => $categoria->id]);
+
+        $this->actingAs($user)->getJson(route('admin.productos.show', $producto))
+            ->assertOk()
+            ->assertJson(['categoria' => $categoria->nombre]);
+    }
+
+    public function test_el_script_de_la_papelera_lleva_el_nonce_del_csp(): void
+    {
+        $response = $this->actingAs(User::factory()->create())->get(route('admin.productos.papelera'));
+
+        preg_match("/'nonce-([a-zA-Z0-9]+)'/", $response->headers->get('Content-Security-Policy'), $m);
+        $this->assertMatchesRegularExpression(
+            '/<script nonce="'.preg_quote($m[1], '/').'">\s*function papeleraApp/',
+            $response->getContent()
+        );
+    }
 }

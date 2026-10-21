@@ -12,20 +12,22 @@
     @endpush
 
     <div
-        x-data="productosApp(@js($categorias->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre])->all()))"
+        x-data="productosApp(@js($categorias->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre])->all()), {{ (int) $totalEliminados }})"
+        @keydown.escape.window="cerrarConEscape()"
         class="mx-auto flex w-full max-w-6xl flex-col gap-4 md:h-full md:min-h-0 md:gap-6"
     >
 
         <div class="flex shrink-0 flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <h1 class="text-2xl font-semibold text-text-primary md:text-[28px]">Productos</h1>
             <div class="flex items-center gap-3">
-                @if ($totalEliminados > 0)
-                    <a href="{{ route('admin.productos.papelera') }}" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-nav border border-border bg-card px-4 text-sm font-medium text-text-secondary hover:bg-page">
-                        Eliminados
-                        <span class="rounded-full bg-page px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">{{ $totalEliminados }}</span>
-                    </a>
-                @endif
-                <button type="button" @click="abrirCrear()" class="inline-flex h-10 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover">
+                <a
+                    href="{{ route('admin.productos.papelera') }}" x-show="totalEliminados > 0" @if ($totalEliminados === 0) x-cloak @endif
+                    class="inline-flex h-11 items-center justify-center gap-1.5 rounded-nav border border-border bg-card px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10"
+                >
+                    Eliminados
+                    <span class="rounded-full bg-page px-1.5 py-0.5 text-[11px] font-medium text-text-secondary" x-text="totalEliminados">{{ $totalEliminados }}</span>
+                </a>
+                <button type="button" @click="abrirCrear()" class="inline-flex h-11 flex-1 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover sm:h-10 sm:flex-none">
                     + Nuevo producto
                 </button>
             </div>
@@ -324,20 +326,97 @@
             </div>
         </div>
 
-        {{-- Confirmación (eliminar / activar / desactivar): reemplaza al confirm() nativo del navegador. --}}
-        <div x-show="confirmacion.abierta" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {{-- Confirmación (eliminar / activar / desactivar) con resumen del producto. --}}
+        <div x-show="confirmacion.abierta" x-cloak class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
             <div class="absolute inset-0 bg-black/40" @click="confirmacion.abierta = false"></div>
-            <div class="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
-                <h3 class="mb-2 text-sm font-semibold text-text-primary" x-text="confirmacion.titulo"></h3>
+            <div class="relative w-full rounded-t-2xl bg-card p-5 shadow-xl sm:max-w-sm sm:rounded-2xl">
+                <h3 class="mb-3 text-sm font-semibold text-text-primary" x-text="confirmacion.titulo"></h3>
+                <template x-if="confirmacion.resumen">
+                    <div class="mb-3 flex items-center gap-3 rounded-nav border border-border bg-page p-2">
+                        <img :src="confirmacion.resumen.imagen" alt="" class="h-12 w-12 shrink-0 rounded-nav object-cover">
+                        <div class="min-w-0 text-sm">
+                            <p class="truncate font-medium text-text-primary" x-text="confirmacion.resumen.nombre"></p>
+                            <p class="truncate text-xs text-text-caption">
+                                <span class="font-mono" x-text="confirmacion.resumen.referencia"></span> · <span x-text="confirmacion.resumen.categoria"></span>
+                            </p>
+                        </div>
+                    </div>
+                </template>
                 <p class="mb-4 text-sm text-text-secondary" x-text="confirmacion.mensaje"></p>
-                <div class="flex justify-end gap-3">
-                    <button type="button" @click="confirmacion.abierta = false" class="inline-flex h-9 items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page">Cancelar</button>
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                    <button type="button" @click="confirmacion.abierta = false" class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page sm:h-9 sm:min-h-0">Cancelar</button>
                     <button
-                        type="button" @click="confirmarAccion()"
-                        class="inline-flex h-9 items-center justify-center rounded-nav px-3 text-sm font-medium text-white"
+                        type="button" @click="confirmarAccion()" :disabled="accionEnCurso"
+                        class="inline-flex min-h-[44px] items-center justify-center rounded-nav px-3 text-sm font-medium text-white disabled:opacity-60 sm:h-9 sm:min-h-0"
                         :class="confirmacion.peligroso ? 'bg-danger-strong hover:opacity-90' : 'bg-accent hover:bg-accent-hover'"
                         x-text="confirmacion.textoBoton"
                     ></button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Vista rápida: datos del producto sin abrir el editor. --}}
+        <div x-show="vistaRapida.abierta" x-cloak class="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
+            <div class="absolute inset-0 bg-black/40" @click="vistaRapida.abierta = false"></div>
+            <div class="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-card shadow-xl sm:max-h-[90vh] sm:rounded-2xl">
+                <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-6">
+                    <h2 class="min-w-0 truncate text-lg font-semibold text-text-primary" x-text="vistaRapida.datos?.nombre || 'Producto'"></h2>
+                    <button type="button" @click="vistaRapida.abierta = false" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-page" aria-label="Cerrar">✕</button>
+                </div>
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+                    <p x-show="vistaRapida.cargando" class="py-8 text-center text-sm text-text-caption">Cargando…</p>
+                    <template x-if="!vistaRapida.cargando && vistaRapida.datos">
+                        <div class="flex flex-col gap-4">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-[180px_1fr]">
+                                <img :src="vistaRapida.datos.imagen_url" alt="" class="aspect-square w-full rounded-nav border border-border object-cover sm:w-[180px]">
+                                <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <dt class="text-text-caption">Referencia</dt><dd class="font-mono text-text-primary" x-text="vistaRapida.datos.referencia"></dd>
+                                    <dt class="text-text-caption">Categoría</dt><dd class="text-text-primary" x-text="vistaRapida.datos.categoria || 'Sin categoría'"></dd>
+                                    <dt class="text-text-caption">Precio</dt><dd class="font-medium text-text-primary" x-text="'S/ ' + vistaRapida.datos.precio"></dd>
+                                    <dt class="text-text-caption">Stock</dt><dd class="text-text-primary" x-text="vistaRapida.datos.stock"></dd>
+                                    <dt class="text-text-caption">Estado</dt>
+                                    <dd>
+                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" :class="vistaRapida.datos.activo ? 'bg-pagado-bg text-pagado-text' : 'bg-anulado-bg text-anulado-text'" x-text="vistaRapida.datos.activo ? 'Activo' : 'Inactivo'"></span>
+                                        <span x-show="vistaRapida.datos.destacado" class="ml-1 rounded-full bg-verificacion-bg px-2 py-0.5 text-[11px] font-medium text-verificacion-text">Destacado</span>
+                                    </dd>
+                                    <dt class="text-text-caption">Slug</dt><dd class="break-all font-mono text-xs text-text-secondary" x-text="vistaRapida.datos.slug"></dd>
+                                </dl>
+                            </div>
+                            <div x-show="(vistaRapida.datos.especificaciones || []).length">
+                                <h3 class="mb-2 text-sm font-semibold text-text-primary">Especificaciones</h3>
+                                <dl class="divide-y divide-border rounded-nav border border-border text-sm">
+                                    <template x-for="(fila, i) in vistaRapida.datos.especificaciones" :key="i">
+                                        <div class="grid grid-cols-1 gap-1 px-3 py-2 sm:grid-cols-[1fr_2fr]">
+                                            <dt class="text-text-caption" x-text="fila.clave"></dt>
+                                            <dd class="break-words text-text-primary" x-text="fila.valor"></dd>
+                                        </div>
+                                    </template>
+                                </dl>
+                            </div>
+                            <div>
+                                <h3 class="mb-2 text-sm font-semibold text-text-primary">Descripción</h3>
+                                {{-- descripcion viene saneada por el mutator de Producto (Purifier). --}}
+                                <div class="prose-sm break-words text-sm text-text-secondary [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" x-html="vistaRapida.datos.descripcion"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
+                    <button type="button" @click="vistaRapida.abierta = false" class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10 sm:min-h-0">Cerrar</button>
+                    <button type="button" @click="editarDesdeVistaRapida()" :disabled="!vistaRapida.datos" class="inline-flex min-h-[44px] items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60 sm:h-10 sm:min-h-0">Editar</button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Aviso de cambios sin guardar al cerrar el modal de producto. --}}
+        <div x-show="descarte.abierto" x-cloak class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="alertdialog" aria-modal="true">
+            <div class="absolute inset-0 bg-black/10" @click="descarte.abierto = false"></div>
+            <div class="relative w-full rounded-t-2xl bg-card p-5 shadow-xl sm:max-w-sm sm:rounded-2xl">
+                <h3 class="mb-2 text-sm font-semibold text-text-primary">¿Descartar los cambios?</h3>
+                <p class="mb-4 text-sm text-text-secondary">Hay cambios sin guardar en este producto. Si cierras ahora, se pierden.</p>
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                    <button type="button" @click="descarte.abierto = false" class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page sm:h-9 sm:min-h-0">Seguir editando</button>
+                    <button type="button" @click="descarte.abierto = false; cerrarModal(true)" class="inline-flex min-h-[44px] items-center justify-center rounded-nav bg-danger-strong px-3 text-sm font-medium text-white hover:opacity-90 sm:h-9 sm:min-h-0">Descartar cambios</button>
                 </div>
             </div>
         </div>
@@ -353,7 +432,7 @@
 
     @push('scripts')
         <script nonce="{{ $cspNonce }}">
-            function productosApp(categoriasIniciales) {
+            function productosApp(categoriasIniciales, totalEliminadosInicial) {
                 const rutaProductos = @js(route('admin.productos.index'));
                 const rutaVerificarReferencia = @js(route('admin.productos.verificar-referencia'));
                 const rutaCategorias = @js(route('admin.categorias.store'));
@@ -430,8 +509,15 @@
                         mensaje: '',
                         textoBoton: '',
                         peligroso: false,
+                        resumen: null,
                         accion: null,
                     },
+                    accionEnCurso: false,
+                    totalEliminados: totalEliminadosInicial,
+
+                    vistaRapida: { abierta: false, cargando: false, datos: null },
+                    descarte: { abierto: false },
+                    estadoInicial: null,
 
                     quill: null,
 
@@ -455,6 +541,13 @@
                         } catch (e) {
                             console.error('No se pudo inicializar el editor de descripcion (Quill):', e);
                         }
+
+                        window.addEventListener('beforeunload', (evento) => {
+                            if (this.hayCambiosSinGuardar()) {
+                                evento.preventDefault();
+                                evento.returnValue = '';
+                            }
+                        });
                     },
 
                     csrfToken() {
@@ -488,6 +581,7 @@
                             this.quill.setText('');
                         }
                         this.modalAbierto = true;
+                        this.tomarFotoInicial();
                     },
 
                     async abrirEditar(id) {
@@ -498,10 +592,21 @@
                         this.slugTocado = true;
                         this.reiniciarReferencia();
                         this.eliminarImagenExistente = false;
+                        this.estadoInicial = null;
                         this.modalAbierto = true;
 
-                        const respuesta = await fetch(`${rutaProductos}/${id}`, { headers: { Accept: 'application/json' } });
-                        const datos = await respuesta.json();
+                        let datos;
+                        try {
+                            const respuesta = await fetch(`${rutaProductos}/${id}`, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                            if (!respuesta.ok) {
+                                throw new Error(`HTTP ${respuesta.status}`);
+                            }
+                            datos = await respuesta.json();
+                        } catch (e) {
+                            this.cerrarModal(true);
+                            this.mostrarToast('No se pudo cargar el producto.', true);
+                            return;
+                        }
 
                         this.form = {
                             categoria_id: datos.categoria_id ?? '',
@@ -524,10 +629,16 @@
                             this.quill.setText('');
                             this.quill.clipboard.dangerouslyPasteHTML(datos.descripcion || '');
                         }
+                        this.tomarFotoInicial();
                     },
 
-                    cerrarModal() {
+                    cerrarModal(forzar = false) {
+                        if (!forzar && this.hayCambiosSinGuardar()) {
+                            this.descarte.abierto = true;
+                            return;
+                        }
                         this.reiniciarReferencia();
+                        this.estadoInicial = null;
                         this.modalAbierto = false;
                     },
 
@@ -689,7 +800,8 @@
                                 throw new Error(datos.message || `HTTP ${respuesta.status}`);
                             }
                             this.insertarFila(datos.html);
-                            this.cerrarModal();
+                            this.totalEliminados = Math.max(0, this.totalEliminados - 1);
+                            this.cerrarModal(true);
                             this.mostrarToast(datos.mensaje || 'Producto recuperado.');
                         } catch (e) {
                             this.mostrarToast('No se pudo restaurar el producto. Intenta de nuevo.', true);
@@ -705,15 +817,120 @@
                     },
 
                     /** Modal de confirmación compartido para Eliminar/Activar/Desactivar. */
-                    pedirConfirmacion({ titulo, mensaje, textoBoton, peligroso = false, accion }) {
-                        this.confirmacion = { abierta: true, titulo, mensaje, textoBoton, peligroso, accion };
+                    pedirConfirmacion({ titulo, mensaje, textoBoton, peligroso = false, resumen = null, accion }) {
+                        this.confirmacion = { abierta: true, titulo, mensaje, textoBoton, peligroso, resumen, accion };
                     },
 
-                    confirmarAccion() {
+                    async confirmarAccion() {
                         const accion = this.confirmacion.accion;
-                        this.confirmacion.abierta = false;
-                        if (accion) {
-                            accion();
+                        if (!accion || this.accionEnCurso) {
+                            return;
+                        }
+                        this.accionEnCurso = true;
+                        try {
+                            await accion();
+                        } finally {
+                            this.accionEnCurso = false;
+                            this.confirmacion.abierta = false;
+                        }
+                    },
+
+                    /**
+                     * Activar/Desactivar/Eliminar por fetch, sin recargar ni
+                     * perder la búsqueda o el filtro. Si la red falla se
+                     * envía el form clásico (redirect con mensaje).
+                     */
+                    async accionDeFila(formulario, tipo, id = null) {
+                        let respuesta;
+                        try {
+                            respuesta = await fetch(formulario.action, {
+                                method: 'POST',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                },
+                                body: new FormData(formulario),
+                            });
+                        } catch (e) {
+                            formulario.submit();
+                            return;
+                        }
+                        const datos = await respuesta.json().catch(() => ({}));
+                        if (respuesta.status === 419) {
+                            this.mostrarToast('Tu sesión expiró. Recarga la página e intenta de nuevo.', true);
+                            return;
+                        }
+                        if (!respuesta.ok) {
+                            this.mostrarToast('No se pudo completar la acción. Intenta de nuevo.', true);
+                            return;
+                        }
+                        if (tipo === 'eliminar') {
+                            document.getElementById(`fila-producto-${id}`)?.remove();
+                            this.totalEliminados = datos.total_eliminados ?? this.totalEliminados + 1;
+                        } else {
+                            this.insertarFila(datos.html);
+                        }
+                        this.mostrarToast(datos.mensaje || 'Listo.');
+                    },
+
+                    async abrirVistaRapida(id) {
+                        this.vistaRapida = { abierta: true, cargando: true, datos: null };
+                        try {
+                            const respuesta = await fetch(`${rutaProductos}/${id}`, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                            if (!respuesta.ok) {
+                                throw new Error(`HTTP ${respuesta.status}`);
+                            }
+                            this.vistaRapida.datos = await respuesta.json();
+                        } catch (e) {
+                            this.vistaRapida.abierta = false;
+                            this.mostrarToast('No se pudo cargar el producto.', true);
+                        } finally {
+                            this.vistaRapida.cargando = false;
+                        }
+                    },
+
+                    editarDesdeVistaRapida() {
+                        const id = this.vistaRapida.datos?.id;
+                        this.vistaRapida.abierta = false;
+                        if (id) {
+                            this.abrirEditar(id);
+                        }
+                    },
+
+                    /** Foto del formulario para saber si hay cambios sin guardar. */
+                    estadoFormulario() {
+                        return JSON.stringify({
+                            form: { ...this.form, descripcion: this.quill ? this.quill.root.innerHTML : this.form.descripcion },
+                            especificaciones: this.especificaciones,
+                            imagenNueva: Boolean(this.imagenArchivo),
+                            eliminarImagen: this.eliminarImagenExistente,
+                        });
+                    },
+
+                    tomarFotoInicial() {
+                        this.$nextTick(() => {
+                            this.estadoInicial = this.estadoFormulario();
+                        });
+                    },
+
+                    hayCambiosSinGuardar() {
+                        return this.modalAbierto && this.estadoInicial !== null && this.estadoFormulario() !== this.estadoInicial;
+                    },
+
+                    cerrarConEscape() {
+                        if (this.descarte.abierto) {
+                            this.descarte.abierto = false;
+                        } else if (this.confirmacion.abierta) {
+                            this.confirmacion.abierta = false;
+                        } else if (this.categoriaModalAbierto) {
+                            this.categoriaModalAbierto = false;
+                        } else if (this.vistaRapida.abierta) {
+                            this.vistaRapida.abierta = false;
+                        } else if (this.lightboxUrl) {
+                            this.lightboxUrl = null;
+                        } else if (this.modalAbierto) {
+                            this.cerrarModal();
                         }
                     },
 
@@ -864,7 +1081,7 @@
 
                             if (xhr.status === 200 || xhr.status === 201) {
                                 this.insertarFila(respuesta.html);
-                                this.cerrarModal();
+                                this.cerrarModal(true);
                                 this.mostrarToast(respuesta.mensaje || 'Guardado.');
                             } else if (xhr.status === 422) {
                                 this.errores = respuesta.errors || {};

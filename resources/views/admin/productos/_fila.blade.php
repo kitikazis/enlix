@@ -25,30 +25,39 @@
             {{ $producto->activo ? 'Activo' : 'Inactivo' }}
         </span>
     </td>
+    @php
+        $resumen = [
+            'imagen' => $producto->imagen_thumb_url,
+            'nombre' => $producto->nombre,
+            'referencia' => $producto->referencia,
+            'categoria' => $producto->categoria?->nombre ?? 'Sin categoría',
+        ];
+    @endphp
     <td class="whitespace-nowrap py-2.5 pr-5 text-right">
-        <button type="button" class="text-xs font-medium text-accent hover:text-accent-hover" @click="abrirEditar({{ $producto->id }})">Editar</button>
+        <button type="button" class="inline-flex min-h-[44px] items-center px-1.5 text-xs font-medium text-text-secondary hover:text-text-primary sm:min-h-0" @click="abrirVistaRapida({{ $producto->id }})">Ver</button>
+        <button type="button" class="ml-1.5 inline-flex min-h-[44px] items-center px-1.5 text-xs font-medium text-accent hover:text-accent-hover sm:min-h-0" @click="abrirEditar({{ $producto->id }})">Editar</button>
 
         {{--
-            Los forms quedan igual (POST+@method spoof de siempre), pero ya
-            no se auto-envian: el boton es type="button" y pide confirmacion
-            en el modal compartido (confirmacion.*) antes de enviar el form
-            via $refs. Nada de onsubmit/confirm() nativo: el CSP del sitio
-            no tiene 'unsafe-inline' y lo bloquearia en silencio.
+            Los forms (POST + @method) quedan como respaldo: la acción va por
+            fetch (accionDeFila) y solo si falla la red se envía el form
+            clásico. Nada de onsubmit/confirm() nativo: el CSP del sitio no
+            tiene 'unsafe-inline' y lo bloquearía en silencio.
         --}}
         <form method="POST" action="{{ route('admin.productos.alternar-activo', $producto) }}" class="inline" x-ref="formActivar{{ $producto->id }}">
             @csrf
             @method('PATCH')
             <button
                 type="button"
-                class="ml-3 text-xs font-medium text-text-secondary hover:text-text-primary"
+                class="ml-1.5 inline-flex min-h-[44px] items-center px-1.5 text-xs font-medium text-text-secondary hover:text-text-primary sm:min-h-0"
                 @click="pedirConfirmacion({
                     titulo: {{ Illuminate\Support\Js::from($producto->activo ? 'Desactivar producto' : 'Activar producto') }},
+                    resumen: {{ Illuminate\Support\Js::from($resumen) }},
                     mensaje: {{ Illuminate\Support\Js::from($producto->activo
-                        ? '¿Desactivar "'.$producto->nombre.'"? Deja de verse en /productos; se puede reactivar cuando quieras.'
-                        : '¿Activar "'.$producto->nombre.'"? Vuelve a verse en /productos.') }},
+                        ? 'Deja de verse en /productos. Puedes reactivarlo cuando quieras.'
+                        : 'Vuelve a verse en /productos.') }},
                     textoBoton: {{ Illuminate\Support\Js::from($producto->activo ? 'Desactivar' : 'Activar') }},
                     peligroso: {{ $producto->activo ? 'true' : 'false' }},
-                    accion: () => $refs.{{ 'formActivar'.$producto->id }}.submit(),
+                    accion: () => accionDeFila($refs.{{ 'formActivar'.$producto->id }}, 'activar'),
                 })"
             >
                 {{ $producto->activo ? 'Desactivar' : 'Activar' }}
@@ -60,13 +69,14 @@
             @method('DELETE')
             <button
                 type="button"
-                class="ml-3 text-xs font-medium text-rechazado-text hover:underline"
+                class="ml-1.5 inline-flex min-h-[44px] items-center px-1.5 text-xs font-medium text-rechazado-text hover:underline sm:min-h-0"
                 @click="pedirConfirmacion({
                     titulo: 'Eliminar producto',
-                    mensaje: {{ Illuminate\Support\Js::from('¿Eliminar "'.$producto->nombre.'"? Desaparece del catálogo y del listado; no se puede deshacer desde aquí.') }},
+                    resumen: {{ Illuminate\Support\Js::from($resumen) }},
+                    mensaje: 'Sale del catálogo y del listado y va a la papelera. Desde allí puedes recuperarlo.',
                     textoBoton: 'Eliminar',
                     peligroso: true,
-                    accion: () => $refs.{{ 'formEliminar'.$producto->id }}.submit(),
+                    accion: () => accionDeFila($refs.{{ 'formEliminar'.$producto->id }}, 'eliminar', {{ $producto->id }}),
                 })"
             >
                 Eliminar

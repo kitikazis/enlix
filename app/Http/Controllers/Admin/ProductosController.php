@@ -64,6 +64,7 @@ class ProductosController extends Controller
             'slug' => $producto->slug,
             'referencia' => $producto->referencia,
             'categoria_id' => $producto->categoria_id,
+            'categoria' => $producto->categoria?->nombre,
             'descripcion' => $producto->descripcion,
             'especificaciones' => $producto->especificaciones ?? [],
             'imagen_url' => $producto->imagen_url,
@@ -133,12 +134,16 @@ class ProductosController extends Controller
      * Desactivar saca el producto de /productos sin tocar nada mas (sigue
      * en el listado admin, se puede reactivar). No confundir con destroy().
      */
-    public function alternarActivo(Producto $producto): RedirectResponse
+    public function alternarActivo(Request $request, Producto $producto): JsonResponse|RedirectResponse
     {
         $producto->update(['activo' => ! $producto->activo]);
         CatalogoProducto::limpiarCache();
 
         $mensaje = $producto->activo ? 'Producto activado.' : 'Producto desactivado.';
+
+        if ($request->expectsJson()) {
+            return $this->respuestaExito($producto->load('categoria'), $mensaje);
+        }
 
         return redirect()->route('admin.productos.index')->with('exito', $mensaje);
     }
@@ -151,7 +156,7 @@ class ProductosController extends Controller
      * propio snapshot de nombre/precio, así que el historial no depende de
      * que el producto siga vivo.
      */
-    public function destroy(Producto $producto): RedirectResponse
+    public function destroy(Request $request, Producto $producto): JsonResponse|RedirectResponse
     {
         // activo=false tambien: find() (App\Support\Producto) sigue
         // encontrando productos eliminados a proposito (ver su docblock),
@@ -160,6 +165,15 @@ class ProductosController extends Controller
         $producto->update(['activo' => false]);
         $producto->delete();
         CatalogoProducto::limpiarCache();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'mensaje' => 'Producto enviado a la papelera.',
+                'id' => $producto->id,
+                'url_restaurar' => route('admin.productos.restaurar', $producto),
+                'total_eliminados' => Producto::onlyTrashed()->count(),
+            ]);
+        }
 
         return redirect()->route('admin.productos.index')->with('exito', 'Producto eliminado.');
     }
