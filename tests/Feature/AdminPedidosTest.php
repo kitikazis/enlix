@@ -111,4 +111,30 @@ class AdminPedidosTest extends TestCase
             ->assertSee('VISA')
             ->assertSee('Tarjeta');
     }
+
+    public function test_filtro_con_hasta_anterior_a_desde_muestra_el_error_en_espanol(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->from(route('admin.pedidos.index'))
+            ->get(route('admin.pedidos.index', ['desde' => '2026-10-10', 'hasta' => '2026-01-01']))
+            ->assertRedirect(route('admin.pedidos.index'))
+            ->assertSessionHasErrors('hasta');
+
+        $this->actingAs($user)
+            ->followingRedirects()
+            ->from(route('admin.pedidos.index'))
+            ->get(route('admin.pedidos.index', ['desde' => 'no-es-fecha']))
+            ->assertOk()
+            ->assertSee('El campo desde debe ser una fecha válida.');
+    }
+
+    public function test_el_filtro_de_pagos_tambien_valida_el_rango(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->from(route('admin.pagos'))
+            ->get(route('admin.pagos', ['desde' => '2026-10-10', 'hasta' => '2026-01-01']))
+            ->assertSessionHasErrors(['hasta' => 'La fecha "hasta" no puede ser anterior a "desde".']);
+    }
 }

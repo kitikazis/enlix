@@ -7,10 +7,17 @@
         </div>
 
         <x-admin.card title="Todos los pedidos">
+            @if ($errors->any())
+                <div class="mb-4 rounded-nav bg-rechazado-bg px-3 py-2 text-sm text-rechazado-text" role="alert">
+                    @foreach ($errors->all() as $error)
+                        <p>{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
             <form method="GET" class="mb-4 flex flex-wrap items-end gap-3">
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Estado</label>
-                    <select name="estado" class="h-9 rounded-nav border border-border bg-card px-2 text-sm">
+                    <select name="estado" class="h-11 sm:h-9 rounded-nav border border-border bg-card px-2 text-sm">
                         <option value="">Todos</option>
                         @foreach ($estados as $estado)
                             <option value="{{ $estado->value }}" @selected(($filtros['estado'] ?? '') === $estado->value)>{{ $estado->etiqueta() }}</option>
@@ -19,18 +26,18 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Desde</label>
-                    <input type="date" name="desde" value="{{ $filtros['desde'] ?? '' }}" class="h-9 rounded-nav border border-border bg-card px-2 text-sm">
+                    <input type="date" name="desde" value="{{ $filtros['desde'] ?? '' }}" class="h-11 sm:h-9 rounded-nav border border-border bg-card px-2 text-sm">
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Hasta</label>
-                    <input type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}" class="h-9 rounded-nav border border-border bg-card px-2 text-sm">
+                    <input type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}" class="h-11 sm:h-9 rounded-nav border border-border bg-card px-2 text-sm">
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Cliente, email o código</label>
-                    <input type="text" name="cliente" value="{{ $filtros['cliente'] ?? '' }}" placeholder="ENX-... / nombre / email" class="h-9 w-56 rounded-nav border border-border bg-card px-2 text-sm">
+                    <input type="text" name="cliente" value="{{ $filtros['cliente'] ?? '' }}" placeholder="ENX-... / nombre / email" class="h-11 sm:h-9 w-full sm:w-56 rounded-nav border border-border bg-card px-2 text-sm">
                 </div>
-                <button type="submit" class="h-9 rounded-nav bg-accent px-3 text-sm font-medium text-white hover:bg-accent-hover">Filtrar</button>
-                <a href="{{ route('admin.pedidos.index') }}" class="h-9 rounded-nav border border-border px-3 text-sm font-medium leading-9 text-text-secondary">Limpiar</a>
+                <button type="submit" class="h-11 sm:h-9 rounded-nav bg-accent px-3 text-sm font-medium text-white hover:bg-accent-hover">Filtrar</button>
+                <a href="{{ route('admin.pedidos.index') }}" class="h-11 sm:h-9 rounded-nav border border-border px-3 text-sm font-medium leading-[44px] sm:leading-9 text-text-secondary">Limpiar</a>
             </form>
 
             <div class="overflow-x-auto">

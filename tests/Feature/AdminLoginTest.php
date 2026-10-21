@@ -67,4 +67,13 @@ class AdminLoginTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_los_errores_del_login_salen_en_espanol(): void
+    {
+        $this->postJson(route('admin.login.store'), [])
+            ->assertJsonValidationErrors([
+                'email' => 'El campo usuario es obligatorio.',
+                'password' => 'El campo contraseña es obligatorio.',
+            ]);
+    }
 }

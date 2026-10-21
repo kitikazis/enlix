@@ -24,8 +24,10 @@ class PedidosController extends Controller
         $filtros = $request->validate([
             'estado' => ['nullable', Rule::enum(EstadoPago::class)],
             'desde' => ['nullable', 'date'],
-            'hasta' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
             'cliente' => ['nullable', 'string', 'max:150'],
+        ], [
+            'hasta.after_or_equal' => 'La fecha "hasta" no puede ser anterior a "desde".',
         ]);
 
         $pedidos = Pedido::query()

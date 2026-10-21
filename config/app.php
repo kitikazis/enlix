@@ -78,7 +78,10 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // Fijo en español (no env): el sitio solo existe en español y el .env de
+    // producción traía APP_LOCALE=en, que mostraba los mensajes de
+    // validación genéricos de Laravel en inglés ("The nombre field...").
+    'locale' => 'es',
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

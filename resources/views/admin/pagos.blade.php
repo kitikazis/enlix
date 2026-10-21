@@ -16,11 +16,18 @@
         </div>
 
         <x-admin.card :padded="false">
+            @if ($errors->any())
+                <div class="mx-4 mt-4 rounded-nav bg-rechazado-bg px-3 py-2 text-sm text-rechazado-text" role="alert">
+                    @foreach ($errors->all() as $error)
+                        <p>{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
             <form method="GET" class="flex flex-wrap items-end gap-3 border-b border-border p-4">
                 <input type="hidden" name="excluir_prueba" value="{{ $excluirPrueba ? '1' : '0' }}">
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Estado</label>
-                    <select name="estado" class="h-9 rounded-nav border border-border bg-card px-2 text-sm">
+                    <select name="estado" class="h-11 sm:h-9 rounded-nav border border-border bg-card px-2 text-sm">
                         <option value="">Todos</option>
                         @foreach ($estados as $estado)
                             <option value="{{ $estado->value }}" @selected(($filtros['estado'] ?? '') === $estado->value)>{{ $estado->etiqueta() }}</option>
@@ -29,18 +36,18 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Desde</label>
-                    <input type="date" name="desde" value="{{ $filtros['desde'] ?? '' }}" class="h-9 rounded-nav border border-border bg-card px-2 text-sm">
+                    <input type="date" name="desde" value="{{ $filtros['desde'] ?? '' }}" class="h-11 sm:h-9 rounded-nav border border-border bg-card px-2 text-sm">
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-text-caption">Hasta</label>
-                    <input type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}" class="h-9 rounded-nav border border-border bg-card px-2 text-sm">
+                    <input type="date" name="hasta" value="{{ $filtros['hasta'] ?? '' }}" class="h-11 sm:h-9 rounded-nav border border-border bg-card px-2 text-sm">
                 </div>
-                <button type="submit" class="h-9 rounded-nav bg-accent px-3 text-sm font-medium text-white hover:bg-accent-hover">Filtrar</button>
-                <a href="{{ route('admin.pagos', ['excluir_prueba' => $excluirPrueba ? '1' : '0']) }}" class="h-9 rounded-nav border border-border px-3 text-sm font-medium leading-9 text-text-secondary">Limpiar</a>
+                <button type="submit" class="h-11 sm:h-9 rounded-nav bg-accent px-3 text-sm font-medium text-white hover:bg-accent-hover">Filtrar</button>
+                <a href="{{ route('admin.pagos', ['excluir_prueba' => $excluirPrueba ? '1' : '0']) }}" class="h-11 sm:h-9 rounded-nav border border-border px-3 text-sm font-medium leading-[44px] sm:leading-9 text-text-secondary">Limpiar</a>
 
                 <a
                     href="{{ request()->fullUrlWithQuery(['excluir_prueba' => $excluirPrueba ? '0' : '1']) }}"
-                    class="ml-auto inline-flex h-9 items-center gap-2 rounded-nav border px-3 text-sm font-medium {{ $excluirPrueba ? 'border-accent bg-accent/10 text-accent' : 'border-border text-text-secondary hover:bg-page' }}"
+                    class="ml-auto inline-flex h-11 sm:h-9 items-center gap-2 rounded-nav border px-3 text-sm font-medium {{ $excluirPrueba ? 'border-accent bg-accent/10 text-accent' : 'border-border text-text-secondary hover:bg-page' }}"
                     aria-pressed="{{ $excluirPrueba ? 'true' : 'false' }}"
                 >
                     <span class="flex h-4 w-7 items-center rounded-full transition-colors {{ $excluirPrueba ? 'bg-accent justify-end' : 'bg-border justify-start' }} px-0.5">
