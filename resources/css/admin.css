@@ -6,8 +6,10 @@
 
 /*
  * Tokens del rediseño del dashboard admin (ver PDF de referencia,
- * 2026-09-25). Todo color/radio vive aquí, nunca como hex suelto en las
- * vistas.
+ * 2026-09-25). Todo color/radio/sombra vive aquí, nunca como hex suelto en
+ * las vistas. Los textos cumplen WCAG AA (4.5:1) tanto sobre bg-card como
+ * sobre bg-page (el crema): text-caption se oscureció a #646976 porque el
+ * #6e7380 anterior daba 4.3:1 sobre el crema.
  */
 @theme {
     --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
@@ -16,10 +18,11 @@
     --color-page: #f5f4f0;
     --color-card: #ffffff;
     --color-border: #e4e2dc;
+    --color-row-hover: #faf9f6;
 
     --color-text-primary: #15171c;
     --color-text-secondary: #5e6270;
-    --color-text-caption: #6e7380;
+    --color-text-caption: #646976;
     --color-text-disabled: #a8adb7;
 
     --color-sidebar: #15171c;
@@ -28,6 +31,9 @@
 
     --color-accent: #2f43d0;
     --color-accent-hover: #1f2e9e;
+    /* Texto sobre bg-accent (botón primario, logo). Blanco en claro; en
+     * oscuro el acento se aclara y el texto pasa a oscuro. */
+    --color-on-accent: #ffffff;
 
     --color-danger-strong: #a8322c;
 
@@ -69,6 +75,15 @@
     --color-expirado-dot: #a8adb7;
 
     --radius-nav: 0.625rem;
+    --radius-card: 1rem;
+
+    --shadow-card: 0 1px 2px 0 rgb(21 23 28 / 0.04), 0 1px 3px 0 rgb(21 23 28 / 0.03);
+    --shadow-pop: 0 16px 40px -12px rgb(21 23 28 / 0.28), 0 2px 8px rgb(21 23 28 / 0.08);
+
+    /* Alto mínimo táctil (44px) y alturas fijas del shell móvil. */
+    --spacing-touch: 2.75rem;
+    --spacing-topbar: 3.5rem;
+    --spacing-bottomnav: 4rem;
 }
 
 [x-cloak] {
@@ -85,32 +100,735 @@ html[data-modo='prueba'] {
     --color-sidebar-active: #4a2c0a;
 }
 
+/* Tema oscuro OPCIONAL: solo si el admin eligió "Tema: sistema" en la
+ * barra lateral (localStorage, ver adminShell()) y el sistema operativo
+ * está en oscuro. Por defecto el panel es siempre claro. */
+@media (prefers-color-scheme: dark) {
+    html[data-tema='sistema'] {
+        color-scheme: dark;
+
+        --color-page: #0f1115;
+        --color-card: #171a21;
+        --color-border: #2a2f3a;
+        --color-row-hover: #1d212a;
+
+        --color-text-primary: #eceef2;
+        --color-text-secondary: #b4b9c5;
+        --color-text-caption: #9aa0ad;
+        --color-text-disabled: #5c6270;
+
+        --color-sidebar: #0b0c0f;
+        --color-sidebar-active: #1f232c;
+        --color-sidebar-item: #b4b9c5;
+
+        --color-accent: #8b97ff;
+        --color-accent-hover: #a3adff;
+        --color-on-accent: #0f1115;
+
+        --color-danger-strong: #c2413a;
+
+        --color-pendiente-bg: #3a2a0b;
+        --color-pendiente-text: #f5cf8a;
+        --color-pendiente-dot: #e0a33b;
+
+        --color-verificacion-bg: #162447;
+        --color-verificacion-text: #b4c7f5;
+        --color-verificacion-dot: #6b8ff0;
+
+        --color-pagado-bg: #0f3324;
+        --color-pagado-text: #9fe0bd;
+        --color-pagado-dot: #3fb27a;
+
+        --color-rechazado-bg: #3d1614;
+        --color-rechazado-text: #f4b4ae;
+        --color-rechazado-dot: #e2625a;
+
+        --color-anulado-bg: #262a33;
+        --color-anulado-text: #c4c8d2;
+        --color-anulado-dot: #8b92a1;
+
+        --color-pago-anulado-bg: #384152;
+        --color-pago-anulado-text: #f1f3f7;
+        --color-pago-anulado-dot: #94a3b8;
+
+        --color-expirado-bg: #20232b;
+        --color-expirado-text: #b4b9c5;
+        --color-expirado-dot: #6b7280;
+
+        --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+        --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.4);
+    }
+
+    html[data-tema='sistema'][data-modo='prueba'] {
+        --color-accent: #f0a841;
+        --color-accent-hover: #f5bd6b;
+        --color-sidebar: #1f1303;
+        --color-sidebar-active: #3a2408;
+    }
+}
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Nada en el admin debe desbordar a lo ancho: clip (no hidden) para no
+     * crear un contenedor de scroll que rompa los position: sticky. */
+    body {
+        overflow-x: clip;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
+    ::selection {
+        background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    }
+}
+
+/* Microtransiciones de Alpine (x-transition) y de las clases transition-*:
+ * se anulan si el sistema pide menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
 @keyframes enlix-loading-bar {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(300%); }
 }
 
+@keyframes enlix-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes enlix-skeleton {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+@keyframes enlix-sheet-in {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@layer components {
+    /* Shell: alto real del viewport móvil (sin el salto de la barra de
+     * direcciones de iOS/Android); 100% como respaldo. */
+    .app-shell {
+        height: 100%;
+        height: 100dvh;
+    }
+
+    .skip-link {
+        position: absolute;
+        left: 1rem;
+        top: -4rem;
+        z-index: 100;
+        border-radius: var(--radius-nav);
+        background: var(--color-card);
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        box-shadow: var(--shadow-pop);
+    }
+
+    .skip-link:focus {
+        top: 1rem;
+    }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ---------------------------------------------------------------
+     * Botones: .btn + variante (primary/secondary/ghost/danger) +
+     * tamaño (btn-sm/btn-lg; md es el default). 44px de alto en móvil,
+     * más compactos desde lg (puntero fino). Estados: hover, focus-visible,
+     * disabled y aria-busy="true" (spinner).
+     * --------------------------------------------------------------- */
+    .btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: var(--spacing-touch);
+        padding: 0 1rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius-nav);
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.25rem;
+        white-space: nowrap;
+        text-decoration: none;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
+    .btn:disabled,
+    .btn[aria-disabled='true'] {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    .btn[aria-busy='true'] {
+        cursor: progress;
+        pointer-events: none;
+    }
+
+    .btn[aria-busy='true']::before {
+        content: '';
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 9999px;
+        animation: enlix-spin 0.7s linear infinite;
+    }
+
+    .btn-sm {
+        padding: 0 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .btn-lg {
+        min-height: 3rem;
+        padding: 0 1.25rem;
+        font-size: 1rem;
+    }
+
+    .btn-icon {
+        width: var(--spacing-touch);
+        padding: 0;
+    }
+
+    @media (width >= 64rem) {
+        .btn {
+            min-height: 2.5rem;
+        }
+
+        .btn-sm {
+            min-height: 2.25rem;
+        }
+
+        .btn-lg {
+            min-height: 3rem;
+        }
+
+        .btn-icon {
+            width: 2.5rem;
+        }
+
+        .btn-icon.btn-sm {
+            width: 2.25rem;
+        }
+    }
+
+    .btn-primary {
+        background: var(--color-accent);
+        color: var(--color-on-accent);
+        box-shadow: var(--shadow-card);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: var(--color-accent-hover);
+    }
+
+    .btn-secondary {
+        border-color: var(--color-border);
+        background: var(--color-card);
+        color: var(--color-text-primary);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--color-page);
+    }
+
+    .btn-ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+        background: var(--color-page);
+        color: var(--color-text-primary);
+    }
+
+    .btn-danger {
+        background: var(--color-danger-strong);
+        color: #ffffff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        filter: brightness(0.92);
+    }
+
+    /* Contador pequeño dentro de botones/enlaces (Eliminados, Filtros). */
+    .count-badge {
+        display: inline-flex;
+        min-width: 1.375rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background: var(--color-page);
+        padding: 0 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.375rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-secondary);
+    }
+
+    /* ---------------------------------------------------------------
+     * Campos de formulario. 16px en móvil (evita el zoom de iOS al
+     * enfocar), 14px desde sm. Altura táctil y fecha con alto parejo.
+     * --------------------------------------------------------------- */
+    .field-label {
+        display: block;
+        margin-bottom: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-text-secondary);
+    }
+
+    .field-input {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        min-height: var(--spacing-touch);
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-nav);
+        background-color: var(--color-card);
+        color: var(--color-text-primary);
+        font-size: 1rem;
+        line-height: 1.5rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field-input::placeholder {
+        color: var(--color-text-caption);
+    }
+
+    .field-input:focus {
+        outline: none;
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+    }
+
+    .field-input[aria-invalid='true'] {
+        border-color: var(--color-rechazado-text);
+    }
+
+    /* iOS dibuja los type=date con su propio alto y centrado: se iguala
+     * al resto de inputs. */
+    .field-input[type='date'] {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .field-input[type='date']::-webkit-date-and-time-value {
+        min-height: 1.5rem;
+        text-align: left;
+    }
+
+    @media (width >= 40rem) {
+        .field-input {
+            font-size: 0.875rem;
+        }
+    }
+
+    @media (width >= 64rem) {
+        .field-input {
+            min-height: 2.5rem;
+            padding-top: 0.375rem;
+            padding-bottom: 0.375rem;
+        }
+    }
+
+    /* ---------------------------------------------------------------
+     * x-admin.data-list: tabla real desde lg; por debajo, cada <tr> se
+     * apila como tarjeta y cada <td data-label="..."> se lee como par
+     * etiqueta / valor. Roles de celda en data-dl:
+     *   media   -> miniatura, a la izquierda del título
+     *   title   -> título de la tarjeta (arriba a la izquierda)
+     *   aside   -> dato destacado (arriba a la derecha: monto, estado)
+     *   status  -> badges bajo el título
+     *   actions -> pie de la tarjeta
+     * Una sola marca para ambas vistas: también funciona con filas
+     * insertadas por JS (productos/_fila.blade.php).
+     * --------------------------------------------------------------- */
+    /* position: relative contiene el thead/caption absolutos (sr-only):
+     * sin esto se posicionaban contra el viewport y estiraban la página. */
+    .dl-wrap {
+        position: relative;
+        min-width: 0;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+    }
+
+    .data-list {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        text-align: left;
+        font-size: 0.875rem;
+    }
+
+    .data-list [data-align='right'] {
+        text-align: right;
+    }
+
+    @media (width >= 64rem) {
+        /* El header solo puede quedar fijo si el propio contenedor es el
+         * que hace scroll vertical (overflow-x crea un contenedor de
+         * scroll y "atrapa" el sticky). */
+        .dl-wrap[data-scroll='y'] {
+            max-height: max(20rem, calc(100dvh - 19rem));
+            overflow: auto;
+        }
+
+        .dl-wrap[data-scroll='fill'] {
+            min-height: 0;
+            flex: 1 1 0%;
+            overflow: auto;
+        }
+
+        .data-list th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-card);
+            padding: 0.75rem 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: var(--color-text-secondary);
+            white-space: nowrap;
+        }
+
+        .data-list td {
+            border-bottom: 1px solid var(--color-border);
+            padding: 0.75rem 0.625rem;
+            vertical-align: middle;
+        }
+
+        .data-list th:first-child,
+        .data-list td:first-child {
+            padding-left: 1.25rem;
+        }
+
+        .data-list th:last-child,
+        .data-list td:last-child {
+            padding-right: 1.25rem;
+        }
+
+        /* Acciones en línea: un poco más angostas para que la tabla de
+         * productos entre a 1024px sin scroll horizontal. */
+        .row-actions .btn-sm {
+            padding: 0 0.625rem;
+        }
+
+        .data-list tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .data-list tbody tr {
+            transition: background-color 0.12s ease;
+        }
+
+        .data-list tbody tr:hover {
+            background: var(--color-row-hover);
+        }
+
+        .data-list [data-dl='mobile'] {
+            display: none;
+        }
+    }
+
+    @media (width < 64rem) {
+        .data-list,
+        .data-list tbody {
+            display: block;
+        }
+
+        .data-list thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        .data-list tbody tr {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            column-gap: 0.75rem;
+            row-gap: 0.5rem;
+            border-bottom: 1px solid var(--color-border);
+            padding: 1rem;
+        }
+
+        .data-list tbody tr:last-child {
+            border-bottom: 0;
+        }
+
+        .data-list td {
+            display: flex;
+            width: 100%;
+            min-width: 0;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        /* La etiqueta no hereda la tipografía del valor (mono, tabular,
+         * negrita): siempre sans, 12px, secundaria. */
+        .data-list td[data-label]::before {
+            content: attr(data-label);
+            flex-shrink: 0;
+            font-family: var(--font-sans);
+            font-size: 0.75rem;
+            font-weight: 500;
+            font-variant-numeric: normal;
+            letter-spacing: normal;
+            text-transform: none;
+            color: var(--color-text-secondary);
+            text-align: left;
+        }
+
+        .data-list td[data-dl='actions'] > .row-actions {
+            width: 100%;
+        }
+
+        .data-list td[data-dl='media'] {
+            order: -4;
+            width: auto;
+            flex: none;
+        }
+
+        .data-list td[data-dl='title'] {
+            order: -3;
+            width: auto;
+            flex: 1 1 0%;
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .data-list td[data-dl='aside'] {
+            order: -2;
+            width: auto;
+            flex: none;
+            align-self: flex-start;
+        }
+
+        .data-list td[data-dl='status'] {
+            order: -1;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+        }
+
+        .data-list td[data-dl='actions'] {
+            order: 10;
+            justify-content: flex-end;
+            margin-top: 0.25rem;
+            border-top: 1px solid var(--color-border);
+            padding-top: 0.75rem;
+        }
+
+        .data-list td[data-dl='desktop'] {
+            display: none;
+        }
+
+        .data-list td[colspan] {
+            display: block;
+            text-align: center;
+        }
+    }
+
+    /* ---------------------------------------------------------------
+     * Acciones de fila: en lg todas en línea; por debajo, la principal
+     * queda visible y el resto va a un menú "⋯" que se abre como hoja
+     * inferior (fixed, para que ninguna tarjeta con overflow lo recorte).
+     * Lo maneja una función global plana (ver admin-dashboard.blade.php):
+     * sin x-data anidado que tape el scope de la página.
+     * --------------------------------------------------------------- */
+    .row-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.25rem;
+    }
+
+    .row-menu-panel,
+    .row-menu-backdrop {
+        display: none;
+    }
+
+    .row-menu[data-abierto] .row-menu-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 69;
+        display: block;
+        background: rgb(15 17 21 / 0.45);
+    }
+
+    .row-menu[data-abierto] .row-menu-panel {
+        position: fixed;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 70;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        border-radius: 1rem 1rem 0 0;
+        background: var(--color-card);
+        padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom));
+        box-shadow: var(--shadow-pop);
+        text-align: left;
+        animation: enlix-sheet-in 0.18s ease-out;
+    }
+
+    .row-menu-panel > form {
+        display: block;
+    }
+
+    .row-menu-panel .btn {
+        width: 100%;
+        min-height: 3rem;
+        justify-content: flex-start;
+        font-size: 0.9375rem;
+    }
+
+    .row-menu-title {
+        display: block;
+        overflow: hidden;
+        padding: 0.25rem 0.5rem 0.5rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (width >= 64rem) {
+        .row-menu,
+        .row-menu-panel,
+        .row-menu[data-abierto] .row-menu-panel {
+            display: contents;
+        }
+
+        .row-menu-panel > form {
+            display: contents;
+        }
+
+        .row-menu-panel .btn {
+            width: auto;
+            min-height: 2.25rem;
+            font-size: 0.8125rem;
+        }
+
+        .row-menu-toggle,
+        .row-menu-title,
+        .row-menu-cancel,
+        .row-menu[data-abierto] .row-menu-backdrop {
+            display: none;
+        }
+    }
+
+    /* Placeholders de carga. */
+    .skeleton {
+        border-radius: 0.5rem;
+        background: linear-gradient(90deg, var(--color-page) 25%, var(--color-border) 37%, var(--color-page) 63%);
+        background-size: 400% 100%;
+        animation: enlix-skeleton 1.4s ease infinite;
+    }
+
+    /* Tooltip del sidebar en modo rail (md-xl): el label vive en un span
+     * oculto que aparece al pasar el mouse o con foco de teclado. */
+    .rail-tooltip {
+        pointer-events: none;
+        position: absolute;
+        left: calc(100% + 0.75rem);
+        top: 50%;
+        z-index: 60;
+        translate: -4px -50%;
+        border-radius: 0.5rem;
+        background: var(--color-text-primary);
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--color-card);
+        white-space: nowrap;
+        opacity: 0;
+        box-shadow: var(--shadow-pop);
+        transition: opacity 0.12s ease, translate 0.12s ease;
+    }
+
+    .group:hover > .rail-tooltip,
+    .group:focus-visible > .rail-tooltip {
+        translate: 0 -50%;
+        opacity: 1;
+    }
+
+    @media (width >= 80rem) {
+        .rail-tooltip {
+            display: none;
+        }
+    }
+}
+
 /* Contenedores con scroll interno propio (tablas/listas dentro de una
  * tarjeta): scrollbar delgada para que no compita visualmente con el
  * contenido en pantallas donde el dashboard no hace scroll de página. */
-.dash-scroll {
+.dash-scroll,
+.dl-wrap {
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
 }
 
-.dash-scroll::-webkit-scrollbar {
+.dash-scroll::-webkit-scrollbar,
+.dl-wrap::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
 
-.dash-scroll::-webkit-scrollbar-thumb {
+.dash-scroll::-webkit-scrollbar-thumb,
+.dl-wrap::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
     border-radius: 9999px;
 }
 
-/* Fade inferior: solo se activa (via Alpine, ver scrollFade() en
- * dashboard.blade.php) cuando de verdad queda contenido por debajo, para
- * nunca cortar una fila a la mitad sin avisar. */
+/* Fade inferior: solo se activa (via actualizarScrollFade() en
+ * admin-dashboard.blade.php) cuando de verdad queda contenido por debajo,
+ * para nunca cortar una fila a la mitad sin avisar. */
 .dash-scroll-fade {
     mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
@@ -130,7 +848,47 @@ html[data-modo='prueba'] {
     border-bottom-right-radius: 0.75rem;
     font-family: inherit;
     font-size: 0.875rem;
+    color: var(--color-text-primary);
 }
 .ql-container.ql-snow.ql-snow:focus-within {
     border-color: var(--color-accent);
+}
+
+/* Botones de la barra de Quill (28x24 por defecto): táctiles en móvil. */
+@media (width < 64rem) {
+    .ql-toolbar.ql-snow.ql-snow {
+        padding: 0.25rem;
+    }
+    .ql-toolbar.ql-snow .ql-formats {
+        margin-right: 0.25rem;
+    }
+    .ql-toolbar.ql-snow button {
+        width: 2.75rem;
+        height: 2.75rem;
+        padding: 0.625rem;
+    }
+    .ql-toolbar.ql-snow .ql-picker {
+        height: 2.75rem;
+    }
+    .ql-toolbar.ql-snow .ql-picker-label {
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Quill pinta sus iconos con trazos grises fijos: en tema oscuro se
+ * aclaran para que la barra no quede invisible. */
+@media (prefers-color-scheme: dark) {
+    html[data-tema='sistema'] .ql-snow .ql-stroke {
+        stroke: var(--color-text-secondary);
+    }
+    html[data-tema='sistema'] .ql-snow .ql-fill {
+        fill: var(--color-text-secondary);
+    }
+    html[data-tema='sistema'] .ql-snow .ql-picker {
+        color: var(--color-text-secondary);
+    }
+    html[data-tema='sistema'] .ql-editor.ql-blank::before {
+        color: var(--color-text-caption);
+    }
 }

@@ -91,6 +91,11 @@ Route::post('/izipay/ipn', [IzipayController::class, 'ipn'])
 
 // Panel admin de solo lectura (ver pagos sin entrar a phpMyAdmin).
 Route::prefix('admin')->name('admin.')->group(function () {
+    // /admin y /admin/ (Laravel ignora la barra final) van al dashboard; si
+    // no hay sesión, el middleware auth de /dashboard manda al login. Antes
+    // /admin daba 404.
+    Route::redirect('/', '/admin/dashboard')->name('inicio');
+
     Route::get('/login', [AdminLoginController::class, 'create'])->name('login');
     Route::post('/login', [AdminLoginController::class, 'store'])
         ->middleware('throttle:admin-login')

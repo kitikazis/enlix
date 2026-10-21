@@ -1,11 +1,11 @@
-@props(['title' => null, 'padded' => true, 'scroll' => false])
+@props(['title' => null, 'padded' => true, 'scroll' => false, 'fill' => false])
 
-<div {{ $attributes->class(['flex flex-col bg-card border border-border rounded-2xl overflow-hidden']) }}>
+<div {{ $attributes->class(['flex min-w-0 flex-col overflow-hidden rounded-card border border-border bg-card shadow-card']) }}>
     @if ($title)
-        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-[clamp(0.875rem,1.5vh,1.25rem)] py-[clamp(0.625rem,1.25vh,1rem)]">
+        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
             <h2 class="truncate text-sm font-semibold text-text-primary">{{ $title }}</h2>
             @isset($action)
-                <div class="shrink-0 text-xs text-text-caption">{{ $action }}</div>
+                <div class="shrink-0 text-xs text-text-secondary">{{ $action }}</div>
             @endisset
         </div>
     @endif
@@ -16,10 +16,18 @@
         en la tabla de productos), un x-data anidado nuevo rompe esa
         resolución de scope. actualizarScrollFade() es una función global
         plana (ver admin-dashboard.blade.php), no crea ningún scope.
+
+        fill: el cuerpo ocupa todo el alto disponible de la tarjeta (para
+        tablas con scroll propio, ver x-admin.data-list scroll="fill").
     --}}
     <div
         @if ($scroll) x-init="actualizarScrollFade($el)" @scroll="actualizarScrollFade($el)" @resize.window="actualizarScrollFade($el)" @endif
-        @class(['p-[clamp(0.875rem,1.5vh,1.25rem)]' => $padded, 'dash-scroll md:min-h-0 md:flex-1 md:overflow-y-auto' => $scroll])
+        @class([
+            'min-w-0',
+            'p-4 sm:p-5' => $padded,
+            'dash-scroll xl:min-h-0 xl:flex-1 xl:overflow-y-auto' => $scroll,
+            'flex min-h-0 flex-1 flex-col' => $fill,
+        ])
     >
         {{ $slot }}
     </div>

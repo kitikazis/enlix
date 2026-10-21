@@ -1,30 +1,42 @@
 <x-layouts.admin-dashboard :titulo="'Páginas legales - Enlix Admin'">
-    <div class="mx-auto flex w-full max-w-[900px] flex-col gap-4">
+    <div class="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:gap-6">
 
-        <div>
-            <h1 class="text-xl font-semibold text-text-primary">Páginas legales</h1>
-            <p class="text-sm text-text-secondary">Edita el contenido público de estas páginas sin tocar código.</p>
-        </div>
+        <x-admin.page-header title="Páginas legales" subtitle="Edita el contenido público de estas páginas sin tocar código." />
 
         @if (session('status'))
-            <div class="rounded-nav border border-pagado-dot bg-pagado-bg px-4 py-3 text-sm text-pagado-text">
+            <div class="rounded-nav border border-pagado-dot bg-pagado-bg px-4 py-3 text-sm text-pagado-text" role="status">
                 {{ session('status') }}
             </div>
         @endif
 
         <x-admin.card :padded="false">
-            @foreach ($paginas as $pagina)
-                <a
-                    href="{{ route('admin.paginas-legales.edit', $pagina) }}"
-                    class="flex items-center justify-between gap-3 border-b border-border px-5 py-4 last:border-b-0 hover:bg-page"
-                >
-                    <div class="min-w-0">
-                        <p class="truncate text-sm font-medium text-text-primary">{{ $pagina->titulo }}</p>
-                        <p class="truncate text-xs text-text-caption">/{{ $pagina->slug }} · actualizado {{ $pagina->updated_at->diffForHumans() }}</p>
-                    </div>
-                    <span class="shrink-0 text-xs font-medium text-accent">Editar →</span>
-                </a>
-            @endforeach
+            <ul class="divide-y divide-border" aria-label="Páginas legales">
+                @forelse ($paginas as $pagina)
+                    <li>
+                        <a
+                            href="{{ route('admin.paginas-legales.edit', $pagina) }}"
+                            class="flex min-h-touch items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-row-hover focus-visible:bg-row-hover sm:px-5"
+                        >
+                            <span class="flex min-w-0 items-center gap-3">
+                                <span class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-nav bg-page text-text-secondary sm:flex">
+                                    <x-admin.icon name="legal" />
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-semibold text-text-primary">{{ $pagina->titulo }}</span>
+                                    <span class="block truncate text-xs text-text-secondary">/{{ $pagina->slug }} · actualizado {{ $pagina->updated_at->diffForHumans() }}</span>
+                                </span>
+                            </span>
+                            <span class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-accent">
+                                Editar <x-admin.icon name="flecha-der" class="h-4 w-4" />
+                            </span>
+                        </a>
+                    </li>
+                @empty
+                    <li class="p-4 sm:p-5">
+                        <x-admin.empty-state icon="legal" title="No hay páginas legales" description="Se crean al ejecutar el seeder de páginas legales." />
+                    </li>
+                @endforelse
+            </ul>
         </x-admin.card>
 
     </div>

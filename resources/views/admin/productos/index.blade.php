@@ -14,74 +14,92 @@
     <div
         x-data="productosApp(@js($categorias->map(fn ($c) => ['id' => $c->id, 'nombre' => $c->nombre])->all()), {{ (int) $totalEliminados }})"
         @keydown.escape.window="cerrarConEscape()"
-        class="mx-auto flex w-full max-w-6xl flex-col gap-4 md:h-full md:min-h-0 md:gap-6"
+        class="flex w-full flex-col gap-5 sm:gap-6 lg:min-h-0 lg:flex-1"
     >
 
-        <div class="flex shrink-0 flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <h1 class="text-2xl font-semibold text-text-primary md:text-[28px]">Productos</h1>
-            <div class="flex items-center gap-3">
+        <x-admin.page-header title="Productos" subtitle="Crea, edita y publica los productos del catálogo.">
+            <x-slot:actions>
                 <a
                     href="{{ route('admin.productos.papelera') }}" x-show="totalEliminados > 0" @if ($totalEliminados === 0) x-cloak @endif
-                    class="inline-flex h-11 items-center justify-center gap-1.5 rounded-nav border border-border bg-card px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10"
+                    class="btn btn-secondary"
                 >
+                    <x-admin.icon name="papelera" class="h-4 w-4" />
                     Eliminados
-                    <span class="rounded-full bg-page px-1.5 py-0.5 text-[11px] font-medium text-text-secondary" x-text="totalEliminados">{{ $totalEliminados }}</span>
+                    <span class="count-badge" x-text="totalEliminados">{{ $totalEliminados }}</span>
                 </a>
-                <button type="button" @click="abrirCrear()" class="inline-flex h-11 flex-1 items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover sm:h-10 sm:flex-none">
-                    + Nuevo producto
+                <button type="button" @click="abrirCrear()" class="btn btn-primary flex-1 sm:flex-none">
+                    <x-admin.icon name="mas-simple" class="h-4 w-4" />
+                    Nuevo producto
                 </button>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-admin.page-header>
 
         @if (session('exito'))
-            <div class="shrink-0 rounded-nav bg-pagado-bg px-4 py-3 text-sm font-medium text-pagado-text">
+            <div class="shrink-0 rounded-nav bg-pagado-bg px-4 py-3 text-sm font-medium text-pagado-text" role="status">
                 {{ session('exito') }}
             </div>
         @endif
 
-        <div class="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
-            <input
-                type="text"
-                x-model="busqueda"
-                @input="filtrar()"
-                placeholder="Buscar por producto o referencia…"
-                class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm sm:max-w-xs"
-            >
-            <select x-model="filtroCategoria" @change="filtrar()" class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm sm:max-w-xs">
-                <option value="">Todas las categorías</option>
-                <template x-for="cat in categorias" :key="cat.id">
-                    <option :value="String(cat.id)" x-text="cat.nombre"></option>
-                </template>
-            </select>
+        <div class="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:items-center" role="search">
+            <div class="relative min-w-0 lg:w-80">
+                <label for="buscar-producto" class="sr-only">Buscar por producto o referencia</label>
+                <x-admin.icon name="buscar" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+                <input
+                    id="buscar-producto"
+                    type="search"
+                    x-model="busqueda"
+                    @input="filtrar()"
+                    placeholder="Buscar por producto o referencia…"
+                    autocomplete="off"
+                    class="field-input pl-9"
+                >
+            </div>
+            <div class="min-w-0 lg:w-64">
+                <label for="filtro-categoria" class="sr-only">Categoría</label>
+                <select id="filtro-categoria" x-model="filtroCategoria" @change="filtrar()" class="field-input">
+                    <option value="">Todas las categorías</option>
+                    <template x-for="cat in categorias" :key="cat.id">
+                        <option :value="String(cat.id)" x-text="cat.nombre"></option>
+                    </template>
+                </select>
+            </div>
+            <button
+                type="button"
+                x-show="busqueda || filtroCategoria" x-cloak
+                @click="busqueda = ''; filtroCategoria = ''; filtrar()"
+                class="btn btn-ghost sm:col-span-2 lg:col-span-1"
+            >Limpiar filtros</button>
         </div>
 
-        <x-admin.card :padded="false" class="md:min-h-0 md:flex-1" scroll>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead>
-                        <tr class="border-b border-border text-xs text-text-caption">
-                            <th class="sticky top-0 z-10 bg-card py-3 pl-5 pr-3 font-medium">Imagen</th>
-                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Producto</th>
-                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Referencia</th>
-                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Categoría</th>
-                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Especificaciones</th>
-                            <th class="sticky top-0 z-10 bg-card py-3 pr-3 font-medium">Estado</th>
-                            <th class="sticky top-0 z-10 bg-card py-3 pr-5 text-right font-medium"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-productos-cuerpo" class="divide-y divide-border">
-                        @forelse ($productos as $producto)
-                            @include('admin.productos._fila', ['producto' => $producto])
-                        @empty
-                            <tr id="fila-vacia">
-                                <td colspan="7" class="py-8">
-                                    <x-admin.empty-state title="No hay productos todavía." />
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+        <x-admin.card :padded="false" class="lg:min-h-0 lg:flex-1" fill>
+            <x-admin.data-list
+                caption="Productos del catálogo"
+                scroll="fill"
+                body-id="tabla-productos-cuerpo"
+                :columns="['Imagen', 'Producto', 'Referencia', 'Categoría', 'Especificaciones', 'Estado', ['label' => 'Acciones', 'sr' => true]]"
+            >
+                @forelse ($productos as $producto)
+                    @include('admin.productos._fila', ['producto' => $producto])
+                @empty
+                    <tr id="fila-vacia">
+                        <td colspan="7">
+                            <x-admin.empty-state icon="productos" title="No hay productos todavía" description="Crea el primero para que aparezca en la tienda.">
+                                <button type="button" @click="abrirCrear()" class="btn btn-primary btn-sm">
+                                    <x-admin.icon name="mas-simple" class="h-4 w-4" />
+                                    Nuevo producto
+                                </button>
+                            </x-admin.empty-state>
+                        </td>
+                    </tr>
+                @endforelse
+                <tr id="fila-sin-resultados" x-show="sinResultados" x-cloak>
+                    <td colspan="7">
+                        <x-admin.empty-state icon="buscar" title="Ningún producto coincide" description="Prueba con otro nombre, referencia o categoría.">
+                            <button type="button" @click="busqueda = ''; filtroCategoria = ''; filtrar()" class="btn btn-secondary btn-sm">Limpiar filtros</button>
+                        </x-admin.empty-state>
+                    </td>
+                </tr>
+            </x-admin.data-list>
         </x-admin.card>
 
         {{-- Modal de producto --}}
@@ -112,7 +130,28 @@
                     </template>
                 </div>
 
-                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 lg:min-h-[520px]">
+                <div class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 lg:min-h-[520px]" :aria-busy="cargandoEdicion ? 'true' : 'false'">
+
+                    {{-- Mientras llegan los datos de "Editar": placeholders en vez de un formulario vacío que parece nuevo. --}}
+                    <div x-show="cargandoEdicion" x-cloak class="absolute inset-0 z-10 grid grid-cols-1 gap-6 bg-card px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[220px_minmax(0,1fr)]" aria-hidden="true">
+                        <div class="skeleton mx-auto aspect-square w-full max-w-[200px] rounded-xl lg:max-w-none"></div>
+                        <div class="flex flex-col gap-5">
+                            <div class="skeleton h-4 w-28"></div>
+                            <div class="skeleton h-11 w-full"></div>
+                            <div class="skeleton h-11 w-full"></div>
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div class="skeleton h-11"></div>
+                                <div class="skeleton h-11"></div>
+                            </div>
+                            <div class="skeleton h-4 w-36"></div>
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div class="skeleton h-11"></div>
+                                <div class="skeleton h-11"></div>
+                                <div class="skeleton h-11"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p x-show="cargandoEdicion" x-cloak class="sr-only" role="status">Cargando producto…</p>
 
                     {{-- Tab: General --}}
                     <div x-show="tabActiva === 'general'" class="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
@@ -345,9 +384,8 @@
                     <p class="text-center text-xs font-medium text-rechazado-text sm:mr-auto sm:text-left" x-show="Object.keys(errores).length" aria-live="polite"
                        x-text="Object.keys(errores).length === 1 ? 'Revisa 1 campo marcado en rojo.' : `Revisa ${Object.keys(errores).length} campos marcados en rojo.`"></p>
                     <div class="flex flex-col-reverse gap-2 sm:ml-auto sm:flex-row sm:gap-3">
-                        <button type="button" @click="cerrarModal()" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10 sm:min-h-0 sm:w-auto">Cancelar</button>
-                        <button type="button" @click="guardar()" :disabled="guardando" class="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-nav bg-accent px-5 text-sm font-medium text-white shadow-sm hover:bg-accent-hover disabled:opacity-60 sm:h-10 sm:min-h-0 sm:w-auto sm:min-w-[150px]">
-                            <svg x-show="guardando" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".3" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                        <button type="button" @click="cerrarModal()" class="btn btn-secondary w-full sm:w-auto">Cancelar</button>
+                        <button type="button" @click="guardar()" :disabled="guardando || cargandoEdicion" :aria-busy="guardando ? 'true' : 'false'" class="btn btn-primary w-full sm:w-auto sm:min-w-[150px]">
                             <span x-text="guardando ? 'Guardando…' : (modoEdicion ? 'Guardar cambios' : 'Crear producto')"></span>
                         </button>
                     </div>
@@ -361,17 +399,19 @@
              todo casi negro). --}}
         <div x-show="categoriaModalAbierto" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/10" @click="categoriaModalAbierto = false"></div>
-            <div class="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
-                <h3 class="mb-3 text-sm font-semibold text-text-primary">Nueva categoría</h3>
+            <div class="relative w-full max-w-sm rounded-2xl bg-card p-5 shadow-pop" role="dialog" aria-modal="true" aria-labelledby="titulo-nueva-categoria">
+                <h3 id="titulo-nueva-categoria" class="mb-3 text-sm font-semibold text-text-primary">Nueva categoría</h3>
+                <label for="nueva-categoria" class="sr-only">Nombre de la categoría</label>
                 <input
-                    type="text" x-model="categoriaNombre" @keydown.enter="crearCategoria()"
+                    id="nueva-categoria" type="text" x-model="categoriaNombre" @keydown.enter="crearCategoria()"
                     placeholder="Nombre de la categoría" maxlength="100"
-                    class="h-10 w-full rounded-nav border border-border bg-card px-3 text-sm"
+                    class="field-input"
+                    :aria-invalid="categoriaError ? 'true' : 'false'"
                 >
                 <p class="mt-1 text-xs text-rechazado-text" x-show="categoriaError" x-text="categoriaError"></p>
-                <div class="mt-4 flex justify-end gap-3">
-                    <button type="button" @click="categoriaModalAbierto = false" class="inline-flex h-9 items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page">Cancelar</button>
-                    <button type="button" @click="crearCategoria()" :disabled="categoriaGuardando" class="inline-flex h-9 items-center justify-center rounded-nav bg-accent px-3 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60">Crear</button>
+                <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                    <button type="button" @click="categoriaModalAbierto = false" class="btn btn-secondary">Cancelar</button>
+                    <button type="button" @click="crearCategoria()" :disabled="categoriaGuardando" :aria-busy="categoriaGuardando ? 'true' : 'false'" class="btn btn-primary">Crear</button>
                 </div>
             </div>
         </div>
@@ -379,8 +419,8 @@
         {{-- Confirmación (eliminar / activar / desactivar) con resumen del producto. --}}
         <div x-show="confirmacion.abierta" x-cloak class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
             <div class="absolute inset-0 bg-black/40" @click="confirmacion.abierta = false"></div>
-            <div class="relative w-full rounded-t-2xl bg-card p-5 shadow-xl sm:max-w-sm sm:rounded-2xl">
-                <h3 class="mb-3 text-sm font-semibold text-text-primary" x-text="confirmacion.titulo"></h3>
+            <div class="relative w-full rounded-t-2xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-pop sm:max-w-sm sm:rounded-2xl sm:pb-5">
+                <h3 class="mb-3 text-base font-semibold text-text-primary" x-text="confirmacion.titulo"></h3>
                 <template x-if="confirmacion.resumen">
                     <div class="mb-3 flex items-center gap-3 rounded-nav border border-border bg-page p-2">
                         <img :src="confirmacion.resumen.imagen" alt="" class="h-12 w-12 shrink-0 rounded-nav object-cover">
@@ -394,11 +434,11 @@
                 </template>
                 <p class="mb-4 text-sm text-text-secondary" x-text="confirmacion.mensaje"></p>
                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-                    <button type="button" @click="confirmacion.abierta = false" class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page sm:h-9 sm:min-h-0">Cancelar</button>
+                    <button type="button" @click="confirmacion.abierta = false" class="btn btn-secondary">Cancelar</button>
                     <button
-                        type="button" @click="confirmarAccion()" :disabled="accionEnCurso"
-                        class="inline-flex min-h-[44px] items-center justify-center rounded-nav px-3 text-sm font-medium text-white disabled:opacity-60 sm:h-9 sm:min-h-0"
-                        :class="confirmacion.peligroso ? 'bg-danger-strong hover:opacity-90' : 'bg-accent hover:bg-accent-hover'"
+                        type="button" @click="confirmarAccion()" :disabled="accionEnCurso" :aria-busy="accionEnCurso ? 'true' : 'false'"
+                        class="btn"
+                        :class="confirmacion.peligroso ? 'btn-danger' : 'btn-primary'"
                         x-text="confirmacion.textoBoton"
                     ></button>
                 </div>
@@ -414,7 +454,17 @@
                     <button type="button" @click="vistaRapida.abierta = false" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-page" aria-label="Cerrar">✕</button>
                 </div>
                 <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
-                    <p x-show="vistaRapida.cargando" class="py-8 text-center text-sm text-text-caption">Cargando…</p>
+                    <div x-show="vistaRapida.cargando" class="grid grid-cols-1 gap-4 sm:grid-cols-[180px_1fr]" aria-hidden="true">
+                        <div class="skeleton aspect-square w-full sm:w-[180px]"></div>
+                        <div class="flex flex-col gap-3">
+                            <div class="skeleton h-4 w-3/4"></div>
+                            <div class="skeleton h-4 w-1/2"></div>
+                            <div class="skeleton h-4 w-2/3"></div>
+                            <div class="skeleton h-4 w-1/3"></div>
+                            <div class="skeleton h-4 w-1/2"></div>
+                        </div>
+                    </div>
+                    <p x-show="vistaRapida.cargando" class="sr-only" role="status">Cargando producto…</p>
                     <template x-if="!vistaRapida.cargando && vistaRapida.datos">
                         <div class="flex flex-col gap-4">
                             <div class="grid grid-cols-1 gap-4 sm:grid-cols-[180px_1fr]">
@@ -425,9 +475,12 @@
                                     <dt class="text-text-caption">Precio</dt><dd class="font-medium text-text-primary" x-text="'S/ ' + vistaRapida.datos.precio"></dd>
                                     <dt class="text-text-caption">Stock</dt><dd class="text-text-primary" x-text="vistaRapida.datos.stock"></dd>
                                     <dt class="text-text-caption">Estado</dt>
-                                    <dd>
-                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" :class="vistaRapida.datos.activo ? 'bg-pagado-bg text-pagado-text' : 'bg-anulado-bg text-anulado-text'" x-text="vistaRapida.datos.activo ? 'Activo' : 'Inactivo'"></span>
-                                        <span x-show="vistaRapida.datos.destacado" class="ml-1 rounded-full bg-verificacion-bg px-2 py-0.5 text-[11px] font-medium text-verificacion-text">Destacado</span>
+                                    <dd class="flex flex-wrap gap-1">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium leading-5" :class="vistaRapida.datos.activo ? 'bg-pagado-bg text-pagado-text' : 'bg-anulado-bg text-anulado-text'">
+                                            <span class="h-1.5 w-1.5 rounded-full" :class="vistaRapida.datos.activo ? 'bg-pagado-dot' : 'bg-anulado-dot'" aria-hidden="true"></span>
+                                            <span x-text="vistaRapida.datos.activo ? 'Activo' : 'Inactivo'"></span>
+                                        </span>
+                                        <span x-show="vistaRapida.datos.destacado" class="rounded-full bg-verificacion-bg px-2.5 py-0.5 text-xs font-medium leading-5 text-verificacion-text">Destacado</span>
                                     </dd>
                                     <dt class="text-text-caption">Slug</dt><dd class="break-all font-mono text-xs text-text-secondary" x-text="vistaRapida.datos.slug"></dd>
                                 </dl>
@@ -451,9 +504,9 @@
                         </div>
                     </template>
                 </div>
-                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
-                    <button type="button" @click="vistaRapida.abierta = false" class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10 sm:min-h-0">Cerrar</button>
-                    <button type="button" @click="editarDesdeVistaRapida()" :disabled="!vistaRapida.datos" class="inline-flex min-h-[44px] items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60 sm:h-10 sm:min-h-0">Editar</button>
+                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end sm:px-6 sm:pb-3">
+                    <button type="button" @click="vistaRapida.abierta = false" class="btn btn-secondary">Cerrar</button>
+                    <button type="button" @click="editarDesdeVistaRapida()" :disabled="!vistaRapida.datos" class="btn btn-primary">Editar</button>
                 </div>
             </div>
         </div>
@@ -465,8 +518,8 @@
                 <h3 class="mb-2 text-sm font-semibold text-text-primary">¿Descartar los cambios?</h3>
                 <p class="mb-4 text-sm text-text-secondary">Hay cambios sin guardar en este producto. Si cierras ahora, se pierden.</p>
                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-                    <button type="button" @click="descarte.abierto = false" class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border px-3 text-sm font-medium text-text-secondary hover:bg-page sm:h-9 sm:min-h-0">Seguir editando</button>
-                    <button type="button" @click="descarte.abierto = false; cerrarModal(true)" class="inline-flex min-h-[44px] items-center justify-center rounded-nav bg-danger-strong px-3 text-sm font-medium text-white hover:opacity-90 sm:h-9 sm:min-h-0">Descartar cambios</button>
+                    <button type="button" @click="descarte.abierto = false" class="btn btn-secondary">Seguir editando</button>
+                    <button type="button" @click="descarte.abierto = false; cerrarModal(true)" class="btn btn-danger">Descartar cambios</button>
                 </div>
             </div>
         </div>
@@ -477,7 +530,7 @@
         </div>
 
         {{-- Toast --}}
-        <div x-show="toastMensaje" x-cloak x-transition role="status" aria-live="polite" class="fixed inset-x-4 bottom-4 z-50 rounded-nav px-4 py-3 text-sm font-medium text-white shadow-lg sm:inset-x-auto sm:bottom-6 sm:right-6" :class="toastError ? 'bg-danger-strong' : 'bg-sidebar-active'" x-text="toastMensaje"></div>
+        <div x-show="toastMensaje" x-cloak x-transition role="status" aria-live="polite" class="fixed inset-x-4 bottom-[calc(var(--spacing-bottomnav)+env(safe-area-inset-bottom)+0.75rem)] z-[75] rounded-nav px-4 py-3 text-sm font-medium text-white shadow-pop md:inset-x-auto md:bottom-6 md:right-6" :class="toastError ? 'bg-danger-strong' : 'bg-sidebar-active'" x-text="toastMensaje"></div>
     </div>
 
     @push('scripts')
@@ -519,6 +572,8 @@
                     categorias: categoriasIniciales,
                     busqueda: '',
                     filtroCategoria: '',
+                    sinResultados: false,
+                    cargandoEdicion: false,
 
                     modalAbierto: false,
                     modoEdicion: false,
@@ -608,11 +663,16 @@
                     filtrar() {
                         const q = this.busqueda.trim().toLowerCase();
                         const cat = this.filtroCategoria;
-                        document.querySelectorAll('#tabla-productos-cuerpo tr[data-id]').forEach((fila) => {
+                        const filas = document.querySelectorAll('#tabla-productos-cuerpo tr[data-id]');
+                        let visibles = 0;
+                        filas.forEach((fila) => {
                             const coincideTexto = !q || fila.dataset.nombre.includes(q) || fila.dataset.referencia.includes(q);
                             const coincideCategoria = !cat || fila.dataset.categoriaId === cat;
-                            fila.style.display = (coincideTexto && coincideCategoria) ? '' : 'none';
+                            const visible = coincideTexto && coincideCategoria;
+                            fila.style.display = visible ? '' : 'none';
+                            visibles += visible ? 1 : 0;
                         });
+                        this.sinResultados = filas.length > 0 && visibles === 0;
                     },
 
                     abrirCrear() {
@@ -644,6 +704,7 @@
                         this.reiniciarReferencia();
                         this.eliminarImagenExistente = false;
                         this.estadoInicial = null;
+                        this.cargandoEdicion = true;
                         this.modalAbierto = true;
 
                         let datos;
@@ -657,6 +718,8 @@
                             this.cerrarModal(true);
                             this.mostrarToast('No se pudo cargar el producto.', true);
                             return;
+                        } finally {
+                            this.cargandoEdicion = false;
                         }
 
                         this.form = {

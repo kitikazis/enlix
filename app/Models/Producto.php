@@ -177,4 +177,14 @@ class Producto extends Model
     {
         return $this->stock - $this->stock_reservado;
     }
+
+    /**
+     * Misma heurística que Pago::esPrueba() (S/ 1.00 es el monto que se usó
+     * para las pruebas reales en producción), solo para la etiqueta
+     * "PRUEBA" del admin: no oculta ni excluye el producto de nada.
+     */
+    public function esPrueba(): bool
+    {
+        return $this->precio_centimos <= 100;
+    }
 }

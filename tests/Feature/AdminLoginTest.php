@@ -17,6 +17,32 @@ class AdminLoginTest extends TestCase
             ->assertRedirect('/admin/login');
     }
 
+    public function test_admin_sin_ruta_redirige_al_dashboard_con_o_sin_barra_final(): void
+    {
+        // Regresion: /admin daba 404 y /admin/ redirigia a /public/admin.
+        $this->get('/admin')->assertRedirect('/admin/dashboard');
+        $this->get('/admin/')->assertRedirect('/admin/dashboard');
+
+        $this->actingAs(User::factory()->create())
+            ->followingRedirects()
+            ->get('/admin/')
+            ->assertOk()
+            ->assertSee('Dashboard');
+    }
+
+    public function test_htaccess_redirige_la_barra_final_sin_exponer_public(): void
+    {
+        // En el hosting, el .htaccess de la raiz reescribe a public/ por
+        // dentro: ahi %{REQUEST_URI} ya trae "/public/..." y la regla
+        // estandar de Laravel mandaba /admin/ a /public/admin. Debe usarse
+        // %{THE_REQUEST} (la URL original del navegador).
+        $htaccess = file_get_contents(public_path('.htaccess'));
+
+        $this->assertStringNotContainsString('RewriteCond %{REQUEST_URI} (.+)/$', $htaccess);
+        $this->assertMatchesRegularExpression('/RewriteCond %\{THE_REQUEST\} .*\n\s*RewriteRule \^ %1 \[L,R=301,NE\]/', $htaccess);
+        $this->assertStringContainsString('\s/public(/[^\s?]+)', $htaccess);
+    }
+
     public function test_login_con_credenciales_invalidas_falla(): void
     {
         $user = User::factory()->create();

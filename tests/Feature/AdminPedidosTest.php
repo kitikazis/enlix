@@ -130,6 +130,44 @@ class AdminPedidosTest extends TestCase
             ->assertSee('El campo desde debe ser una fecha válida.');
     }
 
+    public function test_el_listado_y_el_detalle_muestran_el_estado_de_envio(): void
+    {
+        // Regresion: x-admin.badge-estado llamaba a bordeClasses() y
+        // codigosIzipay(), que solo existen en EstadoPago; con un pedido
+        // con estado_envio (EstadoEnvio) la vista reventaba.
+        $user = User::factory()->create();
+        $pedido = $this->crearPedido([
+            'codigo' => 'ENX-ENVIO-001',
+            'estado_pago' => EstadoPago::Pagado,
+            'estado_envio' => \App\Enums\EstadoEnvio::Enviado,
+        ]);
+
+        $this->actingAs($user)->get(route('admin.pedidos.index'))
+            ->assertOk()
+            ->assertSee('ENX-ENVIO-001')
+            ->assertSee('Enviado');
+
+        $this->actingAs($user)->get(route('admin.pedidos.show', $pedido))
+            ->assertOk()
+            ->assertSee('Enviado');
+    }
+
+    public function test_el_pedido_de_prueba_lleva_la_etiqueta_prueba(): void
+    {
+        $user = User::factory()->create();
+        $this->crearPedido(['codigo' => 'ENX-REAL-001', 'email' => 'real@gmail.com']);
+
+        $this->actingAs($user)->get(route('admin.pedidos.index'))
+            ->assertOk()
+            ->assertDontSee('Prueba');
+
+        $this->crearPedido(['codigo' => 'ENX-PRUEBA-001', 'email' => 'real@gmail.com', 'subtotal_centimos' => 100, 'total_centimos' => 100]);
+
+        $this->actingAs($user)->get(route('admin.pedidos.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['ENX-PRUEBA-001', 'Prueba']);
+    }
+
     public function test_el_filtro_de_pagos_tambien_valida_el_rango(): void
     {
         $this->actingAs(User::factory()->create())

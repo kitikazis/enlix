@@ -79,4 +79,13 @@ class Pedido extends Model
     {
         return $this->hasMany(MovimientoStock::class, 'referencia', 'codigo');
     }
+
+    /**
+     * Misma heurística que Pago::esPrueba(), solo para señalar en el admin
+     * (etiqueta "PRUEBA"): no filtra ni excluye nada.
+     */
+    public function esPrueba(): bool
+    {
+        return str_ends_with((string) $this->email, '@example.com') || $this->total_centimos <= 100;
+    }
 }

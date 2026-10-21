@@ -7,9 +7,9 @@
     muestran sueltos en la pantalla.
 --}}
 <span
-    {{ $attributes->class(['inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium', $estado->badgeClasses(), $estado->bordeClasses()]) }}
-    @if (! empty($estado->codigosIzipay())) title="{{ implode(' · ', $estado->codigosIzipay()) }}" @endif
+    {{ $attributes->class(['inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium leading-5', $estado->badgeClasses(), method_exists($estado, 'bordeClasses') ? $estado->bordeClasses() : '']) }}
+    @if (method_exists($estado, 'codigosIzipay') && ! empty($estado->codigosIzipay())) title="{{ implode(' · ', $estado->codigosIzipay()) }}" @endif
 >
-    <span class="h-1.5 w-1.5 rounded-full {{ $estado->dotClass() }}" aria-hidden="true"></span>
+    <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ $estado->dotClass() }}" aria-hidden="true"></span>
     {{ $estado->etiqueta() }}
 </span>

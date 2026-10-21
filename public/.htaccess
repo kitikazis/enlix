@@ -13,10 +13,24 @@
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
+    # En el hosting, el .htaccess de ~/public_html reescribe todo hacia
+    # public/ por dentro. Por eso aqui %{REQUEST_URI} ya trae "/public/..."
+    # y la regla estandar de Laravel redirigia /admin/ a /public/admin (404).
+    # Se usa %{THE_REQUEST} (la linea original que mando el navegador),
+    # que nunca incluye ese rewrite interno.
+
+    # Quien llegue con /public en la URL (enlace viejo, marcador) se
+    # redirige a la misma ruta sin /public: si no, Laravel toma /public como
+    # base y lo arrastra a todos los enlaces y assets de la pagina.
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\s/public/?[\s?] [NC]
+    RewriteRule ^ / [L,R=301]
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\s/public(/[^\s?]+) [NC]
+    RewriteRule ^ %1 [L,R=301,NE]
+
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\s(/[^\s?]*[^/\s?])/+[\s?]
+    RewriteRule ^ %1 [L,R=301,NE]
 
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d

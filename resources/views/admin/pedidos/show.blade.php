@@ -1,87 +1,87 @@
-<x-layouts.admin-dashboard :titulo="'Pedido '.$pedido->codigo.' - Enlix Admin'">
-    <div class="mx-auto flex max-w-4xl flex-col gap-6">
+@php
+    $soles = fn ($centimos) => 'S/ '.number_format(((int) $centimos) / 100, 2);
+    $fila = 'flex flex-col gap-0.5 py-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4';
+    $valor = 'min-w-0 break-words text-text-primary sm:text-right';
+@endphp
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <a href="{{ route('admin.pedidos.index') }}" class="text-xs font-medium text-accent hover:text-accent-hover">← Todos los pedidos</a>
-                <h1 class="mt-1 font-mono text-2xl font-semibold text-text-primary">{{ $pedido->codigo }}</h1>
-                <p class="text-sm text-text-caption">{{ $pedido->created_at->setTimezone('America/Lima')->format('d/m/Y H:i') }}</p>
-            </div>
-            <div class="flex items-center gap-2">
+<x-layouts.admin-dashboard :titulo="'Pedido '.$pedido->codigo.' - Enlix Admin'">
+    <div class="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:gap-6">
+
+        <x-admin.page-header
+            :title="$pedido->codigo"
+            title-class="font-mono"
+            :back="route('admin.pedidos.index')"
+            back-label="Todos los pedidos"
+            :subtitle="$pedido->created_at->setTimezone('America/Lima')->format('d/m/Y H:i')"
+        >
+            <x-slot:actions>
                 <x-admin.badge-estado :estado="$pedido->estado_pago" />
                 @if ($pedido->estado_envio)
                     <x-admin.badge-estado :estado="$pedido->estado_envio" />
                 @endif
-            </div>
-        </div>
+                @if ($pedido->esPrueba())
+                    <x-admin.badge tone="prueba" :dot="false">Prueba</x-admin.badge>
+                @endif
+            </x-slot:actions>
+        </x-admin.page-header>
 
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <x-admin.card title="Cliente">
-                <dl class="flex flex-col gap-2 text-sm">
-                    <div class="flex justify-between gap-3"><dt class="text-text-caption">Nombre</dt><dd class="text-text-primary">{{ $pedido->nombre_cliente }}</dd></div>
-                    <div class="flex justify-between gap-3"><dt class="text-text-caption">Email</dt><dd class="text-text-primary">{{ $pedido->email }}</dd></div>
-                    <div class="flex justify-between gap-3"><dt class="text-text-caption">Teléfono</dt><dd class="text-text-primary">{{ $pedido->telefono }}</dd></div>
-                    <div class="flex justify-between gap-3"><dt class="text-text-caption">Documento</dt><dd class="text-text-primary">{{ $pedido->tipo_documento }} {{ $pedido->numero_documento }}</dd></div>
-                    <div class="flex justify-between gap-3"><dt class="text-text-caption">Comprobante</dt><dd class="text-text-primary capitalize">{{ $pedido->tipo_comprobante }}{{ $pedido->razon_social ? ' · '.$pedido->razon_social : '' }}</dd></div>
+                <dl class="-my-2.5 divide-y divide-border text-sm">
+                    <div class="{{ $fila }}"><dt class="text-text-secondary">Nombre</dt><dd class="{{ $valor }}">{{ $pedido->nombre_cliente }}</dd></div>
+                    <div class="{{ $fila }}"><dt class="text-text-secondary">Email</dt><dd class="{{ $valor }}">{{ $pedido->email }}</dd></div>
+                    <div class="{{ $fila }}"><dt class="text-text-secondary">Teléfono</dt><dd class="{{ $valor }} tabular-nums">{{ $pedido->telefono }}</dd></div>
+                    <div class="{{ $fila }}"><dt class="text-text-secondary">Documento</dt><dd class="{{ $valor }} tabular-nums">{{ $pedido->tipo_documento }} {{ $pedido->numero_documento }}</dd></div>
+                    <div class="{{ $fila }}"><dt class="text-text-secondary">Comprobante</dt><dd class="{{ $valor }} capitalize">{{ $pedido->tipo_comprobante }}{{ $pedido->razon_social ? ' · '.$pedido->razon_social : '' }}</dd></div>
                 </dl>
             </x-admin.card>
 
             <x-admin.card title="Entrega">
-                <dl class="flex flex-col gap-2 text-sm">
-                    <div class="flex justify-between gap-3"><dt class="text-text-caption">Método</dt><dd class="text-text-primary capitalize">{{ $pedido->metodo_entrega }}</dd></div>
+                <dl class="-my-2.5 divide-y divide-border text-sm">
+                    <div class="{{ $fila }}"><dt class="text-text-secondary">Método</dt><dd class="{{ $valor }} capitalize">{{ $pedido->metodo_entrega }}</dd></div>
                     @if ($pedido->metodo_entrega === 'envio')
-                        <div class="flex justify-between gap-3"><dt class="text-text-caption">Dirección</dt><dd class="text-text-primary text-right">{{ $pedido->direccion }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-text-caption">Distrito</dt><dd class="text-text-primary">{{ $pedido->distrito }}</dd></div>
-                        <div class="flex justify-between gap-3"><dt class="text-text-caption">Ciudad</dt><dd class="text-text-primary">{{ $pedido->ciudad }}</dd></div>
+                        <div class="{{ $fila }}"><dt class="text-text-secondary">Dirección</dt><dd class="{{ $valor }}">{{ $pedido->direccion }}</dd></div>
+                        <div class="{{ $fila }}"><dt class="text-text-secondary">Distrito</dt><dd class="{{ $valor }}">{{ $pedido->distrito }}</dd></div>
+                        <div class="{{ $fila }}"><dt class="text-text-secondary">Ciudad</dt><dd class="{{ $valor }}">{{ $pedido->ciudad }}</dd></div>
                         @if ($pedido->referencia)
-                            <div class="flex justify-between gap-3"><dt class="text-text-caption">Referencia</dt><dd class="text-text-primary text-right">{{ $pedido->referencia }}</dd></div>
+                            <div class="{{ $fila }}"><dt class="text-text-secondary">Referencia</dt><dd class="{{ $valor }}">{{ $pedido->referencia }}</dd></div>
                         @endif
                     @endif
                 </dl>
             </x-admin.card>
         </div>
 
-        <x-admin.card title="Items">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead>
-                        <tr class="border-b border-border text-xs text-text-caption">
-                            <th class="py-2 pr-3 font-medium">SKU</th>
-                            <th class="py-2 pr-3 font-medium">Producto</th>
-                            <th class="py-2 pr-3 text-right font-medium">Cantidad</th>
-                            <th class="py-2 pr-3 text-right font-medium">Precio unit.</th>
-                            <th class="py-2 text-right font-medium">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border">
-                        @foreach ($pedido->items as $item)
-                            <tr>
-                                <td class="whitespace-nowrap py-2.5 pr-3 font-mono text-xs text-text-caption">{{ $item->sku ?? '—' }}</td>
-                                <td class="py-2.5 pr-3">{{ $item->nombre }}</td>
-                                <td class="whitespace-nowrap py-2.5 pr-3 text-right font-mono">{{ $item->cantidad }}</td>
-                                <td class="whitespace-nowrap py-2.5 pr-3 text-right font-mono">S/ {{ number_format($item->precio_unitario_centimos / 100, 2) }}</td>
-                                <td class="whitespace-nowrap py-2.5 text-right font-mono">S/ {{ number_format($item->subtotal_centimos / 100, 2) }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+        <x-admin.card title="Items" :padded="false">
+            <x-admin.data-list
+                caption="Productos del pedido {{ $pedido->codigo }}"
+                :columns="['SKU', 'Producto', ['label' => 'Cantidad', 'align' => 'right'], ['label' => 'Precio unit.', 'align' => 'right'], ['label' => 'Subtotal', 'align' => 'right']]"
+            >
+                @foreach ($pedido->items as $item)
+                    <tr>
+                        <td data-label="SKU" class="whitespace-nowrap font-mono text-xs text-text-secondary">{{ $item->sku ?? '—' }}</td>
+                        <td data-dl="title" class="font-medium text-text-primary">{{ $item->nombre }}</td>
+                        <td data-label="Cantidad" data-align="right" class="whitespace-nowrap font-mono tabular-nums">{{ $item->cantidad }}</td>
+                        <td data-label="Precio unit." data-align="right" class="whitespace-nowrap font-mono tabular-nums">{{ $soles($item->precio_unitario_centimos) }}</td>
+                        <td data-dl="aside" data-align="right" class="whitespace-nowrap font-mono font-semibold tabular-nums">{{ $soles($item->subtotal_centimos) }}</td>
+                    </tr>
+                @endforeach
+            </x-admin.data-list>
 
-            <dl class="mt-4 flex flex-col gap-1.5 border-t border-border pt-4 text-sm">
-                <div class="flex justify-between"><dt class="text-text-caption">Subtotal</dt><dd class="font-mono text-text-primary">S/ {{ number_format($pedido->subtotal_centimos / 100, 2) }}</dd></div>
-                <div class="flex justify-between"><dt class="text-text-caption">Envío</dt><dd class="font-mono text-text-primary">S/ {{ number_format($pedido->costo_envio_centimos / 100, 2) }}</dd></div>
-                <div class="flex justify-between"><dt class="text-text-caption">Descuento</dt><dd class="font-mono text-text-primary">- S/ {{ number_format($pedido->descuento_centimos / 100, 2) }}</dd></div>
-                <div class="flex justify-between text-base font-semibold"><dt class="text-text-primary">Total</dt><dd class="font-mono text-text-primary">S/ {{ number_format($pedido->total_centimos / 100, 2) }}</dd></div>
+            <dl class="flex flex-col gap-2 border-t border-border p-4 text-sm sm:px-5">
+                <div class="flex justify-between gap-4"><dt class="text-text-secondary">Subtotal</dt><dd class="font-mono tabular-nums text-text-primary">{{ $soles($pedido->subtotal_centimos) }}</dd></div>
+                <div class="flex justify-between gap-4"><dt class="text-text-secondary">Envío</dt><dd class="font-mono tabular-nums text-text-primary">{{ $soles($pedido->costo_envio_centimos) }}</dd></div>
+                <div class="flex justify-between gap-4"><dt class="text-text-secondary">Descuento</dt><dd class="font-mono tabular-nums text-text-primary">- {{ $soles($pedido->descuento_centimos) }}</dd></div>
+                <div class="mt-1 flex justify-between gap-4 border-t border-border pt-3 text-base font-semibold"><dt class="text-text-primary">Total</dt><dd class="font-mono tabular-nums text-text-primary">{{ $soles($pedido->total_centimos) }}</dd></div>
             </dl>
         </x-admin.card>
 
         <x-admin.card title="Pago (Izipay)">
-            <dl class="flex flex-col gap-2 text-sm">
-                <div class="flex justify-between gap-3"><dt class="text-text-caption">Order ID</dt><dd class="font-mono text-xs text-text-primary">{{ $pedido->izipay_order_id ?? '—' }}</dd></div>
-                <div class="flex justify-between gap-3"><dt class="text-text-caption">Transaction UUID</dt><dd class="font-mono text-xs text-text-primary">{{ $pedido->transaction_uuid ?? '—' }}</dd></div>
-                <div class="flex justify-between gap-3"><dt class="text-text-caption">Método</dt><dd class="text-text-primary">{{ $pedido->metodo_pago?->etiqueta() ?? '—' }}</dd></div>
-                <div class="flex justify-between gap-3"><dt class="text-text-caption">Tarjeta</dt><dd class="font-mono text-xs text-text-primary">{{ $pedido->card_brand ? $pedido->card_brand.' '.$pedido->card_masked_pan : '—' }}</dd></div>
-                <div class="flex justify-between gap-3"><dt class="text-text-caption">Pagado el</dt><dd class="text-text-primary">{{ $pedido->pagado_en?->setTimezone('America/Lima')->format('d/m/Y H:i') ?? '—' }}</dd></div>
+            <dl class="-my-2.5 divide-y divide-border text-sm">
+                <div class="{{ $fila }}"><dt class="text-text-secondary">Order ID</dt><dd class="{{ $valor }} font-mono text-xs">{{ $pedido->izipay_order_id ?? '—' }}</dd></div>
+                <div class="{{ $fila }}"><dt class="text-text-secondary">Transaction UUID</dt><dd class="{{ $valor }} font-mono text-xs">{{ $pedido->transaction_uuid ?? '—' }}</dd></div>
+                <div class="{{ $fila }}"><dt class="text-text-secondary">Método</dt><dd class="{{ $valor }}">{{ $pedido->metodo_pago?->etiqueta() ?? '—' }}</dd></div>
+                <div class="{{ $fila }}"><dt class="text-text-secondary">Tarjeta</dt><dd class="{{ $valor }} font-mono text-xs">{{ $pedido->card_brand ? $pedido->card_brand.' '.$pedido->card_masked_pan : '—' }}</dd></div>
+                <div class="{{ $fila }}"><dt class="text-text-secondary">Pagado el</dt><dd class="{{ $valor }} tabular-nums">{{ $pedido->pagado_en?->setTimezone('America/Lima')->format('d/m/Y H:i') ?? '—' }}</dd></div>
             </dl>
         </x-admin.card>
     </div>
