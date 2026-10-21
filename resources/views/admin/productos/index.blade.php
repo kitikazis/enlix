@@ -88,19 +88,23 @@
         <div x-show="modalAbierto" x-cloak class="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-4">
             <div class="absolute inset-0 bg-black/40" @click="cerrarModal()"></div>
 
-            <div class="relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-card shadow-xl sm:max-h-[90vh] sm:rounded-2xl">
-                <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-4">
-                    <h2 class="text-lg font-semibold text-text-primary" x-text="modoEdicion ? 'Editar producto' : 'Nuevo producto'"></h2>
-                    <button type="button" @click="cerrarModal()" class="flex h-11 w-11 items-center justify-center rounded-nav text-text-caption hover:bg-page" aria-label="Cerrar">✕</button>
+            <div class="relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-card shadow-2xl sm:max-h-[90vh] sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-producto">
+                <div class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" aria-hidden="true"></div>
+                <div class="flex shrink-0 items-start justify-between gap-3 px-4 pb-2 pt-3 sm:px-6 sm:pt-5">
+                    <div class="min-w-0">
+                        <h2 id="titulo-modal-producto" class="text-lg font-semibold text-text-primary" x-text="modoEdicion ? 'Editar producto' : 'Nuevo producto'"></h2>
+                        <p class="truncate text-sm text-text-caption" x-text="modoEdicion ? (form.nombre || '…') : 'Completa los datos y guarda para publicarlo.'"></p>
+                    </div>
+                    <button type="button" @click="cerrarModal()" class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-page hover:text-text-primary" aria-label="Cerrar">✕</button>
                 </div>
 
-                <div class="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-4 pt-2 [scrollbar-width:none] sm:px-6 sm:pt-3">
+                <div class="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-4 [scrollbar-width:none] sm:px-6" role="tablist">
                     <template x-for="tab in [['general','General'],['descripcion','Descripción'],['especificaciones','Especificaciones']]" :key="tab[0]">
                         <button
-                            type="button"
+                            type="button" role="tab" :aria-selected="tabActiva === tab[0]"
                             @click="tabActiva = tab[0]"
-                            class="relative flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-t-nav px-3 py-2 text-sm font-medium"
-                            :class="tabActiva === tab[0] ? 'border-b-2 border-accent text-accent' : 'text-text-secondary hover:text-text-primary'"
+                            class="relative -mb-px flex min-h-[44px] shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors"
+                            :class="tabActiva === tab[0] ? 'border-accent text-accent' : 'border-transparent text-text-secondary hover:text-text-primary'"
                         >
                             <span x-text="tab[1]"></span>
                             <span x-show="tabTieneError(tab[0])" class="h-1.5 w-1.5 rounded-full bg-rechazado-dot"></span>
@@ -108,155 +112,196 @@
                     </template>
                 </div>
 
-                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 lg:min-h-[520px]">
 
                     {{-- Tab: General --}}
-                    <div x-show="tabActiva === 'general'" class="flex flex-col gap-4">
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div class="min-w-0">
-                                <label for="producto-nombre" class="mb-1 block text-sm font-medium text-text-primary">Producto</label>
-                                <input
-                                    id="producto-nombre" type="text" x-model="form.nombre" @input="onNombreInput()"
-                                    maxlength="150" required
-                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
-                                    :class="errores.nombre ? 'border-rechazado-text' : 'border-border'"
-                                >
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.nombre" x-text="errores.nombre?.[0]"></p>
-                            </div>
-                            <div class="min-w-0">
-                                <label for="producto-slug" class="mb-1 block text-sm font-medium text-text-primary">Slug <span class="font-normal text-text-caption">(editable)</span></label>
-                                <input
-                                    id="producto-slug" type="text" x-model="form.slug" @input="onSlugInput()"
-                                    maxlength="170" autocapitalize="none" spellcheck="false"
-                                    class="h-11 w-full rounded-nav border bg-card px-3 font-mono text-base sm:h-10 sm:text-sm"
-                                    :class="errores.slug ? 'border-rechazado-text' : 'border-border'"
-                                >
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.slug" x-text="errores.slug?.[0]"></p>
-                                <p class="mt-1 text-xs text-text-caption" x-show="!errores.slug">Si ya existe, se le agrega un sufijo (-2, -3…).</p>
-                            </div>
-                        </div>
+                    <div x-show="tabActiva === 'general'" class="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div class="min-w-0">
-                                <label for="producto-referencia" class="mb-1 block text-sm font-medium text-text-primary">Referencia</label>
-                                <input
-                                    id="producto-referencia" type="text" x-model="form.referencia" @input="verificarReferencia()"
-                                    maxlength="50" required autocapitalize="characters" spellcheck="false"
-                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base uppercase sm:h-10 sm:text-sm"
-                                    :class="errores.referencia || ['ocupada', 'eliminada'].includes(referenciaEstado) ? 'border-rechazado-text' : 'border-border'"
-                                >
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.referencia" x-text="errores.referencia?.[0]"></p>
-                                <div x-show="!errores.referencia && referenciaEstado" class="mt-1 text-xs" aria-live="polite">
-                                    <p x-show="referenciaEstado === 'verificando'" class="text-text-caption">Verificando…</p>
-                                    <p x-show="referenciaEstado === 'disponible'" class="text-pagado-text">Referencia disponible.</p>
-                                    <p x-show="referenciaEstado === 'ocupada'" class="text-rechazado-text">
-                                        Ya existe un producto con esta referencia<span x-show="referenciaProducto?.nombre"> («<span x-text="referenciaProducto?.nombre"></span>»)</span>.
-                                    </p>
-                                    <div x-show="referenciaEstado === 'eliminada'" class="flex flex-col gap-2 rounded-nav bg-rechazado-bg p-2 text-rechazado-text sm:flex-row sm:items-center sm:justify-between">
-                                        <p class="min-w-0 break-words">Es de «<span x-text="referenciaProducto?.nombre"></span>», que está en la papelera.</p>
-                                        <button
-                                            type="button" @click="restaurarProductoEliminado()" :disabled="restaurando"
-                                            class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-nav border border-current px-3 text-xs font-medium hover:bg-card disabled:opacity-60 sm:min-h-[36px]"
-                                            x-text="restaurando ? 'Restaurando…' : 'Restaurar ese producto'"
-                                        ></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="min-w-0">
-                                <label for="producto-categoria" class="mb-1 block text-sm font-medium text-text-primary">Categoría</label>
-                                <div class="flex gap-2">
-                                    <select
-                                        id="producto-categoria" x-model="form.categoria_id" @change="limpiarError('categoria_id')"
-                                        class="h-11 w-full min-w-0 rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
-                                        :class="errores.categoria_id ? 'border-rechazado-text' : 'border-border'"
-                                    >
-                                        <option value="">Selecciona una categoría</option>
-                                        <template x-for="cat in categorias" :key="cat.id">
-                                            <option :value="cat.id" x-text="cat.nombre"></option>
-                                        </template>
-                                    </select>
-                                    <button type="button" @click="abrirCategoriaModal()" title="Crear categoría" aria-label="Crear categoría" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav border border-border text-text-secondary hover:bg-page sm:h-10 sm:w-10">+</button>
-                                </div>
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.categoria_id" x-text="errores.categoria_id?.[0]"></p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-text-primary">Imagen del producto <span class="font-normal text-text-caption" x-show="modoEdicion">(opcional)</span></label>
+                        {{-- Imagen --}}
+                        <div class="flex flex-col gap-2">
+                            <span class="text-sm font-medium text-text-primary">
+                                Imagen <span class="font-normal text-text-caption" x-text="modoEdicion ? '(opcional)' : ''"></span>
+                            </span>
                             <div
-                                @dragover.prevent @drop.prevent="procesarArchivo($event.dataTransfer.files[0])"
-                                @click="$refs.inputImagen.click()"
-                                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-nav border-2 border-dashed bg-page px-4 py-6 text-center"
-                                :class="errores.imagen ? 'border-rechazado-text' : 'border-border'"
+                                role="button" tabindex="0" aria-label="Elegir imagen del producto"
+                                @click="$refs.inputImagen.click()" @keydown.enter.prevent="$refs.inputImagen.click()"
+                                @dragover.prevent="arrastrandoImagen = true" @dragleave.prevent="arrastrandoImagen = false"
+                                @drop.prevent="arrastrandoImagen = false; procesarArchivo($event.dataTransfer.files[0])"
+                                class="group relative mx-auto flex aspect-square w-full max-w-[200px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed bg-page transition-colors lg:max-w-none"
+                                :class="errores.imagen ? 'border-rechazado-text' : (arrastrandoImagen ? 'border-accent bg-accent/5' : (imagenPreviewUrl ? 'border-solid border-border' : 'border-border hover:border-accent/60'))"
                             >
                                 <template x-if="imagenPreviewUrl">
-                                    <img :src="imagenPreviewUrl" alt="Vista previa" class="h-28 w-28 rounded-nav object-cover">
+                                    <img :src="imagenPreviewUrl" alt="Vista previa del producto" class="absolute inset-0 h-full w-full object-cover">
                                 </template>
-                                <template x-if="!imagenPreviewUrl">
-                                    <p class="text-sm text-text-caption">Arrastra una imagen aquí o haz clic para seleccionarla<br>JPG, PNG o WEBP · máx. 2 MB</p>
-                                </template>
-                                <input x-ref="inputImagen" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @click.stop @change="procesarArchivo($event.target.files[0])">
+                                <div x-show="imagenPreviewUrl" class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-6 text-center text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                    Cambiar imagen
+                                </div>
+                                <div x-show="!imagenPreviewUrl" class="flex flex-col items-center gap-2 px-4 text-center">
+                                    <svg class="h-10 w-10 text-text-caption" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                        <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+                                    </svg>
+                                    <p class="text-sm font-medium text-text-secondary">Arrastra o elige una imagen</p>
+                                    <p class="text-xs text-text-caption">JPG, PNG o WEBP · máx. 2 MB<br>mín. 200 × 200 px</p>
+                                </div>
+                                <input x-ref="inputImagen" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @click.stop @change="procesarArchivo($event.target.files[0]); $event.target.value = ''">
                             </div>
-                            <div class="mt-2 flex gap-2" x-show="imagenPreviewUrl">
-                                <button type="button" @click.stop="$refs.inputImagen.click()" class="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-accent hover:text-accent-hover sm:min-h-0 sm:px-0">Cambiar</button>
+                            <div class="flex items-center justify-center gap-1 lg:justify-start" x-show="imagenPreviewUrl">
+                                <button type="button" @click="$refs.inputImagen.click()" class="inline-flex min-h-[44px] items-center rounded-nav px-2 text-xs font-medium text-accent hover:bg-page sm:min-h-[32px]">Cambiar</button>
+                                <span class="text-text-disabled" aria-hidden="true">·</span>
                                 <button
-                                    type="button" @click.stop="quitarImagen()"
-                                    class="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-rechazado-text hover:underline sm:min-h-0 sm:px-0"
-                                    x-text="imagenArchivo ? 'Deshacer' : 'Eliminar imagen'"
+                                    type="button" @click="quitarImagen()"
+                                    class="inline-flex min-h-[44px] items-center rounded-nav px-2 text-xs font-medium text-rechazado-text hover:bg-page sm:min-h-[32px]"
+                                    x-text="imagenArchivo ? 'Deshacer' : 'Quitar imagen'"
                                 ></button>
                             </div>
-                            <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-page" x-show="guardando && subiendoProgreso > 0">
+                            <div class="h-1.5 w-full overflow-hidden rounded-full bg-page" x-show="guardando && subiendoProgreso > 0">
                                 <div class="h-full bg-accent transition-all" :style="`width: ${subiendoProgreso}%`"></div>
                             </div>
-                            <p class="mt-1 text-xs text-rechazado-text" x-show="errores.imagen" x-text="errores.imagen?.[0]"></p>
+                            <p class="text-xs text-rechazado-text" x-show="errores.imagen" x-text="errores.imagen?.[0]"></p>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <div class="min-w-0">
-                                <label for="producto-precio" class="mb-1 block text-sm font-medium text-text-primary">Precio (S/)</label>
-                                <input
-                                    id="producto-precio" type="number" x-model="form.precio" @input="limpiarError('precio')"
-                                    step="0.01" min="0.01" max="99999.99" inputmode="decimal" required
-                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
-                                    :class="errores.precio ? 'border-rechazado-text' : 'border-border'"
-                                >
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.precio" x-text="errores.precio?.[0]"></p>
-                            </div>
-                            <div class="min-w-0">
-                                <label for="producto-stock" class="mb-1 block text-sm font-medium text-text-primary">Stock</label>
-                                <input
-                                    id="producto-stock" type="number" x-model="form.stock" @input="limpiarError('stock')"
-                                    step="1" min="0" inputmode="numeric"
-                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
-                                    :class="errores.stock ? 'border-rechazado-text' : 'border-border'"
-                                >
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.stock" x-text="errores.stock?.[0]"></p>
-                            </div>
-                            <div class="min-w-0">
-                                <label for="producto-orden" class="mb-1 block text-sm font-medium text-text-primary">Orden</label>
-                                <input
-                                    id="producto-orden" type="number" x-model="form.orden" @input="limpiarError('orden')"
-                                    step="1" min="0" inputmode="numeric"
-                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base sm:h-10 sm:text-sm"
-                                    :class="errores.orden ? 'border-rechazado-text' : 'border-border'"
-                                >
-                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.orden" x-text="errores.orden?.[0]"></p>
-                            </div>
-                        </div>
+                        <div class="flex min-w-0 flex-col gap-6">
 
-                        <div class="flex flex-col gap-1 sm:flex-row sm:gap-6">
-                            <label class="flex min-h-[44px] items-center gap-2 text-sm text-text-primary sm:min-h-0">
-                                <input type="checkbox" x-model="form.activo" class="h-5 w-5 rounded border-border sm:h-4 sm:w-4">
-                                Visible en /productos
-                            </label>
-                            <label class="flex min-h-[44px] items-center gap-2 text-sm text-text-primary sm:min-h-0">
-                                <input type="checkbox" x-model="form.destacado" class="h-5 w-5 rounded border-border sm:h-4 sm:w-4">
-                                Destacado
-                            </label>
+                            {{-- Identificación --}}
+                            <section class="flex flex-col gap-4">
+                                <h3 class="text-xs font-semibold uppercase tracking-wide text-text-caption">Identificación</h3>
+                                <div class="min-w-0">
+                                    <label for="producto-nombre" class="mb-1 block text-sm font-medium text-text-primary">Nombre del producto</label>
+                                    <input
+                                        id="producto-nombre" type="text" x-model="form.nombre" @input="onNombreInput()"
+                                        maxlength="150" required placeholder="Ej. Monitor LG 27&quot; 4K"
+                                        class="h-11 w-full rounded-nav border bg-card px-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                        :class="errores.nombre ? 'border-rechazado-text' : 'border-border'"
+                                    >
+                                    <p class="mt-1 text-xs text-rechazado-text" x-show="errores.nombre" x-text="errores.nombre?.[0]"></p>
+                                </div>
+                                <div class="min-w-0">
+                                    <label for="producto-slug" class="mb-1 block text-sm font-medium text-text-primary">Slug <span class="font-normal text-text-caption">(URL, editable)</span></label>
+                                    <input
+                                        id="producto-slug" type="text" x-model="form.slug" @input="onSlugInput()"
+                                        maxlength="170" autocapitalize="none" spellcheck="false" placeholder="se-genera-desde-el-nombre"
+                                        class="h-11 w-full rounded-nav border bg-card px-3 font-mono text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                        :class="errores.slug ? 'border-rechazado-text' : 'border-border'"
+                                    >
+                                    <p class="mt-1 text-xs text-rechazado-text" x-show="errores.slug" x-text="errores.slug?.[0]"></p>
+                                    <p class="mt-1 text-xs text-text-caption" x-show="!errores.slug">Si ya existe, se le agrega un sufijo (-2, -3…).</p>
+                                </div>
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div class="min-w-0">
+                                        <label for="producto-referencia" class="mb-1 block text-sm font-medium text-text-primary">Referencia</label>
+                                        <input
+                                            id="producto-referencia" type="text" x-model="form.referencia" @input="verificarReferencia()"
+                                            maxlength="50" required autocapitalize="characters" spellcheck="false" placeholder="Ej. MON-LG-27"
+                                            class="h-11 w-full rounded-nav border bg-card px-3 font-mono text-base uppercase placeholder:normal-case focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                            :class="errores.referencia || ['ocupada', 'eliminada'].includes(referenciaEstado) ? 'border-rechazado-text' : (referenciaEstado === 'disponible' ? 'border-pagado-dot' : 'border-border')"
+                                        >
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.referencia" x-text="errores.referencia?.[0]"></p>
+                                        <div x-show="!errores.referencia && referenciaEstado" class="mt-1 text-xs" aria-live="polite">
+                                            <p x-show="referenciaEstado === 'verificando'" class="text-text-caption">Verificando…</p>
+                                            <p x-show="referenciaEstado === 'disponible'" class="text-pagado-text">✓ Referencia disponible.</p>
+                                            <p x-show="referenciaEstado === 'ocupada'" class="text-rechazado-text">
+                                                Ya existe un producto con esta referencia<span x-show="referenciaProducto?.nombre"> («<span x-text="referenciaProducto?.nombre"></span>»)</span>.
+                                            </p>
+                                            <div x-show="referenciaEstado === 'eliminada'" class="flex flex-col gap-2 rounded-nav bg-rechazado-bg p-2 text-rechazado-text">
+                                                <p class="min-w-0 break-words">Es de «<span x-text="referenciaProducto?.nombre"></span>», que está en la papelera.</p>
+                                                <button
+                                                    type="button" @click="restaurarProductoEliminado()" :disabled="restaurando"
+                                                    class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-current px-3 text-xs font-medium hover:bg-card disabled:opacity-60 sm:min-h-[36px]"
+                                                    x-text="restaurando ? 'Restaurando…' : 'Restaurar ese producto'"
+                                                ></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <label for="producto-categoria" class="mb-1 block text-sm font-medium text-text-primary">Categoría</label>
+                                        <div class="flex gap-2">
+                                            <select
+                                                id="producto-categoria" x-model="form.categoria_id" @change="limpiarError('categoria_id')"
+                                                class="h-11 w-full min-w-0 flex-1 rounded-nav border bg-card px-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                                :class="errores.categoria_id ? 'border-rechazado-text' : 'border-border'"
+                                            >
+                                                <option value="">Selecciona…</option>
+                                                <template x-for="cat in categorias" :key="cat.id">
+                                                    <option :value="cat.id" x-text="cat.nombre"></option>
+                                                </template>
+                                            </select>
+                                            <button type="button" @click="abrirCategoriaModal()" title="Crear categoría" aria-label="Crear categoría" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav border border-border bg-card text-lg leading-none text-text-secondary hover:border-accent hover:text-accent sm:h-10 sm:w-10">+</button>
+                                        </div>
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.categoria_id" x-text="errores.categoria_id?.[0]"></p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {{-- Precio e inventario --}}
+                            <section class="flex flex-col gap-4 border-t border-border pt-5">
+                                <h3 class="text-xs font-semibold uppercase tracking-wide text-text-caption">Precio e inventario</h3>
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    <div class="min-w-0">
+                                        <label for="producto-precio" class="mb-1 block text-sm font-medium text-text-primary">Precio</label>
+                                        <div class="relative">
+                                            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-text-caption">S/</span>
+                                            <input
+                                                id="producto-precio" type="number" x-model="form.precio" @input="limpiarError('precio')"
+                                                step="0.01" min="0.01" max="99999.99" inputmode="decimal" required placeholder="0.00"
+                                                class="h-11 w-full rounded-nav border bg-card pl-9 pr-3 text-base tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                                :class="errores.precio ? 'border-rechazado-text' : 'border-border'"
+                                            >
+                                        </div>
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.precio" x-text="errores.precio?.[0]"></p>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <label for="producto-stock" class="mb-1 block text-sm font-medium text-text-primary">Stock</label>
+                                        <input
+                                            id="producto-stock" type="number" x-model="form.stock" @input="limpiarError('stock')"
+                                            step="1" min="0" inputmode="numeric"
+                                            class="h-11 w-full rounded-nav border bg-card px-3 text-base tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                            :class="errores.stock ? 'border-rechazado-text' : 'border-border'"
+                                        >
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.stock" x-text="errores.stock?.[0]"></p>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <label for="producto-orden" class="mb-1 block text-sm font-medium text-text-primary">Orden <span class="font-normal text-text-caption">(en el catálogo)</span></label>
+                                        <input
+                                            id="producto-orden" type="number" x-model="form.orden" @input="limpiarError('orden')"
+                                            step="1" min="0" inputmode="numeric"
+                                            class="h-11 w-full rounded-nav border bg-card px-3 text-base tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                            :class="errores.orden ? 'border-rechazado-text' : 'border-border'"
+                                        >
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.orden" x-text="errores.orden?.[0]"></p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {{-- Publicación --}}
+                            <section class="flex flex-col gap-3 border-t border-border pt-5">
+                                <h3 class="text-xs font-semibold uppercase tracking-wide text-text-caption">Publicación</h3>
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors" :class="form.activo ? 'border-accent/40 bg-accent/5' : 'border-border hover:bg-page'">
+                                        <input type="checkbox" x-model="form.activo" class="peer sr-only">
+                                        <span class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40" :class="form.activo ? 'bg-accent' : 'bg-border'" aria-hidden="true">
+                                            <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" :class="form.activo ? 'translate-x-5' : ''"></span>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-medium text-text-primary">Visible en la tienda</span>
+                                            <span class="block text-xs text-text-caption">Aparece en /productos y se puede comprar.</span>
+                                        </span>
+                                    </label>
+                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors" :class="form.destacado ? 'border-accent/40 bg-accent/5' : 'border-border hover:bg-page'">
+                                        <input type="checkbox" x-model="form.destacado" class="peer sr-only">
+                                        <span class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40" :class="form.destacado ? 'bg-accent' : 'bg-border'" aria-hidden="true">
+                                            <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" :class="form.destacado ? 'translate-x-5' : ''"></span>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-medium text-text-primary">Destacado</span>
+                                            <span class="block text-xs text-text-caption">Marca interna; el catálogo aún no lo muestra distinto.</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </section>
                         </div>
                     </div>
 
-                    {{-- Tab: Descripción --}}
+{{-- Tab: Descripción --}}
                     <div x-show="tabActiva === 'descripcion'" class="flex flex-col gap-2">
                         <label class="mb-1 block text-sm font-medium text-text-primary">Descripción</label>
                         <div x-ref="editor" class="min-h-[220px] bg-card"></div>
@@ -277,7 +322,7 @@
                             >
                                 <span class="flex h-11 cursor-move items-center px-1 text-text-caption sm:h-9" aria-hidden="true">⠿</span>
                                 <div class="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr]">
-                                    <input type="text" x-model="fila.clave" @input="limpiarError('especificaciones')" placeholder="Clave" maxlength="100" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
+                                    <input type="text" x-model="fila.clave" @input="limpiarError('especificaciones')" placeholder="Clave" maxlength="100" class="h-11 w-full min-w-0 rounded-nav border bg-card px-2 text-base sm:h-9 sm:text-sm" :class="errores.especificaciones && !String(fila.clave || '').trim() && String(fila.valor || '').trim() ? 'border-rechazado-text' : 'border-border'">
                                     <input type="text" x-model="fila.valor" @input="limpiarError('especificaciones')" placeholder="Valor" maxlength="500" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
                                 </div>
                                 <button type="button" @click="especificaciones.splice(i, 1)" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav text-text-caption hover:bg-card sm:h-9 sm:w-9" aria-label="Eliminar fila">✕</button>
@@ -296,11 +341,16 @@
 
                 </div>
 
-                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
-                    <button type="button" @click="cerrarModal()" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10 sm:min-h-0 sm:w-auto">Cancelar</button>
-                    <button type="button" @click="guardar()" :disabled="guardando" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60 sm:h-10 sm:min-h-0 sm:w-auto">
-                        <span x-text="guardando ? 'Guardando…' : 'Guardar'"></span>
-                    </button>
+                <div class="flex shrink-0 flex-col gap-2 border-t border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-6 sm:py-4">
+                    <p class="text-center text-xs font-medium text-rechazado-text sm:mr-auto sm:text-left" x-show="Object.keys(errores).length" aria-live="polite"
+                       x-text="Object.keys(errores).length === 1 ? 'Revisa 1 campo marcado en rojo.' : `Revisa ${Object.keys(errores).length} campos marcados en rojo.`"></p>
+                    <div class="flex flex-col-reverse gap-2 sm:ml-auto sm:flex-row sm:gap-3">
+                        <button type="button" @click="cerrarModal()" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-nav border border-border px-4 text-sm font-medium text-text-secondary hover:bg-page sm:h-10 sm:min-h-0 sm:w-auto">Cancelar</button>
+                        <button type="button" @click="guardar()" :disabled="guardando" class="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-nav bg-accent px-5 text-sm font-medium text-white shadow-sm hover:bg-accent-hover disabled:opacity-60 sm:h-10 sm:min-h-0 sm:w-auto sm:min-w-[150px]">
+                            <svg x-show="guardando" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".3" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                            <span x-text="guardando ? 'Guardando…' : (modoEdicion ? 'Guardar cambios' : 'Crear producto')"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -484,6 +534,7 @@
                     arrastrando: null,
 
                     imagenArchivo: null,
+                    arrastrandoImagen: false,
                     imagenPreviewUrl: null,
                     imagenExistenteUrl: null,
                     eliminarImagenExistente: false,

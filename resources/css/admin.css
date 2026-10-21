@@ -115,3 +115,22 @@ html[data-modo='prueba'] {
     mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
 }
+
+/* Editor de descripción (Quill) del modal de productos: mismas esquinas y
+ * foco que el resto de campos del admin. */
+.ql-toolbar.ql-snow.ql-snow {
+    border-color: var(--color-border);
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+    background: var(--color-page);
+}
+.ql-container.ql-snow.ql-snow {
+    border-color: var(--color-border);
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+}
+.ql-container.ql-snow.ql-snow:focus-within {
+    border-color: var(--color-accent);
+}
