@@ -39,6 +39,8 @@ class Reclamo extends Model
         'detalle',
         'pedido_consumidor',
         'estado',
+        'respuesta',
+        'respondido_en',
         'acepto_privacidad_en',
         'fecha_limite_respuesta',
         'ip_origen',
@@ -52,6 +54,7 @@ class Reclamo extends Model
         'estado' => EstadoReclamo::class,
         'acepto_privacidad_en' => 'datetime',
         'fecha_limite_respuesta' => 'date',
+        'respondido_en' => 'datetime',
     ];
 
     protected function numeroCorrelativo(): Attribute

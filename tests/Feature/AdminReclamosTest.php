@@ -63,15 +63,50 @@ class AdminReclamosTest extends TestCase
         $r->assertSee('El producto llegó dañado.');
     }
 
-    public function test_marca_un_reclamo_como_atendido(): void
+    public function test_marca_un_reclamo_como_atendido_registrando_la_respuesta(): void
     {
         $user = User::factory()->create();
         $reclamo = $this->reclamo();
 
-        $r = $this->actingAs($user)->patch(route('admin.reclamos.atender', $reclamo));
+        $r = $this->actingAs($user)->patch(route('admin.reclamos.atender', $reclamo), [
+            'respuesta' => '  Se cambió el producto por uno nuevo y se avisó por correo.  ',
+        ]);
 
         $r->assertRedirect();
-        $this->assertSame(EstadoReclamo::Atendido, $reclamo->fresh()->estado);
+        $reclamo->refresh();
+        $this->assertSame(EstadoReclamo::Atendido, $reclamo->estado);
+        $this->assertSame('Se cambió el producto por uno nuevo y se avisó por correo.', $reclamo->respuesta);
+        $this->assertNotNull($reclamo->respondido_en);
+
+        $this->actingAs($user)->get(route('admin.reclamos.show', $reclamo))
+            ->assertSee('Se cambió el producto por uno nuevo')
+            ->assertSee('dentro del plazo')
+            ->assertDontSee('Responder y marcar como atendido');
+    }
+
+    public function test_no_se_puede_atender_sin_respuesta(): void
+    {
+        $user = User::factory()->create();
+        $reclamo = $this->reclamo();
+        $url = route('admin.reclamos.show', $reclamo);
+
+        $this->actingAs($user)->from($url)->patch(route('admin.reclamos.atender', $reclamo), ['respuesta' => 'corta'])
+            ->assertRedirect($url)
+            ->assertSessionHasErrors(['respuesta' => 'La respuesta debe tener al menos 10 caracteres.']);
+
+        $this->assertSame(EstadoReclamo::Pendiente, $reclamo->fresh()->estado);
+    }
+
+    public function test_un_reclamo_atendido_no_se_vuelve_a_responder(): void
+    {
+        $user = User::factory()->create();
+        $reclamo = $this->reclamo();
+        $this->actingAs($user)->patch(route('admin.reclamos.atender', $reclamo), ['respuesta' => 'Primera respuesta registrada.']);
+
+        $this->actingAs($user)->patch(route('admin.reclamos.atender', $reclamo), ['respuesta' => 'Intento de pisar la respuesta.'])
+            ->assertSessionHas('status', 'Este reclamo ya estaba atendido.');
+
+        $this->assertSame('Primera respuesta registrada.', $reclamo->fresh()->respuesta);
     }
 
     public function test_el_badge_del_menu_cuenta_solo_pendientes(): void
