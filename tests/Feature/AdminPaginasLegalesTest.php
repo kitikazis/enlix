@@ -62,6 +62,22 @@ class AdminPaginasLegalesTest extends TestCase
         $this->assertStringContainsString('Texto seguro', $pagina->contenido);
     }
 
+    public function test_si_falla_la_validacion_el_contenido_reenviado_se_reimprime_saneado(): void
+    {
+        $user = User::factory()->create();
+        $pagina = PaginaLegal::obtener(PaginaLegal::SLUG_PRIVACIDAD);
+        $url = route('admin.paginas-legales.edit', $pagina);
+
+        $this->actingAs($user)->from($url)->followingRedirects()->put(route('admin.paginas-legales.update', $pagina), [
+            'titulo' => '',
+            'contenido' => '<p>Borrador</p><img src=x onerror="alert(1)">',
+        ])
+            ->assertOk()
+            ->assertSee('El campo título es obligatorio.')
+            ->assertSee('Borrador')
+            ->assertDontSee('onerror', false);
+    }
+
     public function test_el_cambio_se_ve_de_inmediato_en_la_pagina_publica(): void
     {
         $user = User::factory()->create();

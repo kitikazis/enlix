@@ -51,7 +51,8 @@
                 </x-admin.card>
 
                 <x-admin.card title="Contenido">
-                    <div x-ref="editor">{!! old('contenido', $pagina->contenido) !!}</div>
+                    {{-- old() es lo que se acaba de enviar SIN pasar por el mutator: se sanea antes de reimprimirlo. --}}
+                    <div x-ref="editor">{!! clean(old('contenido', $pagina->contenido)) !!}</div>
                     <input type="hidden" name="contenido" x-ref="contenidoInput">
                 </x-admin.card>
 

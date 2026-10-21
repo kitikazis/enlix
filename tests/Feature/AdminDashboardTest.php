@@ -228,6 +228,20 @@ class AdminDashboardTest extends TestCase
         $this->assertStringContainsString('Plan Web Básico', $contenido);
     }
 
+    public function test_exportar_csv_lleva_bom_y_neutraliza_formulas(): void
+    {
+        $user = User::factory()->create();
+        $this->crearPago(EstadoPago::Pagado, 9900)->update(['email' => '=HYPERLINK("http://x")@x.com']);
+
+        $contenido = $this->actingAs($user)
+            ->get(route('admin.dashboard.exportar', ['rango' => '30d']))
+            ->streamedContent();
+
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $contenido);
+        $this->assertStringContainsString("\"'=HYPERLINK(\"\"http://x\"\")@x.com\"", $contenido);
+        $this->assertStringNotContainsString(',"=HYPERLINK', $contenido);
+    }
+
     public function test_exportar_csv_exige_login(): void
     {
         $this->get(route('admin.dashboard.exportar'))->assertRedirect('/admin/login');

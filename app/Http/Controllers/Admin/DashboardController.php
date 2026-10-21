@@ -183,23 +183,37 @@ class DashboardController extends Controller
             // Exporta el correo sin enmascarar: es un archivo para el propio
             // admin (ya autenticado), no la vista en pantalla.
             $salida = fopen('php://output', 'w');
+            // BOM: sin él Excel abre el UTF-8 como ANSI ("Plan Web BÃ¡sico").
+            fwrite($salida, "\xEF\xBB\xBF");
             fputcsv($salida, ['Fecha', 'Producto', 'Email', 'Monto', 'Moneda', 'Estado', 'Método', 'Order ID']);
 
             foreach ($pagos as $pago) {
                 fputcsv($salida, [
                     $pago->created_at->setTimezone(self::ZONA)->format('Y-m-d H:i'),
-                    $nombresProducto[$pago->producto] ?? $pago->producto,
-                    $pago->email,
-                    number_format($pago->monto / 100, 2),
+                    $this->celdaSegura($nombresProducto[$pago->producto] ?? $pago->producto),
+                    $this->celdaSegura($pago->email),
+                    number_format($pago->monto / 100, 2, '.', ''),
                     $pago->moneda,
                     $pago->estado->etiqueta(),
                     $pago->metodo_pago?->etiqueta() ?? '',
-                    $pago->izipay_order_id,
+                    $this->celdaSegura($pago->izipay_order_id),
                 ]);
             }
 
             fclose($salida);
         }, $nombreArchivo, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Inyección de fórmulas en CSV: el email lo escribe el cliente en el
+     * checkout y "=HYPERLINK(...)@x.com" es un correo RFC válido; Excel lo
+     * ejecutaría al abrir el archivo. El apóstrofo lo fuerza a texto.
+     */
+    private function celdaSegura(?string $valor): string
+    {
+        $valor = (string) $valor;
+
+        return preg_match('/^[=+\-@\t\r]/', $valor) ? "'".$valor : $valor;
     }
 
     private function modoPruebaDeSesion(Request $request): bool
