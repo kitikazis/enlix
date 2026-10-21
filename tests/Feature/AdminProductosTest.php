@@ -764,6 +764,17 @@ class AdminProductosTest extends TestCase
             ->assertJson(['categoria' => $categoria->nombre]);
     }
 
+    public function test_el_csp_permite_la_vista_previa_local_de_la_imagen(): void
+    {
+        // URL.createObjectURL() da una URL blob:; sin blob: en img-src el
+        // navegador la bloqueaba (imagen rota) y el chequeo de 200x200 fallaba.
+        $csp = $this->actingAs(User::factory()->create())
+            ->get(route('admin.productos.index'))
+            ->headers->get('Content-Security-Policy');
+
+        $this->assertMatchesRegularExpression('/img-src [^;]*\bblob:/', $csp);
+    }
+
     public function test_el_script_de_la_papelera_lleva_el_nonce_del_csp(): void
     {
         $response = $this->actingAs(User::factory()->create())->get(route('admin.productos.papelera'));

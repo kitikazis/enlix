@@ -80,7 +80,10 @@ class SecurityHeaders
             $scriptSrc,
             "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com *.micuentaweb.pe",
             "font-src 'self' fonts.gstatic.com *.micuentaweb.pe",
-            "img-src 'self' data: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe *.online-metrix.net",
+            // blob: es la vista previa local de la imagen elegida en el modal
+            // de productos (URL.createObjectURL). Sin él el navegador la
+            // bloqueaba y se veía el ícono de imagen rota.
+            "img-src 'self' data: blob: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe *.online-metrix.net",
             "connect-src 'self' *.micuentaweb.pe *.online-metrix.net",
             "frame-src 'self' *.micuentaweb.pe *.online-metrix.net www.google.com",
             "frame-ancestors 'self'",
