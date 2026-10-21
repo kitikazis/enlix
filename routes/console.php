@@ -43,8 +43,11 @@ Schedule::command('izipay:reconcile')
 // que cada minuto se levanta un worker que procesa lo pendiente (hoy solo
 // los 2 mailables ShouldQueue de confirmación de pedido pagado) y termina
 // solo en vez de quedarse escuchando (--stop-when-empty evita acumular
-// procesos PHP colgados en el servidor compartido).
-Schedule::command('queue:work', ['--stop-when-empty' => true, '--max-time' => 50])
+// procesos PHP colgados en el servidor compartido). Va como string y no
+// como ['--stop-when-empty' => true]: el array lo convierte en
+// --stop-when-empty='1' y queue:work lo rechaza (la opción no lleva valor),
+// así que la cola nunca corría y el log crecía ~10 MB/día con el error.
+Schedule::command('queue:work --stop-when-empty --max-time=50')
     ->everyMinute()
     ->withoutOverlapping();
 
