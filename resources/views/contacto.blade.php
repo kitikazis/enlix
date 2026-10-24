@@ -93,8 +93,8 @@
           Visítanos en Lima, Perú.
         </h2>
         <p class="text-muted-enlix" style="font-size: 15.5px;">
-          Atendemos a empresas en Lima y todo el Perú. Coordina una cita previa con
-          nuestro equipo para una asesoría presencial o remota.
+          Atendemos a empresas en Lima y todo el Perú, on-site en tus oficinas o en
+          nuestro local. Coordina una cita previa con nuestro equipo.
         </p>
 
         <div class="map-info mt-4">
@@ -114,13 +114,13 @@
           <div class="map-info-row row-hours">
             <div class="ico" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12,6 12,12 16,14"/>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9,12 11,14 15,10"/>
               </svg>
             </div>
             <div>
-              <p class="label">Atención al cliente</p>
-              <p class="value">Disponibilidad continua, 24/7 los 365 días del año</p>
+              <p class="label">Modalidad de atención</p>
+              <p class="value">100&nbsp;% presencial: on-site o en nuestro local, con cobertura a nivel nacional</p>
             </div>
           </div>
 
