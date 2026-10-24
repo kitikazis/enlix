@@ -66,6 +66,16 @@ class SecurityHeaders
             $scriptSrc .= " 'unsafe-eval'";
         }
 
+        // Google Analytics 4: solo si está configurado (ver partials/cookies).
+        // gtag.js se carga desde googletagmanager y envía las mediciones a
+        // google-analytics / analytics.google.
+        $ga = config('services.google.analytics_id')
+            ? ' *.googletagmanager.com *.google-analytics.com *.analytics.google.com'
+            : '';
+        if ($ga !== '') {
+            $scriptSrc .= ' *.googletagmanager.com';
+        }
+
         $directivas = [
             "default-src 'self'",
             // El cliente Krypton (PopIn) reparte sus recursos entre varios
@@ -83,8 +93,8 @@ class SecurityHeaders
             // blob: es la vista previa local de la imagen elegida en el modal
             // de productos (URL.createObjectURL). Sin él el navegador la
             // bloqueaba y se veía el ícono de imagen rota.
-            "img-src 'self' data: blob: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe *.online-metrix.net",
-            "connect-src 'self' *.micuentaweb.pe *.online-metrix.net",
+            "img-src 'self' data: blob: images.unsplash.com cdn.simpleicons.org *.micuentaweb.pe *.online-metrix.net{$ga}",
+            "connect-src 'self' *.micuentaweb.pe *.online-metrix.net{$ga}",
             "frame-src 'self' *.micuentaweb.pe *.online-metrix.net www.google.com",
             "frame-ancestors 'self'",
             "form-action 'self' *.micuentaweb.pe",

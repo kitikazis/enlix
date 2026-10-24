@@ -14,11 +14,13 @@ use App\Http\Controllers\IzipayController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ServicioController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PageController::class, 'inicio'])->name('inicio');
 Route::get('/nosotros', [PageController::class, 'nosotros'])->name('nosotros');
 Route::get('/contacto', [PageController::class, 'contacto'])->name('contacto');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // El nombre de ruta 'terminos' no cambia (checkout.blade.php y los tests ya
 // lo usan): solo se mueve el path a /terminos-y-condiciones. El /terminos

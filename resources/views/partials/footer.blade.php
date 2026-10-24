@@ -99,6 +99,9 @@
         </div>
         <div class="col-md-6 text-md-end mt-2 mt-md-0">
           Mantenimiento de equipos de cómputo e impresoras en todo el Perú.
+          @if (config('services.google.analytics_id'))
+            <a href="#" data-cookies-abrir class="footer-cookies-link">Preferencias de cookies</a>
+          @endif
         </div>
       </div>
     </div>
