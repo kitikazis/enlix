@@ -8,28 +8,40 @@ use Illuminate\Http\Response;
 /**
  * sitemap.xml para Google Search Console: páginas públicas indexables.
  * Carrito, checkout y admin quedan fuera (ver también public/robots.txt).
+ *
+ * El XML se arma aquí y no en una vista Blade a propósito: el hosting tiene
+ * short_open_tag=On, y el "<?xml" de una plantilla se interpreta como
+ * apertura de PHP (error 500 solo en producción).
  */
 class SitemapController extends Controller
 {
     public function __invoke(): Response
     {
         $urls = [
-            ['loc' => route('inicio'), 'priority' => '1.0'],
-            ['loc' => route('nosotros'), 'priority' => '0.7'],
-            ['loc' => route('contacto'), 'priority' => '0.8'],
-            ['loc' => route('productos'), 'priority' => '0.6'],
+            [route('inicio'), '1.0'],
+            [route('nosotros'), '0.7'],
+            [route('contacto'), '0.8'],
+            [route('productos'), '0.6'],
         ];
 
         foreach (array_keys(Catalogo::items()) as $slug) {
-            $urls[] = ['loc' => route('servicio.show', $slug), 'priority' => '0.9'];
+            $urls[] = [route('servicio.show', $slug), '0.9'];
         }
 
-        $urls[] = ['loc' => route('libro-reclamaciones.index'), 'priority' => '0.3'];
-        $urls[] = ['loc' => route('terminos'), 'priority' => '0.2'];
-        $urls[] = ['loc' => route('politica-privacidad'), 'priority' => '0.2'];
+        $urls[] = [route('libro-reclamaciones.index'), '0.3'];
+        $urls[] = [route('terminos'), '0.2'];
+        $urls[] = [route('politica-privacidad'), '0.2'];
 
-        return response()
-            ->view('sitemap', ['urls' => $urls])
-            ->header('Content-Type', 'application/xml; charset=UTF-8');
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+            .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+
+        foreach ($urls as [$loc, $prioridad]) {
+            $xml .= '  <url><loc>'.htmlspecialchars($loc, ENT_XML1).'</loc>'
+                .'<priority>'.$prioridad.'</priority></url>'."\n";
+        }
+
+        $xml .= '</urlset>'."\n";
+
+        return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 }
