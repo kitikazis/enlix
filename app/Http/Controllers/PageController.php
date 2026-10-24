@@ -13,7 +13,7 @@ class PageController extends Controller
     public function inicio(): View
     {
         return view('inicio', [
-            'titulo'  => 'Enlix - Soluciones tecnológicas para empresas',
+            'titulo'  => 'Enlix - Mantenimiento de computadoras e impresoras en Perú',
             'current' => 'inicio',
         ]);
     }
@@ -21,8 +21,9 @@ class PageController extends Controller
     public function nosotros(): View
     {
         return view('nosotros', [
-            'titulo'  => 'Nosotros - Enlix',
-            'current' => 'nosotros',
+            'titulo'          => 'Nosotros - Enlix',
+            'metaDescription' => 'Conoce a Enlix: empresa peruana especializada en el mantenimiento de equipos de cómputo e impresoras. Nuestra misión, visión y valores.',
+            'current'         => 'nosotros',
         ]);
     }
 

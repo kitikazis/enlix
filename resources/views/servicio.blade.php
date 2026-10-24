@@ -6,8 +6,8 @@
   <div class="container">
     <p class="crumbs" style="font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--enlix-muted); margin: 0;">
       <a href="{{ route('inicio') }}" style="color: var(--enlix-muted);">Inicio</a> &nbsp;/&nbsp;
-      <a href="#" style="color: var(--enlix-muted);">Servicios</a> &nbsp;/&nbsp;
-      <a href="#" style="color: var(--enlix-muted);">{{ $svc['group_label'] }}</a> &nbsp;/&nbsp;
+      <a href="{{ route('inicio') }}#servicios" style="color: var(--enlix-muted);">Servicios</a> &nbsp;/&nbsp;
+      <span>{{ $svc['group_label'] }}</span> &nbsp;/&nbsp;
       <span style="color: var(--enlix-ink);">{{ $svc['short'] }}</span>
     </p>
   </div>
@@ -39,6 +39,12 @@
           {{ $svc['lead'] }}
         </p>
 
+        <ul class="svc-trust" aria-label="Condiciones del servicio">
+          <li>100&nbsp;% presencial: on-site o en nuestro local</li>
+          <li>Cobertura a nivel nacional</li>
+          <li>Trabajo garantizado</li>
+        </ul>
+
         <div class="svc-block mt-4" id="detalle">
           <p class="svc-block-num">{{ $svc['group_num'] }} — {{ $svc['group_label'] }}</p>
           <h2>Qué incluye este servicio</h2>
@@ -48,6 +54,17 @@
             @endforeach
           </ul>
         </div>
+
+        @if (! empty($svc['equipos']))
+        <div class="svc-block">
+          <h2>Equipos que atendemos</h2>
+          <ul class="svc-chips">
+            @foreach ($svc['equipos'] as $equipo)
+              <li>{{ $equipo }}</li>
+            @endforeach
+          </ul>
+        </div>
+        @endif
 
         {{-- Otros servicios del grupo --}}
         @php($otros = \App\Support\Catalogo::otrosDelGrupo($servicio_actual))

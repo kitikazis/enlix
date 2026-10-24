@@ -8,20 +8,11 @@ use Tests\TestCase;
 
 class FooterTest extends TestCase
 {
-    public function test_el_enlace_al_admin_no_aparece_en_produccion(): void
+    public function test_el_footer_no_muestra_enlace_al_admin(): void
     {
-        $this->app['env'] = 'production';
-
         $this->get('/')
             ->assertOk()
-            ->assertSee('Soluciones tecnológicas para empresas en el Perú.')
+            ->assertSee('Mantenimiento de equipos de cómputo e impresoras en todo el Perú.')
             ->assertDontSee('href="'.route('admin.dashboard').'"', false);
-    }
-
-    public function test_el_enlace_al_admin_aparece_fuera_de_produccion(): void
-    {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('href="'.route('admin.dashboard').'"', false);
     }
 }

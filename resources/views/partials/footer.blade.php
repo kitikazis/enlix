@@ -1,7 +1,7 @@
 @php
   $_grupos_all   = array_values($grupos);
-  $_servicios_c1 = array_slice($_grupos_all, 0, 3); // Grupos 1-3
-  $_servicios_c2 = array_slice($_grupos_all, 3);    // Grupos 4-5
+  $_servicios_c1 = array_slice($_grupos_all, 0, 1); // Grupo 1 (mantenimiento)
+  $_servicios_c2 = array_slice($_grupos_all, 1);    // Grupos 2-3
 @endphp
 <footer class="enlix-footer">
   <div class="container">
@@ -11,8 +11,8 @@
       <div class="col-12 col-lg-2">
         <img src="{{ asset('assets/img/enlix-logo.jpg') }}" alt="Enlix" class="footer-brand-img">
         <p class="footer-tag">
-          Soluciones tecnológicas y servicios de TI que ayudan a las empresas a operar
-          con confianza, eficiencia y continuidad.
+          Mantenimiento preventivo y correctivo de equipos de cómputo e impresoras,
+          con servicio presencial y cobertura a nivel nacional.
         </p>
         <p class="footer-info"><span>Dónde estamos</span>Lima, Perú</p>
       </div>
@@ -27,7 +27,7 @@
         </ul>
       </div>
 
-      {{-- Servicios columna 1 (grupos 1-3) --}}
+      {{-- Servicios columna 1 (grupo 1) --}}
       <div class="col-12 col-sm-6 col-lg-2">
         <h5>Servicios</h5>
         <ul class="footer-services">
@@ -42,7 +42,7 @@
         </ul>
       </div>
 
-      {{-- Servicios columna 2 (grupos 4-5) --}}
+      {{-- Servicios columna 2 (grupos 2-3) --}}
       <div class="col-12 col-sm-6 col-lg-2 footer-services-col2">
         <ul class="footer-services">
           @foreach ($_servicios_c2 as $g)
@@ -90,10 +90,7 @@
           &copy; {{ date('Y') }} Enlix. Todos los derechos reservados.
         </div>
         <div class="col-md-6 text-md-end mt-2 mt-md-0">
-          Soluciones tecnológicas para empresas en el Perú.
-          @unless (app()->isProduction())
-            <a href="{{ route('admin.dashboard') }}" style="color: inherit; opacity: .5; margin-left: 12px;">Admin</a>
-          @endunless
+          Mantenimiento de equipos de cómputo e impresoras en todo el Perú.
         </div>
       </div>
     </div>

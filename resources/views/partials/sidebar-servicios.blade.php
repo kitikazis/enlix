@@ -27,7 +27,7 @@
   </nav>
 
   <div class="sidebar-cta">
-    <p>¿Necesitas asesoría para tu proyecto?</p>
+    <p>¿Necesitas atención para tus equipos?</p>
     <a href="{{ route('contacto') }}" class="btn btn-primary-enlix w-100">Solicitar cotización</a>
   </div>
 </aside>

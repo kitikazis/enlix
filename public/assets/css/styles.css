@@ -617,7 +617,7 @@ a:hover { color: var(--enlix-blue-900); }
 .hero-stats .stat-num {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 34px;
+  font-size: clamp(26px, 7vw, 34px);
   color: #fff;
   line-height: 1;
   display: block;
@@ -1890,4 +1890,95 @@ body.enlix-modal-abierto { overflow: hidden; }
   .enlix-modal-overlay.is-open .enlix-modal-carrito { transform: translateY(0); }
   .enlix-modal-carrito-footer { flex-direction: column-reverse; align-items: stretch; }
   .enlix-modal-carrito-seguir { text-align: center; padding: 8px 0; }
+}
+
+/* ---------- Servicio: franja de confianza y equipos atendidos ---------- */
+.svc-trust {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.svc-trust li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--enlix-ink);
+}
+.svc-trust li::before {
+  content: "";
+  flex-shrink: 0;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--enlix-blue-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23154A85' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
+@media (min-width: 768px) {
+  .svc-trust { flex-direction: row; flex-wrap: wrap; gap: 10px 24px; }
+}
+
+.svc-block ul.svc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+.svc-block ul.svc-chips li {
+  margin: 0;
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--enlix-blue-800);
+  background: var(--enlix-blue-50);
+  border-radius: 999px;
+}
+.svc-block ul.svc-chips li::before { content: none; }
+
+/* ---------- Nosotros: valores ---------- */
+.valores-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 48px;
+}
+.valor-item {
+  display: flex;
+  gap: 18px;
+  padding: 22px 0;
+  border-top: 1px solid var(--enlix-border);
+  min-width: 0;
+}
+.valor-num {
+  flex-shrink: 0;
+  width: 40px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--enlix-accent);
+  line-height: 1.6;
+}
+.valor-body { min-width: 0; }
+.valor-item h3 {
+  display: block;
+  font-size: 17px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--enlix-ink);
+  line-height: 1.4;
+  margin: 0 0 6px;
+}
+.valor-item p {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--enlix-muted);
+  margin: 0;
+}
+@media (min-width: 768px) {
+  .valores-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

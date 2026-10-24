@@ -155,7 +155,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 });
 
-// Páginas de servicio: /servicio-cctv, /servicio-distribucion-equipos, etc.
+// Páginas de servicio: /servicio-mantenimiento-preventivo, /servicio-venta-equipos, etc.
 Route::get('/servicio-{slug}', [ServicioController::class, 'show'])
     ->where('slug', '[a-z0-9-]+')
     ->name('servicio.show');

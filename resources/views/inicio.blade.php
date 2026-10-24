@@ -10,10 +10,9 @@
         <div class="hero-line"></div>
         <h1>ENLIX</h1>
         <p class="lead">
-          ¿Buscas soluciones tecnológicas? Estamos para ayudarte.
-          Asesoría, implementación y soporte en infraestructura tecnológica,
-          equipos y soluciones de TI para empresas que necesitan operar
-          con confianza y eficiencia.
+          Mantenimiento preventivo y correctivo de laptops, PCs, All-in-One,
+          Mac e impresoras de todas las marcas. Servicio 100&nbsp;% presencial,
+          on-site o en nuestro local, con cobertura a nivel nacional.
         </p>
         <div class="hero-cta">
           <a href="#servicios" class="btn btn-primary-enlix">Ver nuestros servicios</a>
@@ -25,20 +24,20 @@
     <div class="hero-stats">
       <div class="row gy-4">
         <div class="col-6 col-md-3">
-          <span class="stat-num">15+</span>
+          <span class="stat-num">{{ count(\App\Support\Catalogo::items()) }}</span>
           <span class="stat-lbl">Servicios especializados</span>
         </div>
         <div class="col-6 col-md-3">
-          <span class="stat-num">5</span>
-          <span class="stat-lbl">Áreas de práctica</span>
+          <span class="stat-num">100%</span>
+          <span class="stat-lbl">Atención presencial</span>
         </div>
         <div class="col-6 col-md-3">
-          <span class="stat-num">B2B</span>
-          <span class="stat-lbl">Enfoque corporativo</span>
+          <span class="stat-num">Perú</span>
+          <span class="stat-lbl">Cobertura nacional</span>
         </div>
         <div class="col-6 col-md-3">
-          <span class="stat-num">2026</span>
-          <span class="stat-lbl">Operaciones activas</span>
+          <span class="stat-num">Garantía</span>
+          <span class="stat-lbl">En cada servicio</span>
         </div>
       </div>
     </div>
@@ -48,7 +47,7 @@
 <!-- ============ LOGOS / STRIP ============ -->
 <section class="logos-strip">
   <div class="container">
-    <p class="label text-center mb-4">Trabajamos con marcas reconocidas del ecosistema TI</p>
+    <p class="label text-center mb-4">Atendemos equipos de todas las marcas</p>
     <div class="row align-items-center justify-content-around gy-4">
       <div class="col-6 col-md-2 text-center">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 28" class="brand-logo-img" role="img" aria-label="Microsoft">
@@ -69,7 +68,7 @@
         <img src="https://cdn.simpleicons.org/dell/007DB8" alt="Dell" class="brand-logo-img">
       </div>
       <div class="col-6 col-md-2 text-center">
-        <img src="https://cdn.simpleicons.org/cisco/1BA0D7" alt="Cisco" class="brand-logo-img">
+        <img src="https://cdn.simpleicons.org/apple/555555" alt="Apple" class="brand-logo-img">
       </div>
       <div class="col-6 col-md-2 text-center">
         <img src="https://cdn.simpleicons.org/epson/003399" alt="Epson" class="brand-logo-img">
@@ -85,12 +84,17 @@
       <div class="col-lg-5">
         <p class="eyebrow">Quiénes somos</p>
         <h2 class="mb-3" style="font-size: clamp(28px, 3.5vw, 40px); line-height: 1.2;">
-          Tecnología que sostiene tu operación día a día.
+          Equipos que funcionan, una operación que no se detiene.
         </h2>
+        <p style="font-size: 16px;">
+          En Enlix somos una empresa peruana especializada en el mantenimiento preventivo
+          y correctivo de equipos de cómputo e impresoras. Nuestro compromiso es realizar
+          un trabajo excelente y garantizado, cuidando cada detalle para que tus equipos
+          funcionen de manera confiable, eficiente y segura.
+        </p>
         <p class="text-muted-enlix" style="font-size: 16px;">
-          En Enlix nos enfocamos en comprender las necesidades de cada cliente para ofrecer
-          asesoría, implementación y soporte en infraestructura tecnológica, equipos y soluciones
-          de TI. Acompañamos a las empresas para que su tecnología funcione de forma confiable y eficiente.
+          Combinamos experiencia técnica, atención personalizada y soluciones prácticas
+          que ayudan a las empresas a mantener su operación sin interrupciones.
         </p>
         <a href="{{ route('nosotros') }}" class="btn btn-ghost-enlix mt-2">
           Conoce más sobre Enlix <span class="arrow">&rarr;</span>
@@ -112,12 +116,12 @@
       <div class="col-lg-7">
         <p class="eyebrow">Nuestros servicios</p>
         <h2 style="font-size: clamp(28px, 3.5vw, 40px); line-height: 1.2;">
-          Quince servicios independientes para tu operación tecnológica.
+          Del mantenimiento a la renovación de tus equipos, en un solo lugar.
         </h2>
       </div>
       <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
         <p class="text-muted-enlix mb-0" style="font-size: 15px;">
-          Cada servicio se contrata por separado o como parte de una solución integral.
+          Contrata un servicio puntual o una solución integral para todo tu parque informático.
         </p>
       </div>
     </div>
@@ -128,14 +132,22 @@
           <span class="home-svc-group-num">{{ $g['num'] }}</span>
           <h3>{{ $g['label'] }}</h3>
         </div>
+        @php
+          // Columnas según cantidad, para que ningún grupo deje tarjetas huérfanas.
+          $colClase = match (count($g['items'])) {
+              1       => 'col-12',
+              4       => 'col-md-6 col-lg-3',
+              default => 'col-md-6 col-lg-4',
+          };
+        @endphp
         <div class="row g-4">
           @foreach ($g['items'] as $sub)
             @php($svc = \App\Support\Catalogo::find($sub['slug']))
-            <div class="col-md-6 col-lg-4">
+            <div class="{{ $colClase }}">
               <a href="{{ route('servicio.show', $sub['slug']) }}" class="home-svc-card">
-                <span class="home-svc-card-tag">{{ $g['label'] }}</span>
+                <span class="home-svc-card-tag">{{ $svc['badge'] }}</span>
                 <h4>{{ $svc['short'] }}</h4>
-                <p>{{ mb_substr($svc['lead'], 0, 110) }}…</p>
+                <p>{{ $svc['lead'] }}</p>
                 <span class="home-svc-card-cta">Ver servicio <span class="arrow">&rarr;</span></span>
               </a>
             </div>
@@ -151,7 +163,7 @@
           <div>
             <p class="num">A tu medida</p>
             <h3>¿Necesitas algo distinto?</h3>
-            <p>Cuéntanos sobre tu proyecto y diseñamos una solución específica para tu organización.</p>
+            <p>Cuéntanos qué necesitan tus equipos y diseñamos una solución específica para tu empresa.</p>
           </div>
           <a href="{{ route('contacto') }}" class="btn btn-primary-enlix" style="background: var(--enlix-accent); border-color: var(--enlix-accent); color: var(--enlix-blue-900);">Conversemos</a>
         </div>
@@ -168,40 +180,40 @@
       <div class="col-lg-4">
         <p class="eyebrow">Por qué Enlix</p>
         <h2 style="font-size: clamp(26px, 3vw, 36px); line-height: 1.2;">
-          Una relación de largo plazo, no una transacción.
+          No solo solucionamos problemas: construimos confianza.
         </h2>
       </div>
       <div class="col-lg-8">
         <div class="row g-4">
           <div class="col-md-6">
             <div class="p-4" style="border-left: 3px solid var(--enlix-blue-700);">
-              <h4 style="font-size: 17px; margin: 0 0 10px;">Asesoría especializada</h4>
+              <h4 style="font-size: 17px; margin: 0 0 10px;">Trabajo excelente y garantizado</h4>
               <p class="text-muted-enlix mb-0" style="font-size: 14.5px;">
-                Comprendemos tu operación antes de proponer una solución. Recomendamos lo que tu empresa realmente necesita.
+                Cada intervención se realiza con rigor técnico y atención al detalle, y la respaldamos con garantías claras.
               </p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="p-4" style="border-left: 3px solid var(--enlix-blue-700);">
-              <h4 style="font-size: 17px; margin: 0 0 10px;">Continuidad operativa</h4>
+              <h4 style="font-size: 17px; margin: 0 0 10px;">100&nbsp;% presencial, en todo el Perú</h4>
               <p class="text-muted-enlix mb-0" style="font-size: 14.5px;">
-                Soporte continuo, suministros disponibles y mantenimiento preventivo para que tu tecnología no detenga el negocio.
+                Atendemos on-site en tus oficinas o en nuestro local, con cobertura a nivel nacional.
               </p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="p-4" style="border-left: 3px solid var(--enlix-blue-700);">
-              <h4 style="font-size: 17px; margin: 0 0 10px;">Calidad y garantía</h4>
+              <h4 style="font-size: 17px; margin: 0 0 10px;">Todas las marcas y equipos</h4>
               <p class="text-muted-enlix mb-0" style="font-size: 14.5px;">
-                Trabajamos con equipos y suministros de marcas reconocidas, con garantía y respaldo formal.
+                Laptops, PCs, All-in-One, Mac e impresoras de cualquier marca, con un mismo estándar de servicio.
               </p>
             </div>
           </div>
           <div class="col-md-6">
             <div class="p-4" style="border-left: 3px solid var(--enlix-blue-700);">
-              <h4 style="font-size: 17px; margin: 0 0 10px;">Acompañamiento integral</h4>
+              <h4 style="font-size: 17px; margin: 0 0 10px;">Relaciones de largo plazo</h4>
               <p class="text-muted-enlix mb-0" style="font-size: 14.5px;">
-                Desde la asesoría inicial hasta el soporte posterior, acompañamos cada etapa del proyecto.
+                Te acompañamos con profesionalismo, transparencia y resultados que se notan, antes y después de cada servicio.
               </p>
             </div>
           </div>
@@ -216,8 +228,8 @@
   <div class="container position-relative">
     <div class="row align-items-center">
       <div class="col-lg-8">
-        <h2>¿Hablamos sobre tu próximo proyecto tecnológico?</h2>
-        <p>Cuéntanos qué necesita tu empresa. Te respondemos con una propuesta clara.</p>
+        <h2>¿Tus equipos necesitan mantenimiento o reparación?</h2>
+        <p>Coordinamos una visita on-site o recibimos tus equipos en nuestro local. Te respondemos con una propuesta clara.</p>
       </div>
       <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
         <a href="{{ route('contacto') }}" class="btn btn-primary-enlix">Solicitar cotización</a>
