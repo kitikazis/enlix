@@ -27,7 +27,7 @@
           Nuestro equipo te responderá con asesoría, una propuesta clara y los siguientes pasos.
           También puedes escribirnos directamente por correo o llamarnos.
         </p>
-        <a href="https://wa.me/51963885176?text=Hola%20Enlix%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n%20sobre%20sus%20servicios."
+        <a href="{{ \App\Support\Contacto::whatsapp() }}"
            target="_blank" rel="noopener"
            class="btn btn-primary-enlix mt-2"
            style="background: #1F8A4A; border-color: #1F8A4A;">
@@ -146,7 +146,7 @@
             <div>
               <p class="label">WhatsApp</p>
               <p class="value">
-                <a href="https://wa.me/51963885176?text=Hola%20Enlix%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n%20sobre%20sus%20servicios."
+                <a href="{{ \App\Support\Contacto::whatsapp() }}"
                    target="_blank" rel="noopener">
                   Escríbenos directamente
                 </a>

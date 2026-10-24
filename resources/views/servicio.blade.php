@@ -17,13 +17,13 @@
   <div class="container">
     <div class="row gx-lg-5">
 
-      {{-- Sidebar --}}
-      <div class="col-lg-4 mb-4 mb-lg-0">
+      {{-- Sidebar (en móvil va después del contenido) --}}
+      <div class="col-lg-4 order-2 order-lg-1 mt-5 mt-lg-0">
         @include('partials.sidebar-servicios', ['servicio_actual' => $servicio_actual])
       </div>
 
       {{-- Contenido --}}
-      <div class="col-lg-8">
+      <div class="col-lg-8 order-1 order-lg-2">
 
         <div class="svc-hero-img">
           <img src="{{ $svc['image'] }}" alt="{{ $svc['title'] }}">
@@ -92,7 +92,8 @@
               <p style="color: rgba(255,255,255,0.75); margin: 0;">{{ $svc['cta_text'] }}</p>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
-              <a href="{{ route('contacto') }}" class="btn btn-primary-enlix" style="background: #fff; color: var(--enlix-blue-900); border-color: #fff;">{{ $svc['cta_btn'] }}</a>
+              <a href="{{ \App\Support\Contacto::whatsappServicio($svc['short']) }}" target="_blank" rel="noopener" class="btn btn-whatsapp-enlix">{{ $svc['cta_btn'] }}</a>
+              <a href="{{ route('contacto') }}" class="svc-cta-alt">Otros medios de contacto</a>
             </div>
           </div>
         </div>

@@ -6,17 +6,23 @@
 <section class="hero">
   <div class="container position-relative">
     <div class="row">
-      <div class="col-lg-9">
+      <div class="col-lg-10 col-xl-9">
         <div class="hero-line"></div>
-        <h1>ENLIX</h1>
+        <p class="hero-kicker">Enlix · Servicio técnico para empresas</p>
+        <h1>Mantenimiento de computadoras e impresoras para empresas, en todo el Perú.</h1>
         <p class="lead">
-          Mantenimiento preventivo y correctivo de laptops, PCs, All-in-One,
-          Mac e impresoras de todas las marcas. Servicio 100&nbsp;% presencial,
-          on-site o en nuestro local, con cobertura a nivel nacional.
+          Laptops, PCs, All-in-One, Mac e impresoras de todas las marcas.
+          Servicio 100&nbsp;% presencial, on-site o en nuestro local, con trabajo garantizado.
         </p>
         <div class="hero-cta">
-          <a href="#servicios" class="btn btn-primary-enlix">Ver nuestros servicios</a>
-          <a href="{{ route('contacto') }}" class="btn btn-outline-enlix">Contáctanos</a>
+          <a href="{{ \App\Support\Contacto::whatsapp('Hola Enlix, quiero cotizar un servicio para mis equipos.') }}"
+             target="_blank" rel="noopener" class="btn btn-whatsapp-enlix">
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+              <path d="M16.004 4C9.385 4 4 9.385 4 16.004c0 2.114.555 4.18 1.61 6L4 28l6.155-1.59a12 12 0 0 0 5.85 1.498h.005C22.62 27.908 28 22.523 28 15.904 28 9.285 22.623 4 16.004 4zm6.948 17.018c-.295.83-1.715 1.59-2.4 1.688-.612.09-1.387.13-2.243-.14-.515-.165-1.176-.385-2.025-.752-3.566-1.54-5.894-5.131-6.07-5.366-.177-.236-1.46-1.94-1.46-3.706 0-1.766.927-2.633 1.255-2.996.325-.36.706-.45.94-.45h.677c.216 0 .505-.082.792.604.295.706 1.005 2.473 1.094 2.653.09.18.15.39.03.625-.118.236-.176.382-.353.59-.176.205-.372.46-.531.617-.176.176-.36.367-.156.722.205.354.91 1.504 1.957 2.434 1.346 1.2 2.48 1.572 2.832 1.748.354.176.56.146.766-.088.205-.236.882-1.03 1.117-1.385.236-.354.471-.295.796-.176.325.117 2.063.975 2.418 1.152.354.176.59.265.677.412.088.146.088.85-.207 1.682z"/>
+            </svg>
+            Cotizar por WhatsApp
+          </a>
+          <a href="#servicios" class="btn btn-outline-enlix">Ver servicios</a>
         </div>
       </div>
     </div>
@@ -232,7 +238,7 @@
         <p>Coordinamos una visita on-site o recibimos tus equipos en nuestro local. Te respondemos con una propuesta clara.</p>
       </div>
       <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
-        <a href="{{ route('contacto') }}" class="btn btn-primary-enlix">Solicitar cotización</a>
+        <a href="{{ \App\Support\Contacto::whatsapp('Hola Enlix, quiero cotizar un servicio para mis equipos.') }}" target="_blank" rel="noopener" class="btn btn-whatsapp-enlix">Cotizar por WhatsApp</a>
       </div>
     </div>
   </div>

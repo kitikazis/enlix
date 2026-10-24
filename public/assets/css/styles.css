@@ -18,7 +18,8 @@
   --enlix-bg-soft:  #F5F7FB;
   --enlix-bg-grey:  #EDF1F7;
 
-  --enlix-accent:   #C9A24A;  /* gold acento sobrio */
+  --enlix-accent:   #C9A24A;  /* gold acento sobrio (fondos oscuros y decoración) */
+  --enlix-accent-ink: #8A6A1F; /* gold para texto sobre fondo claro (contraste AA 5:1) */
 
   --font-heading: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
   --font-body:    'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -555,7 +556,7 @@ a:hover { color: var(--enlix-blue-900); }
     linear-gradient(180deg, #08203D 0%, #0A2540 60%, #0E3A6B 100%);
   color: #fff;
   overflow: hidden;
-  padding: 140px 0 120px;
+  padding: 104px 0 104px;
 }
 .hero::before {
   content: "";
@@ -580,11 +581,21 @@ a:hover { color: var(--enlix-blue-900); }
   background: var(--enlix-accent);
   margin-bottom: 28px;
 }
+.hero .hero-kicker {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--enlix-accent);
+  margin: 0 0 16px;
+}
 .hero h1 {
-  font-size: clamp(56px, 9vw, 112px);
-  line-height: 0.95;
+  font-size: clamp(32px, 4.2vw, 54px);
+  line-height: 1.1;
   color: #fff;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
+  max-width: 900px;
   margin: 0 0 24px;
 }
 .hero .lead {
@@ -1178,10 +1189,10 @@ a:hover { color: var(--enlix-blue-900); }
   display: block;
 }
 .enlix-footer .footer-brand-img {
-  height: 44px;
+  height: 64px;
   width: auto;
   background: #fff;
-  padding: 8px 14px;
+  padding: 0 12px;
   border-radius: 4px;
   display: inline-block;
   margin-bottom: 22px;
@@ -1960,7 +1971,7 @@ body.enlix-modal-abierto { overflow: hidden; }
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.06em;
-  color: var(--enlix-accent);
+  color: var(--enlix-accent-ink);
   line-height: 1.6;
 }
 .valor-body { min-width: 0; }
@@ -1981,4 +1992,81 @@ body.enlix-modal-abierto { overflow: hidden; }
 }
 @media (min-width: 768px) {
   .valores-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- Botón WhatsApp (CTA principal de conversión) ---------- */
+.btn-whatsapp-enlix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  background: #1A7A41;           /* verde WhatsApp oscurecido: contraste AA con blanco */
+  color: #fff;
+  border: 1px solid #1A7A41;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  transition: background .18s ease, border-color .18s ease;
+}
+.btn-whatsapp-enlix:hover,
+.btn-whatsapp-enlix:focus-visible {
+  background: #146333;
+  border-color: #146333;
+  color: #fff;
+}
+.hero .hero-cta .btn { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* Enlace secundario bajo el CTA oscuro de cada servicio */
+.svc-cta-alt {
+  display: block;
+  margin-top: 10px;
+  font-size: 13.5px;
+  color: rgba(255,255,255,0.75);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.svc-cta-alt:hover { color: #fff; }
+
+/* ---------- Barra de contacto fija (móvil) ---------- */
+.contacto-barra-movil { display: none; }
+@media (max-width: 767.98px) {
+  .contacto-barra-movil {
+    display: flex;
+    gap: 10px;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1060;
+    background: #fff;
+    border-top: 1px solid var(--enlix-border);
+    box-shadow: 0 -8px 24px -12px rgba(10,37,64,0.25);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .contacto-barra-btn {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .contacto-barra-llamar {
+    flex: 0 0 auto;
+    padding: 0 18px;
+    color: var(--enlix-blue-800);
+    border: 1px solid var(--enlix-blue-800);
+  }
+  .contacto-barra-whatsapp { background: #1A7A41; color: #fff; }
+  .contacto-barra-llamar:hover { color: var(--enlix-blue-900); }
+  .contacto-barra-whatsapp:hover { color: #fff; background: #146333; }
+
+  /* La barra reemplaza al botón flotante y no debe tapar el final de la página */
+  .wa-float.wa-float-con-barra { display: none; }
+  body:has(.contacto-barra-movil) { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
 }

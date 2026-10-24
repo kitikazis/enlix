@@ -28,7 +28,8 @@
 
   <div class="sidebar-cta">
     <p>¿Necesitas atención para tus equipos?</p>
-    <a href="{{ route('contacto') }}" class="btn btn-primary-enlix w-100">Solicitar cotización</a>
+    <a href="{{ $servicio_actual !== '' ? \App\Support\Contacto::whatsappServicio(config("servicios.items.$servicio_actual.short", '')) : \App\Support\Contacto::whatsapp() }}"
+       target="_blank" rel="noopener" class="btn btn-whatsapp-enlix w-100">Cotizar por WhatsApp</a>
   </div>
 </aside>
 <script nonce="{{ $cspNonce }}">
