@@ -1,7 +1,11 @@
 @php
   $_seo_titulo      = $titulo ?? 'Enlix - Mantenimiento de computadoras e impresoras en Perú';
   $_seo_descripcion = $metaDescription ?? 'Enlix: mantenimiento preventivo y correctivo de laptops, PCs, All-in-One, Mac e impresoras de todas las marcas. Servicio 100 % presencial con cobertura a nivel nacional.';
-  $_seo_imagen      = $svc['image'] ?? asset('assets/img/android-chrome-192x192.png');
+  // $seoImagen: foto grande propia de la página (ej. la oferta del día en
+  // /productos), para que al compartir el enlace en WhatsApp/redes salga el
+  // producto y no el ícono de Enlix.
+  $_seo_imagen_grande = $seoImagen ?? $svc['image'] ?? null;
+  $_seo_imagen      = $_seo_imagen_grande ?? asset('assets/img/android-chrome-192x192.png');
   $_seo_empresa_id  = route('inicio').'#empresa';
 
   // Datos estructurados (schema.org) para que Google entienda qué es Enlix.
@@ -39,6 +43,33 @@
       ];
   }
 
+  // Oferta del día de /productos: Product + Offer para que Google pueda
+  // mostrar precio, stock y vigencia en los resultados.
+  if (! empty($oferta)) {
+      $_seo_producto = [
+          '@context'    => 'https://schema.org',
+          '@type'       => 'Product',
+          'name'        => $oferta->nombre,
+          'image'       => $oferta->imagen_url,
+          'description' => $oferta->oferta_bajada ?: trim(strip_tags($oferta->descripcion)),
+          'sku'         => $oferta->referencia,
+          'offers'      => [
+              '@type'           => 'Offer',
+              'url'             => route('productos'),
+              'priceCurrency'   => 'PEN',
+              'price'           => number_format($oferta->precio_centimos / 100, 2, '.', ''),
+              'priceValidUntil' => $oferta->oferta_termina_en->setTimezone('America/Lima')->toDateString(),
+              'availability'    => $oferta->stockDisponible() > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+              'itemCondition'   => 'https://schema.org/NewCondition',
+              'seller'          => ['@type' => 'Organization', '@id' => $_seo_empresa_id, 'name' => 'Enlix'],
+          ],
+      ];
+      if ($oferta->marca) {
+          $_seo_producto['brand'] = ['@type' => 'Brand', 'name' => $oferta->marca->nombre];
+      }
+      $_seo_jsonld[] = $_seo_producto;
+  }
+
   if (isset($svc, $servicio_actual)) {
       $_seo_jsonld[] = [
           '@context'    => 'https://schema.org',
@@ -70,7 +101,10 @@
   <meta property="og:description" content="{{ $_seo_descripcion }}">
   <meta property="og:url" content="{{ url()->current() }}">
   <meta property="og:image" content="{{ $_seo_imagen }}">
-  <meta name="twitter:card" content="{{ isset($svc['image']) ? 'summary_large_image' : 'summary' }}">
+@if (! empty($seoImagenAlt))
+  <meta property="og:image:alt" content="{{ $seoImagenAlt }}">
+@endif
+  <meta name="twitter:card" content="{{ $_seo_imagen_grande ? 'summary_large_image' : 'summary' }}">
 
 @if (config('services.google.site_verification'))
   <meta name="google-site-verification" content="{{ config('services.google.site_verification') }}">

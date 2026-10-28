@@ -54,6 +54,9 @@ class IzipayController extends Controller
         return view('productos', [
             'titulo' => $oferta ? "Oferta del día: {$oferta->nombre} - Enlix" : 'Productos - Enlix',
             'metaDescription' => $oferta?->oferta_bajada,
+            // Vista previa al compartir /productos: la foto de la oferta.
+            'seoImagen' => $oferta?->imagen_url,
+            'seoImagenAlt' => $oferta?->nombre,
             'current' => 'productos',
             'oferta' => $oferta,
             'productos' => $productos,

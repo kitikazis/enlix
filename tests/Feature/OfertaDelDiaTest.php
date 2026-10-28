@@ -254,6 +254,36 @@ class OfertaDelDiaTest extends TestCase
         $this->get(route('productos'))
             ->assertOk()
             ->assertSee('Nuestros productos')
-            ->assertDontSee('class="oferta-hero"', false);
+            ->assertDontSee('class="oferta-hero"', false)
+            ->assertSee('android-chrome-192x192.png', false)
+            ->assertDontSee('"@type":"Product"', false);
+    }
+
+    public function test_al_compartir_productos_la_vista_previa_es_la_foto_de_la_oferta(): void
+    {
+        $producto = $this->crear();
+
+        $this->get(route('productos'))
+            ->assertSee('<meta property="og:image" content="'.e($producto->imagen_url).'">', false)
+            ->assertSee('<meta property="og:image:alt" content="NB ROG Zephyrus G16">', false)
+            ->assertSee('<meta name="twitter:card" content="summary_large_image">', false)
+            ->assertSee('<meta property="og:description" content="Descubre el ROG Zephyrus G16 por tiempo limitado.">', false);
+    }
+
+    public function test_la_oferta_tiene_datos_estructurados_de_producto_para_google(): void
+    {
+        $this->freezeSecond();
+        $this->crear();
+
+        $html = $this->get(route('productos'))->getContent();
+        preg_match_all('#<script type="application/ld\+json"[^>]*>(.*?)</script>#s', $html, $bloques);
+        $producto = collect($bloques[1])->map(fn ($json) => json_decode($json, true))->firstWhere('@type', 'Product');
+
+        $this->assertNotNull($producto);
+        $this->assertSame('NB ROG Zephyrus G16', $producto['name']);
+        $this->assertSame('PEN', $producto['offers']['priceCurrency']);
+        $this->assertSame('7499.00', $producto['offers']['price']);
+        $this->assertSame('https://schema.org/InStock', $producto['offers']['availability']);
+        $this->assertSame(now()->addDay()->setTimezone('America/Lima')->toDateString(), $producto['offers']['priceValidUntil']);
     }
 }

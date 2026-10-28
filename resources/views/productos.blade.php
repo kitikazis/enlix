@@ -20,10 +20,13 @@
   .prod-card-img {
     width: calc(100% + 56px);
     margin: -28px -28px 20px -28px;
-    height: 200px;
-    object-fit: cover;
+    height: 220px;
+    /* contain y no cover: la foto del producto se ve completa, sin cortar
+       la laptop/caja arriba y abajo. */
+    object-fit: contain;
+    padding: 16px;
     border-radius: 8px 8px 0 0;
-    background: #f5f4f0;
+    background: var(--enlix-bg-soft);
   }
   .prod-card-title { font-size: 20px; margin: 0 0 8px; color: var(--enlix-ink); }
   .prod-card-desc  { color: var(--enlix-muted); font-size: 14px; line-height: 1.6; margin: 0; }
