@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EstadoPago;
 use App\Models\Pago;
+use App\Models\Producto as ProductoModel;
 use App\Services\IzipayService;
 use App\Services\PagoService;
 use Illuminate\Http\JsonResponse;
@@ -37,12 +38,25 @@ class IzipayController extends Controller
 
     private const MENSAJE_VERIFICANDO = 'Estamos confirmando tu pago. En unos minutos verás el resultado.';
 
+    /**
+     * Catálogo con la "oferta del día" arriba (si hay una vigente). El
+     * producto en oferta no se repite en la grilla de abajo.
+     */
     public function index(): View
     {
+        $oferta = ProductoModel::ofertaDelDia();
+        $productos = Producto::items();
+
+        if ($oferta !== null) {
+            unset($productos[$oferta->slug]);
+        }
+
         return view('productos', [
-            'titulo' => 'Productos - Enlix',
+            'titulo' => $oferta ? "Oferta del día: {$oferta->nombre} - Enlix" : 'Productos - Enlix',
+            'metaDescription' => $oferta?->oferta_bajada,
             'current' => 'productos',
-            'productos' => Producto::items(),
+            'oferta' => $oferta,
+            'productos' => $productos,
         ]);
     }
 

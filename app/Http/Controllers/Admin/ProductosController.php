@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -70,10 +71,18 @@ class ProductosController extends Controller
             'imagen_url' => $producto->imagen_url,
             'tiene_imagen' => $producto->imagen !== null,
             'precio' => number_format($producto->precio_centimos / 100, 2, '.', ''),
+            'precio_comparacion' => $producto->precio_comparacion_centimos !== null
+                ? number_format($producto->precio_comparacion_centimos / 100, 2, '.', '')
+                : '',
             'stock' => $producto->stock,
             'orden' => $producto->orden,
             'activo' => $producto->activo,
             'destacado' => $producto->destacado,
+            'oferta' => $producto->tieneOfertaVigente(),
+            'oferta_termina_en' => $producto->tieneOfertaVigente() ? $producto->oferta_termina_en->toIso8601String() : null,
+            'oferta_titular' => $producto->oferta_titular ?? '',
+            'oferta_bajada' => $producto->oferta_bajada ?? '',
+            'oferta_beneficios' => $producto->oferta_beneficios ?? [],
         ]);
     }
 
@@ -83,8 +92,14 @@ class ProductosController extends Controller
         $datos['slug'] = $this->slugUnico($request->input('slug') ?: $datos['nombre']);
         $datos['imagen'] = $this->procesarImagen($request->file('imagen'));
 
+        $datos += $this->datosOferta($request);
+
         try {
-            $producto = Producto::create($datos);
+            [$producto, $reemplazados] = DB::transaction(function () use ($datos) {
+                $producto = Producto::create($datos);
+
+                return [$producto, $this->quitarOtrasOfertas($producto)];
+            });
         } catch (UniqueConstraintViolationException $e) {
             $this->eliminarImagen($datos['imagen']);
 
@@ -93,7 +108,7 @@ class ProductosController extends Controller
 
         CatalogoProducto::limpiarCache();
 
-        return $this->respuestaExito($producto->load('categoria'), 'Producto creado.', 201);
+        return $this->respuestaExito($producto->load('categoria'), 'Producto creado.', 201, $reemplazados);
     }
 
     public function update(ProductoGuardarRequest $request, Producto $producto): JsonResponse
@@ -108,8 +123,14 @@ class ProductosController extends Controller
             $datos['imagen'] = null;
         }
 
+        $datos += $this->datosOferta($request, $producto);
+
         try {
-            $producto->update($datos);
+            $reemplazados = DB::transaction(function () use ($producto, $datos) {
+                $producto->update($datos);
+
+                return $this->quitarOtrasOfertas($producto);
+            });
         } catch (UniqueConstraintViolationException $e) {
             if ($request->hasFile('imagen')) {
                 $this->eliminarImagen($datos['imagen']);
@@ -127,7 +148,7 @@ class ProductosController extends Controller
 
         CatalogoProducto::limpiarCache();
 
-        return $this->respuestaExito($producto->load('categoria'), 'Producto actualizado.');
+        return $this->respuestaExito($producto->load('categoria'), 'Producto actualizado.', 200, $reemplazados);
     }
 
     /**
@@ -226,12 +247,107 @@ class ProductosController extends Controller
         ]);
     }
 
-    private function respuestaExito(Producto $producto, string $mensaje, int $status = 200): JsonResponse
+    /**
+     * $reemplazados: productos que dejaron de ser la oferta del día por
+     * este guardado. Sus filas vuelven también (filas_extra) para que el
+     * listado no siga mostrando la etiqueta "Oferta" en el anterior.
+     */
+    private function respuestaExito(Producto $producto, string $mensaje, int $status = 200, array $reemplazados = []): JsonResponse
     {
         return response()->json([
             'mensaje' => $mensaje,
             'html' => view('admin.productos._fila', ['producto' => $producto])->render(),
+            'filas_extra' => collect($reemplazados)
+                ->map(fn (Producto $p) => view('admin.productos._fila', ['producto' => $p->load('categoria')])->render())
+                ->all(),
         ], $status);
+    }
+
+    /**
+     * Campos de la oferta del día. Solo se tocan si el formulario manda
+     * "oferta" (el modal siempre lo manda): cualquier otro cliente que no
+     * conozca la oferta no la borra sin querer.
+     *
+     * Publicar abre una ventana de 24 h reales desde AHORA. Editar una
+     * oferta que ya está vigente NO reinicia el contador (corregir una
+     * errata no regala horas), salvo que se pida "oferta_reiniciar".
+     * Desmarcarla cierra la ventana pero conserva los textos.
+     */
+    private function datosOferta(ProductoGuardarRequest $request, ?Producto $producto = null): array
+    {
+        if (! $request->has('oferta')) {
+            return [];
+        }
+
+        $datos = $request->validated();
+
+        $campos = [
+            'oferta_titular' => $this->textoONulo($datos['oferta_titular'] ?? null),
+            'oferta_bajada' => $this->textoONulo($datos['oferta_bajada'] ?? null),
+            'oferta_beneficios' => $this->beneficios($datos['oferta_beneficios'] ?? null),
+        ];
+
+        if (! $request->boolean('oferta')) {
+            return $campos + ['oferta_inicia_en' => null, 'oferta_termina_en' => null];
+        }
+
+        if ($producto?->tieneOfertaVigente() && ! $request->boolean('oferta_reiniciar')) {
+            return $campos;
+        }
+
+        return $campos + [
+            'oferta_inicia_en' => now(),
+            'oferta_termina_en' => now()->addHours(Producto::HORAS_OFERTA),
+        ];
+    }
+
+    /**
+     * Una sola oferta del día a la vez: si este producto quedó como oferta
+     * vigente, se cierra la de cualquier otro. Devuelve los afectados.
+     */
+    private function quitarOtrasOfertas(Producto $producto): array
+    {
+        if (! $producto->tieneOfertaVigente()) {
+            return [];
+        }
+
+        $otros = Producto::whereKeyNot($producto->id)
+            ->where('oferta_termina_en', '>', now())
+            ->get();
+
+        foreach ($otros as $otro) {
+            $otro->update(['oferta_inicia_en' => null, 'oferta_termina_en' => null]);
+        }
+
+        return $otros->all();
+    }
+
+    private function textoONulo(?string $texto): ?string
+    {
+        $texto = trim((string) $texto);
+
+        return $texto === '' ? null : $texto;
+    }
+
+    /** Igual que especificaciones(): [{titulo, texto}, ...] sin las filas vacías. */
+    private function beneficios(?string $json): ?array
+    {
+        $filas = json_decode($json ?? '', true);
+
+        if (! is_array($filas)) {
+            return null;
+        }
+
+        $beneficios = collect($filas)
+            ->map(fn ($fila) => [
+                'titulo' => trim((string) ($fila['titulo'] ?? '')),
+                'texto' => trim((string) ($fila['texto'] ?? '')),
+            ])
+            ->filter(fn ($fila) => $fila['titulo'] !== '')
+            ->values()
+            ->all();
+
+        return $beneficios === [] ? null : $beneficios;
     }
 
     private function datosProducto(ProductoGuardarRequest $request): array
@@ -251,7 +367,11 @@ class ProductosController extends Controller
             'orden' => (int) ($datos['orden'] ?? 0),
             'activo' => $request->boolean('activo'),
             'destacado' => $request->boolean('destacado'),
-        ];
+        ] + ($request->has('precio_comparacion') ? [
+            'precio_comparacion_centimos' => filled($datos['precio_comparacion'] ?? null)
+                ? (int) bcmul((string) $datos['precio_comparacion'], '100')
+                : null,
+        ] : []);
     }
 
     /**

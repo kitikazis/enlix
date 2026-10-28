@@ -66,6 +66,11 @@ class Producto extends Model
         'orden',
         'activo',
         'destacado',
+        'oferta_titular',
+        'oferta_bajada',
+        'oferta_beneficios',
+        'oferta_inicia_en',
+        'oferta_termina_en',
     ];
 
     protected $casts = [
@@ -81,7 +86,13 @@ class Producto extends Model
         'orden' => 'integer',
         'activo' => 'boolean',
         'destacado' => 'boolean',
+        'oferta_beneficios' => 'array',
+        'oferta_inicia_en' => 'datetime',
+        'oferta_termina_en' => 'datetime',
     ];
+
+    /** Duración de la oferta del día: 24 horas reales desde que se publica. */
+    public const HORAS_OFERTA = 24;
 
     /**
      * Forma canónica de la referencia (sin espacios en los extremos, en
@@ -150,6 +161,31 @@ class Producto extends Model
                 ? Storage::disk('public')->url(Str::replaceFirst('productos/', 'productos/thumbs/', $this->imagen))
                 : asset('assets/img/producto-placeholder.svg'),
         );
+    }
+
+    /**
+     * La oferta del día vigente (como mucho una: publicar otra quita la
+     * anterior, ver Admin\ProductosController). Sin caché a propósito: el
+     * catálogo de App\Support\Producto se cachea 60s y la oferta debe
+     * desaparecer justo al vencer, no hasta un minuto después.
+     */
+    public static function ofertaDelDia(): ?self
+    {
+        return static::query()
+            ->where('activo', true)
+            ->where('oferta_inicia_en', '<=', now())
+            ->where('oferta_termina_en', '>', now())
+            ->latest('oferta_inicia_en')
+            ->first();
+    }
+
+    /** true si este producto es la oferta del día y aún no venció (no mira `activo`). */
+    public function tieneOfertaVigente(): bool
+    {
+        return $this->oferta_inicia_en !== null
+            && $this->oferta_termina_en !== null
+            && $this->oferta_inicia_en->lte(now())
+            && $this->oferta_termina_en->gt(now());
     }
 
     public function categoria(): BelongsTo

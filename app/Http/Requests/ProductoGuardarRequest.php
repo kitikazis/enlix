@@ -32,6 +32,12 @@ class ProductoGuardarRequest extends FormRequest
 
     public const MAX_VALOR_SPEC = 500;
 
+    public const MAX_BENEFICIOS_OFERTA = 3;
+
+    public const MAX_TITULO_BENEFICIO = 60;
+
+    public const MAX_TEXTO_BENEFICIO = 200;
+
     protected function prepareForValidation(): void
     {
         if ($this->has('referencia')) {
@@ -39,9 +45,11 @@ class ProductoGuardarRequest extends FormRequest
         }
 
         // "149,90" (coma decimal, habitual en Perú) se acepta como 149.90.
-        $precio = $this->input('precio');
-        if (is_string($precio) && preg_match('/^\d+,\d{1,2}$/', trim($precio))) {
-            $this->merge(['precio' => str_replace(',', '.', trim($precio))]);
+        foreach (['precio', 'precio_comparacion'] as $campo) {
+            $precio = $this->input($campo);
+            if (is_string($precio) && preg_match('/^\d+,\d{1,2}$/', trim($precio))) {
+                $this->merge([$campo => str_replace(',', '.', trim($precio))]);
+            }
         }
     }
 
@@ -59,10 +67,19 @@ class ProductoGuardarRequest extends FormRequest
             // va primero: "1e3" pasa 'numeric' pero revienta bcmul() (500), y
             // "10.555" se truncaba en silencio a 10.55.
             'precio' => ['required', 'regex:/^\d{1,5}(\.\d{1,2})?$/', 'numeric', 'min:0.01', 'max:99999.99'],
+            // "Antes S/ X" tachado de la oferta (y del carrito). Opcional, pero
+            // si viene tiene que ser mayor al precio: un "antes" menor o igual
+            // sería un descuento falso.
+            'precio_comparacion' => ['nullable', 'regex:/^\d{1,5}(\.\d{1,2})?$/', 'numeric', 'max:99999.99', 'gt:precio'],
             'stock' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'orden' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'activo' => ['nullable', 'boolean'],
             'destacado' => ['nullable', 'boolean'],
+            'oferta' => ['nullable', 'boolean', $this->ofertaVisible()],
+            'oferta_reiniciar' => ['nullable', 'boolean'],
+            'oferta_titular' => ['nullable', 'required_if:oferta,1,true', 'string', 'max:120'],
+            'oferta_bajada' => ['nullable', 'string', 'max:300'],
+            'oferta_beneficios' => ['nullable', 'string', $this->beneficiosValidos()],
             'eliminar_imagen' => ['nullable', 'boolean'],
             'imagen' => [$this->esEdicion() ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:min_width=200,min_height=200'],
         ];
@@ -86,6 +103,10 @@ class ProductoGuardarRequest extends FormRequest
             'precio.regex' => 'Escribe el precio con hasta 2 decimales, por ejemplo 149.90.',
             'precio.min' => 'El precio debe ser mayor a S/ 0.00.',
             'precio.max' => 'El precio no puede superar S/ 99,999.99.',
+            'precio_comparacion.regex' => 'Escribe el precio regular con hasta 2 decimales, por ejemplo 199.90.',
+            'precio_comparacion.max' => 'El precio regular no puede superar S/ 99,999.99.',
+            'precio_comparacion.gt' => 'El precio regular debe ser mayor al precio de venta.',
+            'oferta_titular.required_if' => 'Escribe el titular de la oferta.',
             'stock.min' => 'El stock no puede ser negativo.',
             'orden.min' => 'El orden no puede ser negativo.',
             'imagen.required' => 'Sube una imagen del producto (JPG, PNG o WEBP · máx. 2 MB).',
@@ -111,6 +132,11 @@ class ProductoGuardarRequest extends FormRequest
             'orden' => 'orden',
             'activo' => 'visible',
             'destacado' => 'destacado',
+            'oferta' => 'oferta del día',
+            'oferta_titular' => 'titular',
+            'oferta_bajada' => 'bajada',
+            'oferta_beneficios' => 'beneficios',
+            'precio_comparacion' => 'precio regular',
             'imagen' => 'imagen',
         ];
     }
@@ -189,6 +215,62 @@ class ProductoGuardarRequest extends FormRequest
                     } else {
                         $vistas[$normalizada] = $n;
                     }
+                }
+            }
+        };
+    }
+
+    /** La oferta se muestra en /productos: un producto oculto no puede ser la oferta del día. */
+    private function ofertaVisible(): Closure
+    {
+        return function (string $attribute, mixed $valor, Closure $fail): void {
+            if ($this->boolean('oferta') && ! $this->boolean('activo')) {
+                $fail('Para publicarlo como oferta, activa «Visible en la tienda».');
+            }
+        };
+    }
+
+    /**
+     * Las tarjetas 01/02/03 de la oferta llegan en JSON como
+     * [{titulo, texto}, ...]. Las filas totalmente vacías se descartan en el
+     * controller; una fila a medias vuelve como 422, igual que las specs.
+     */
+    private function beneficiosValidos(): Closure
+    {
+        return function (string $attribute, mixed $valor, Closure $fail): void {
+            if (! is_string($valor) || trim($valor) === '') {
+                return;
+            }
+
+            $filas = json_decode($valor, true);
+
+            if (! is_array($filas) || ! array_is_list($filas)) {
+                $fail('No se pudieron leer los beneficios. Vuelve a intentarlo.');
+
+                return;
+            }
+
+            if (count($filas) > self::MAX_BENEFICIOS_OFERTA) {
+                $fail('Máximo '.self::MAX_BENEFICIOS_OFERTA.' beneficios.');
+
+                return;
+            }
+
+            foreach ($filas as $i => $fila) {
+                $n = $i + 1;
+                $titulo = trim((string) (is_array($fila) ? ($fila['titulo'] ?? '') : ''));
+                $texto = trim((string) (is_array($fila) ? ($fila['texto'] ?? '') : ''));
+
+                if ($titulo === '' && $texto !== '') {
+                    $fail("Beneficio {$n}: falta el título.");
+                }
+
+                if (mb_strlen($titulo) > self::MAX_TITULO_BENEFICIO) {
+                    $fail("Beneficio {$n}: el título no puede pasar de ".self::MAX_TITULO_BENEFICIO.' caracteres.');
+                }
+
+                if (mb_strlen($texto) > self::MAX_TEXTO_BENEFICIO) {
+                    $fail("Beneficio {$n}: el texto no puede pasar de ".self::MAX_TEXTO_BENEFICIO.' caracteres.');
                 }
             }
         };

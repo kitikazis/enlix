@@ -31,6 +31,11 @@
             @if ($producto->esPrueba())
                 <x-admin.badge tone="prueba" :dot="false" class="self-start lg:self-auto">Prueba</x-admin.badge>
             @endif
+            @if ($producto->tieneOfertaVigente())
+                <x-admin.badge tone="info" class="self-start whitespace-nowrap lg:self-auto" title="Oferta del día en /productos">
+                    Oferta · vence {{ $producto->oferta_termina_en->setTimezone('America/Lima')->format('d/m H:i') }}
+                </x-admin.badge>
+            @endif
         </span>
     </td>
     <td data-label="Referencia" class="whitespace-nowrap font-mono text-xs text-text-secondary">{{ $producto->referencia }}</td>

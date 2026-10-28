@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="flex shrink-0 gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-4 [scrollbar-width:none] sm:px-6" role="tablist">
-                    <template x-for="tab in [['general','General'],['descripcion','Descripción'],['especificaciones','Especificaciones']]" :key="tab[0]">
+                    <template x-for="tab in [['general','General'],['descripcion','Descripción'],['especificaciones','Especificaciones'],['oferta','Oferta del día']]" :key="tab[0]">
                         <button
                             type="button" role="tab" :aria-selected="tabActiva === tab[0]"
                             @click="tabActiva = tab[0]"
@@ -378,6 +378,90 @@
                         </ul>
                     </div>
 
+                    {{-- Tab: Oferta del día --}}
+                    <div x-show="tabActiva === 'oferta'" class="flex flex-col gap-6">
+
+                        <section class="flex flex-col gap-3">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors" :class="errores.oferta ? 'border-rechazado-text' : (form.oferta ? 'border-accent/40 bg-accent/5' : 'border-border hover:bg-page')">
+                                <input type="checkbox" x-model="form.oferta" @change="limpiarError('oferta')" class="peer sr-only">
+                                <span class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40" :class="form.oferta ? 'bg-accent' : 'bg-border'" aria-hidden="true">
+                                    <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" :class="form.oferta ? 'translate-x-5' : ''"></span>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-medium text-text-primary">Publicar como oferta del día</span>
+                                    <span class="block text-xs text-text-caption">Aparece arriba en /productos con un contador de 24 horas. Si otro producto era la oferta, deja de serlo.</span>
+                                </span>
+                            </label>
+                            <p class="text-xs text-rechazado-text" x-show="errores.oferta" x-text="errores.oferta?.[0]"></p>
+
+                            {{-- Estado de la ventana de 24 h (solo si este producto ya es la oferta vigente). --}}
+                            <div x-show="ofertaTerminaEn && form.oferta" class="flex flex-col gap-2 rounded-xl bg-verificacion-bg p-3 text-sm text-verificacion-text sm:flex-row sm:items-center sm:justify-between">
+                                <p class="min-w-0">Vigente hasta el <strong class="tabular-nums" x-text="formatearVencimiento(ofertaTerminaEn)"></strong>.</p>
+                                <label class="flex min-h-[44px] cursor-pointer items-center gap-2 sm:min-h-0">
+                                    <input type="checkbox" x-model="form.oferta_reiniciar" class="h-4 w-4 rounded border-border accent-accent">
+                                    <span>Reiniciar 24 h al guardar</span>
+                                </label>
+                            </div>
+                            <p x-show="form.oferta && !ofertaTerminaEn" class="text-xs text-text-caption">Al guardar empiezan a correr las 24 horas.</p>
+                            <p x-show="!form.oferta && ofertaTerminaEn" class="text-xs text-rechazado-text">Al guardar, la oferta deja de mostrarse en /productos. Los textos se conservan.</p>
+                        </section>
+
+                        <section class="flex flex-col gap-4 border-t border-border pt-5">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-text-caption">Textos de la portada</h3>
+                            <div class="min-w-0">
+                                <label for="oferta-titular" class="mb-1 block text-sm font-medium text-text-primary">Titular</label>
+                                <input
+                                    id="oferta-titular" type="text" x-model="form.oferta_titular" @input="limpiarError('oferta_titular')"
+                                    maxlength="120" placeholder="Ej. La potencia que buscas. Hoy es el momento."
+                                    class="h-11 w-full rounded-nav border bg-card px-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                    :class="errores.oferta_titular ? 'border-rechazado-text' : 'border-border'"
+                                >
+                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.oferta_titular" x-text="errores.oferta_titular?.[0]"></p>
+                            </div>
+                            <div class="min-w-0">
+                                <label for="oferta-bajada" class="mb-1 block text-sm font-medium text-text-primary">Bajada <span class="font-normal text-text-caption">(opcional)</span></label>
+                                <textarea
+                                    id="oferta-bajada" x-model="form.oferta_bajada" @input="limpiarError('oferta_bajada')"
+                                    maxlength="300" rows="3" placeholder="Ej. Descubre el ROG Zephyrus G16 en nuestra oferta especial por tiempo limitado."
+                                    class="w-full rounded-nav border bg-card px-3 py-2 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:text-sm"
+                                    :class="errores.oferta_bajada ? 'border-rechazado-text' : 'border-border'"
+                                ></textarea>
+                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.oferta_bajada" x-text="errores.oferta_bajada?.[0]"></p>
+                            </div>
+                            <div class="min-w-0 sm:max-w-[16rem]">
+                                <label for="producto-precio-comparacion" class="mb-1 block text-sm font-medium text-text-primary">Precio regular <span class="font-normal text-text-caption">(opcional)</span></label>
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-text-caption">S/</span>
+                                    <input
+                                        id="producto-precio-comparacion" type="number" x-model="form.precio_comparacion" @input="limpiarError('precio_comparacion')"
+                                        step="0.01" min="0.01" max="99999.99" inputmode="decimal" placeholder="0.00"
+                                        class="h-11 w-full rounded-nav border bg-card pl-9 pr-3 text-base tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                        :class="errores.precio_comparacion ? 'border-rechazado-text' : 'border-border'"
+                                    >
+                                </div>
+                                <p class="mt-1 text-xs text-rechazado-text" x-show="errores.precio_comparacion" x-text="errores.precio_comparacion?.[0]"></p>
+                                <p class="mt-1 text-xs text-text-caption" x-show="!errores.precio_comparacion">Se muestra tachado junto al precio de venta.</p>
+                            </div>
+                            <p class="text-xs text-text-caption">La imagen, el precio de venta y la descripción salen de la pestaña General y Descripción; las 4 primeras filas de Especificaciones se muestran como fichas.</p>
+                        </section>
+
+                        <section class="flex flex-col gap-3 border-t border-border pt-5">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-text-caption">Beneficios <span class="font-normal normal-case tracking-normal">(opcional, hasta 3)</span></h3>
+                            <template x-for="(beneficio, i) in beneficios" :key="i">
+                                <div class="grid grid-cols-1 gap-2 rounded-nav border border-border bg-page p-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,2fr)] sm:items-center">
+                                    <span class="font-mono text-xs font-semibold text-accent" x-text="`0${i + 1} /`"></span>
+                                    <input type="text" x-model="beneficio.titulo" @input="limpiarError('oferta_beneficios')" placeholder="Título, ej. Imagen que impresiona" maxlength="60" :aria-label="`Título del beneficio ${i + 1}`" class="h-11 w-full min-w-0 rounded-nav border bg-card px-2 text-base sm:h-9 sm:text-sm" :class="errores.oferta_beneficios && !String(beneficio.titulo || '').trim() && String(beneficio.texto || '').trim() ? 'border-rechazado-text' : 'border-border'">
+                                    <input type="text" x-model="beneficio.texto" @input="limpiarError('oferta_beneficios')" placeholder="Texto corto" maxlength="200" :aria-label="`Texto del beneficio ${i + 1}`" class="h-11 w-full min-w-0 rounded-nav border border-border bg-card px-2 text-base sm:h-9 sm:text-sm">
+                                </div>
+                            </template>
+                            <ul class="flex flex-col gap-0.5 text-xs text-rechazado-text" x-show="errores.oferta_beneficios">
+                                <template x-for="mensaje in (errores.oferta_beneficios || [])" :key="mensaje">
+                                    <li x-text="mensaje"></li>
+                                </template>
+                            </ul>
+                        </section>
+                    </div>
+
                 </div>
 
                 <div class="flex shrink-0 flex-col gap-2 border-t border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-6 sm:py-4">
@@ -481,6 +565,7 @@
                                             <span x-text="vistaRapida.datos.activo ? 'Activo' : 'Inactivo'"></span>
                                         </span>
                                         <span x-show="vistaRapida.datos.destacado" class="rounded-full bg-verificacion-bg px-2.5 py-0.5 text-xs font-medium leading-5 text-verificacion-text">Destacado</span>
+                                        <span x-show="vistaRapida.datos.oferta" class="rounded-full bg-verificacion-bg px-2.5 py-0.5 text-xs font-medium leading-5 text-verificacion-text" x-text="`Oferta · vence ${formatearVencimiento(vistaRapida.datos.oferta_termina_en)}`"></span>
                                     </dd>
                                     <dt class="text-text-caption">Slug</dt><dd class="break-all font-mono text-xs text-text-secondary" x-text="vistaRapida.datos.slug"></dd>
                                 </dl>
@@ -543,7 +628,9 @@
                     general: ['categoria_id', 'referencia', 'nombre', 'slug', 'imagen', 'precio', 'stock', 'orden'],
                     descripcion: ['descripcion'],
                     especificaciones: ['especificaciones'],
+                    oferta: ['oferta', 'oferta_titular', 'oferta_bajada', 'oferta_beneficios', 'precio_comparacion'],
                 };
+                const MAX_BENEFICIOS = 3;
 
                 // Funcion plana (no metodo del objeto): "form: this.formVacio()"
                 // de abajo se evalua MIENTRAS el objeto x-data todavia se esta
@@ -565,7 +652,21 @@
                         orden: 0,
                         activo: true,
                         destacado: false,
+                        precio_comparacion: '',
+                        oferta: false,
+                        oferta_reiniciar: false,
+                        oferta_titular: '',
+                        oferta_bajada: '',
                     };
+                }
+
+                // Siempre 3 casillas (las tarjetas 01/02/03 de la oferta); las
+                // vacías no se guardan (ver ProductosController::beneficios).
+                function beneficiosVacios(existentes = []) {
+                    return Array.from({ length: MAX_BENEFICIOS }, (_, i) => ({
+                        titulo: existentes[i]?.titulo ?? '',
+                        texto: existentes[i]?.texto ?? '',
+                    }));
                 }
 
                 return {
@@ -587,6 +688,8 @@
                     form: formVacio(),
                     especificaciones: [],
                     arrastrando: null,
+                    beneficios: beneficiosVacios(),
+                    ofertaTerminaEn: null,
 
                     imagenArchivo: null,
                     arrastrandoImagen: false,
@@ -683,6 +786,8 @@
                         this.slugTocado = false;
                         this.form = formVacio();
                         this.especificaciones = [];
+                        this.beneficios = beneficiosVacios();
+                        this.ofertaTerminaEn = null;
                         this.imagenArchivo = null;
                         this.imagenPreviewUrl = null;
                         this.imagenExistenteUrl = null;
@@ -733,8 +838,15 @@
                             orden: datos.orden,
                             activo: datos.activo,
                             destacado: datos.destacado,
+                            precio_comparacion: datos.precio_comparacion ?? '',
+                            oferta: datos.oferta,
+                            oferta_reiniciar: false,
+                            oferta_titular: datos.oferta_titular ?? '',
+                            oferta_bajada: datos.oferta_bajada ?? '',
                         };
                         this.especificaciones = (datos.especificaciones || []).map((f) => ({ clave: f.clave, valor: f.valor }));
+                        this.beneficios = beneficiosVacios(datos.oferta_beneficios || []);
+                        this.ofertaTerminaEn = datos.oferta_termina_en;
                         this.imagenArchivo = null;
                         this.imagenPreviewUrl = datos.tiene_imagen ? datos.imagen_url : null;
                         this.imagenExistenteUrl = this.imagenPreviewUrl;
@@ -1017,6 +1129,7 @@
                         return JSON.stringify({
                             form: { ...this.form, descripcion: this.quill ? this.quill.root.innerHTML : this.form.descripcion },
                             especificaciones: this.especificaciones,
+                            beneficios: this.beneficios,
                             imagenNueva: Boolean(this.imagenArchivo),
                             eliminarImagen: this.eliminarImagenExistente,
                         });
@@ -1137,7 +1250,47 @@
                             errores.especificaciones = specs;
                         }
 
+                        const precioRegular = String(this.form.precio_comparacion ?? '').trim().replace(/^(\d+),(\d{1,2})$/, '$1.$2');
+                        if (precioRegular !== '') {
+                            if (!/^\d{1,5}(\.\d{1,2})?$/.test(precioRegular)) {
+                                errores.precio_comparacion = ['Escribe el precio regular con hasta 2 decimales, por ejemplo 199.90.'];
+                            } else if (!errores.precio && Number(precioRegular) <= Number(precio)) {
+                                errores.precio_comparacion = ['El precio regular debe ser mayor al precio de venta.'];
+                            }
+                        }
+
+                        if (this.form.oferta && !this.form.activo) {
+                            errores.oferta = ['Para publicarlo como oferta, activa «Visible en la tienda».'];
+                        }
+                        if (this.form.oferta && !String(this.form.oferta_titular || '').trim()) {
+                            errores.oferta_titular = ['Escribe el titular de la oferta.'];
+                        }
+                        const beneficios = [];
+                        this.beneficios.forEach((b, i) => {
+                            if (!String(b.titulo || '').trim() && String(b.texto || '').trim()) {
+                                beneficios.push(`Beneficio ${i + 1}: falta el título.`);
+                            }
+                        });
+                        if (beneficios.length) {
+                            errores.oferta_beneficios = beneficios;
+                        }
+
                         return errores;
+                    },
+
+                    /** "2026-10-29T19:30:00+00:00" → "29/10, 14:30" (hora de Lima, igual que el listado). */
+                    formatearVencimiento(iso) {
+                        if (!iso) {
+                            return '';
+                        }
+                        return new Date(iso).toLocaleString('es-PE', {
+                            timeZone: 'America/Lima',
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                        });
                     },
 
                     guardar() {
@@ -1166,6 +1319,12 @@
                         datos.append('orden', this.form.orden);
                         datos.append('activo', this.form.activo ? '1' : '0');
                         datos.append('destacado', this.form.destacado ? '1' : '0');
+                        datos.append('precio_comparacion', this.form.precio_comparacion ?? '');
+                        datos.append('oferta', this.form.oferta ? '1' : '0');
+                        datos.append('oferta_reiniciar', this.form.oferta_reiniciar ? '1' : '0');
+                        datos.append('oferta_titular', this.form.oferta_titular || '');
+                        datos.append('oferta_bajada', this.form.oferta_bajada || '');
+                        datos.append('oferta_beneficios', JSON.stringify(this.beneficios));
                         if (this.imagenArchivo) {
                             datos.append('imagen', this.imagenArchivo);
                         }
@@ -1195,6 +1354,8 @@
 
                             if (xhr.status === 200 || xhr.status === 201) {
                                 this.insertarFila(respuesta.html);
+                                // Producto que era la oferta anterior: su fila pierde la etiqueta "Oferta".
+                                (respuesta.filas_extra || []).forEach((html) => this.insertarFila(html));
                                 this.cerrarModal(true);
                                 this.mostrarToast(respuesta.mensaje || 'Guardado.');
                             } else if (xhr.status === 422) {
