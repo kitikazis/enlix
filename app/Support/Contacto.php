@@ -27,4 +27,10 @@ class Contacto
     {
         return self::whatsapp("Hola Enlix, quiero cotizar el servicio de {$servicio}.");
     }
+
+    /** Enlace wa.me con el producto ya indicado. */
+    public static function whatsappProducto(string $producto): string
+    {
+        return self::whatsapp("Hola Enlix, quiero más información sobre {$producto}.");
+    }
 }

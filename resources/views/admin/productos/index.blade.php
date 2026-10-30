@@ -197,6 +197,35 @@
                                 <div class="h-full bg-accent transition-all" :style="`width: ${subiendoProgreso}%`"></div>
                             </div>
                             <p class="text-xs text-rechazado-text" x-show="errores.imagen" x-text="errores.imagen?.[0]"></p>
+
+                            {{-- Fotos adicionales: se guardan al subirlas, cada una en su propia petición. --}}
+                            <div class="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+                                <span class="text-sm font-medium text-text-primary">
+                                    Más fotos <span class="font-normal text-text-caption" x-text="`(${galeria.length}/${maxGaleria})`"></span>
+                                </span>
+                                <template x-if="!modoEdicion">
+                                    <p class="text-xs text-text-caption">Guarda el producto y luego ábrelo en Editar para agregar más fotos.</p>
+                                </template>
+                                <template x-if="modoEdicion">
+                                    <div class="flex flex-col gap-2">
+                                        <div class="grid grid-cols-3 gap-2" x-show="galeria.length">
+                                            <template x-for="foto in galeria" :key="foto.id">
+                                                <div class="relative aspect-square overflow-hidden rounded-nav border border-border bg-page">
+                                                    <img :src="foto.thumb_url" alt="" class="h-full w-full object-cover">
+                                                    <button type="button" @click="confirmarEliminarFoto(foto)" aria-label="Quitar esta foto" class="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-bl-nav bg-card text-sm leading-none text-rechazado-text">&times;</button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <button
+                                            type="button" @click="$refs.inputGaleria.click()" x-show="galeria.length < maxGaleria" :disabled="subiendoFoto"
+                                            class="inline-flex min-h-[44px] items-center justify-center rounded-nav border border-border bg-card px-3 text-xs font-medium text-accent hover:border-accent disabled:opacity-60 sm:min-h-[36px]"
+                                            x-text="subiendoFoto ? 'Subiendo…' : 'Agregar fotos'"
+                                        ></button>
+                                        <input x-ref="inputGaleria" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden" @change="subirFotosGaleria([...$event.target.files]); $event.target.value = ''">
+                                        <p class="text-xs text-rechazado-text" x-show="errorGaleria" x-text="errorGaleria" role="alert"></p>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
 
                         <div class="flex min-w-0 flex-col gap-6">
@@ -267,6 +296,34 @@
                                             <button type="button" @click="abrirCategoriaModal()" title="Crear categoría" aria-label="Crear categoría" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-nav border border-border bg-card text-lg leading-none text-text-secondary hover:border-accent hover:text-accent sm:h-10 sm:w-10">+</button>
                                         </div>
                                         <p class="mt-1 text-xs text-rechazado-text" x-show="errores.categoria_id" x-text="errores.categoria_id?.[0]"></p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div class="min-w-0">
+                                        <label for="producto-marca" class="mb-1 block text-sm font-medium text-text-primary">Marca <span class="font-normal text-text-caption">(opcional)</span></label>
+                                        <input
+                                            id="producto-marca" type="text" x-model="form.marca" @input="limpiarError('marca')"
+                                            list="producto-marcas" maxlength="100" placeholder="Ej. ASUS"
+                                            class="h-11 w-full rounded-nav border bg-card px-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                            :class="errores.marca ? 'border-rechazado-text' : 'border-border'"
+                                        >
+                                        <datalist id="producto-marcas">
+                                            @foreach ($marcas as $marca)
+                                                <option value="{{ $marca }}"></option>
+                                            @endforeach
+                                        </datalist>
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.marca" x-text="errores.marca?.[0]"></p>
+                                        <p class="mt-1 text-xs text-text-caption" x-show="!errores.marca">Si no está en la lista, se crea al guardar.</p>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <label for="producto-garantia" class="mb-1 block text-sm font-medium text-text-primary">Garantía <span class="font-normal text-text-caption">(meses, opcional)</span></label>
+                                        <input
+                                            id="producto-garantia" type="number" x-model="form.meses_garantia" @input="limpiarError('meses_garantia')"
+                                            step="1" min="0" max="120" inputmode="numeric" placeholder="Ej. 12"
+                                            class="h-11 w-full rounded-nav border bg-card px-3 text-base tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
+                                            :class="errores.meses_garantia ? 'border-rechazado-text' : 'border-border'"
+                                        >
+                                        <p class="mt-1 text-xs text-rechazado-text" x-show="errores.meses_garantia" x-text="errores.meses_garantia?.[0]"></p>
                                     </div>
                                 </div>
                             </section>
@@ -626,7 +683,7 @@
                 const rutaVerificarReferencia = @js(route('admin.productos.verificar-referencia'));
                 const rutaCategorias = @js(route('admin.categorias.store'));
                 const camposPorTab = {
-                    general: ['categoria_id', 'referencia', 'nombre', 'slug', 'imagen', 'precio', 'stock', 'orden'],
+                    general: ['categoria_id', 'referencia', 'nombre', 'marca', 'meses_garantia', 'slug', 'imagen', 'precio', 'stock', 'orden'],
                     descripcion: ['descripcion'],
                     especificaciones: ['especificaciones'],
                     oferta: ['oferta', 'oferta_titular', 'oferta_bajada', 'oferta_beneficios', 'precio_comparacion'],
@@ -646,6 +703,8 @@
                         categoria_id: '',
                         referencia: '',
                         nombre: '',
+                        marca: '',
+                        meses_garantia: '',
                         slug: '',
                         descripcion: '',
                         precio: '',
@@ -697,6 +756,11 @@
                     imagenPreviewUrl: null,
                     imagenExistenteUrl: null,
                     eliminarImagenExistente: false,
+
+                    galeria: [],
+                    maxGaleria: @js(\App\Models\Producto::MAX_FOTOS_GALERIA),
+                    subiendoFoto: false,
+                    errorGaleria: null,
 
                     referenciaEstado: null,
                     referenciaProducto: null,
@@ -793,6 +857,8 @@
                         this.imagenPreviewUrl = null;
                         this.imagenExistenteUrl = null;
                         this.eliminarImagenExistente = false;
+                        this.galeria = [];
+                        this.errorGaleria = null;
                         this.reiniciarReferencia();
                         if (this.quill) {
                             this.quill.setText('');
@@ -809,6 +875,8 @@
                         this.slugTocado = true;
                         this.reiniciarReferencia();
                         this.eliminarImagenExistente = false;
+                        this.galeria = [];
+                        this.errorGaleria = null;
                         this.estadoInicial = null;
                         this.cargandoEdicion = true;
                         this.modalAbierto = true;
@@ -832,6 +900,8 @@
                             categoria_id: datos.categoria_id ?? '',
                             referencia: datos.referencia,
                             nombre: datos.nombre,
+                            marca: datos.marca ?? '',
+                            meses_garantia: datos.meses_garantia ?? '',
                             slug: datos.slug,
                             descripcion: datos.descripcion,
                             precio: datos.precio,
@@ -851,6 +921,7 @@
                         this.imagenArchivo = null;
                         this.imagenPreviewUrl = datos.tiene_imagen ? datos.imagen_url : null;
                         this.imagenExistenteUrl = this.imagenPreviewUrl;
+                        this.galeria = datos.galeria || [];
 
                         if (this.quill) {
                             this.quill.setText('');
@@ -1059,6 +1130,82 @@
                         } finally {
                             this.accionEnCurso = false;
                             this.confirmacion.abierta = false;
+                        }
+                    },
+
+                    /** Una petición por foto: ver ProductosController::agregarImagen. */
+                    async subirFotosGaleria(archivos) {
+                        this.errorGaleria = null;
+                        this.subiendoFoto = true;
+
+                        for (const archivo of archivos) {
+                            if (this.galeria.length >= this.maxGaleria) {
+                                this.errorGaleria = `Solo se pueden agregar ${this.maxGaleria} fotos adicionales.`;
+                                break;
+                            }
+                            if (archivo.size > 2 * 1024 * 1024) {
+                                this.errorGaleria = `${archivo.name} pesa más de 2 MB.`;
+                                continue;
+                            }
+
+                            const datos = new FormData();
+                            datos.append('imagen', archivo);
+
+                            try {
+                                const respuesta = await fetch(`${rutaProductos}/${this.productoId}/imagenes`, {
+                                    method: 'POST',
+                                    headers: {
+                                        Accept: 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'X-CSRF-TOKEN': this.csrfToken(),
+                                    },
+                                    body: datos,
+                                });
+                                const cuerpo = await respuesta.json().catch(() => ({}));
+
+                                if (respuesta.ok) {
+                                    this.galeria.push(cuerpo);
+                                } else if (respuesta.status === 419) {
+                                    this.mostrarToast('Tu sesión expiró. Recarga la página e intenta de nuevo.', true);
+                                    break;
+                                } else {
+                                    this.errorGaleria = cuerpo.errors?.imagen?.[0] || 'No se pudo subir la foto. Debe pesar máx. 2 MB.';
+                                }
+                            } catch (e) {
+                                this.errorGaleria = 'No se pudo conectar con el servidor.';
+                                break;
+                            }
+                        }
+
+                        this.subiendoFoto = false;
+                    },
+
+                    confirmarEliminarFoto(foto) {
+                        this.pedirConfirmacion({
+                            titulo: 'Quitar esta foto',
+                            mensaje: 'Se elimina de inmediato de la página del producto.',
+                            textoBoton: 'Quitar foto',
+                            peligroso: true,
+                            accion: () => this.eliminarFotoGaleria(foto),
+                        });
+                    },
+
+                    async eliminarFotoGaleria(foto) {
+                        try {
+                            const respuesta = await fetch(`${rutaProductos}/${this.productoId}/imagenes/${foto.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                },
+                            });
+                            if (!respuesta.ok) {
+                                throw new Error(`HTTP ${respuesta.status}`);
+                            }
+                            this.galeria = this.galeria.filter((f) => f.id !== foto.id);
+                        } catch (e) {
+                            this.mostrarToast('No se pudo quitar la foto. Intenta de nuevo.', true);
                         }
                     },
 
@@ -1312,6 +1459,8 @@
                         datos.append('categoria_id', this.form.categoria_id);
                         datos.append('referencia', this.form.referencia);
                         datos.append('nombre', this.form.nombre);
+                        datos.append('marca', this.form.marca || '');
+                        datos.append('meses_garantia', this.form.meses_garantia ?? '');
                         datos.append('slug', this.form.slug || '');
                         datos.append('descripcion', this.form.descripcion);
                         datos.append('especificaciones', JSON.stringify(this.especificaciones));

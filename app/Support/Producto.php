@@ -51,6 +51,23 @@ class Producto
         return $producto ? self::aArray($producto) : null;
     }
 
+    /**
+     * Otros productos activos para la página de detalle: primero los de la
+     * misma categoría y, si no alcanzan, el resto del catálogo.
+     */
+    public static function relacionados(ProductoModel $producto, int $limite = 3): array
+    {
+        return ProductoModel::where('activo', true)
+            ->whereKeyNot($producto->id)
+            ->orderByRaw('categoria_id = ? desc', [$producto->categoria_id])
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->limit($limite)
+            ->get()
+            ->map(fn (ProductoModel $p) => self::aArray($p))
+            ->all();
+    }
+
     public static function limpiarCache(): void
     {
         Cache::forget(self::CACHE_KEY);

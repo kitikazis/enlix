@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Catalogo;
+use App\Support\Producto;
 use Illuminate\Http\Response;
 
 /**
@@ -26,6 +27,10 @@ class SitemapController extends Controller
 
         foreach (array_keys(Catalogo::items()) as $slug) {
             $urls[] = [route('servicio.show', $slug), '0.9'];
+        }
+
+        foreach (array_keys(Producto::items()) as $slug) {
+            $urls[] = [route('productos.show', $slug), '0.5'];
         }
 
         $urls[] = [route('libro-reclamaciones.index'), '0.3'];

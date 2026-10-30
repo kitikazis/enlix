@@ -94,6 +94,9 @@ class Producto extends Model
     /** Duración de la oferta del día: 24 horas reales desde que se publica. */
     public const HORAS_OFERTA = 24;
 
+    /** Fotos adicionales a la principal que se pueden subir desde el admin. */
+    public const MAX_FOTOS_GALERIA = 5;
+
     /**
      * Forma canónica de la referencia (sin espacios en los extremos, en
      * mayúsculas). La usan el mutator, el FormRequest y el chequeo en vivo,
@@ -161,6 +164,25 @@ class Producto extends Model
                 ? Storage::disk('public')->url(Str::replaceFirst('productos/', 'productos/thumbs/', $this->imagen))
                 : asset('assets/img/producto-placeholder.svg'),
         );
+    }
+
+    /**
+     * Fotos de la página de detalle: la principal y luego las adicionales.
+     * El placeholder solo sale si el producto no tiene ninguna.
+     *
+     * @return array<int, array{url: string, thumb_url: string}>
+     */
+    public function fotos(): array
+    {
+        $fotos = $this->imagenes
+            ->map(fn (ImagenProducto $i) => ['url' => $i->url, 'thumb_url' => $i->thumb_url])
+            ->all();
+
+        if ($this->imagen !== null || $fotos === []) {
+            array_unshift($fotos, ['url' => $this->imagen_url, 'thumb_url' => $this->imagen_thumb_url]);
+        }
+
+        return $fotos;
     }
 
     /**

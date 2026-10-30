@@ -1,7 +1,7 @@
 {{--
     Modal "Producto agregado al carrito", incluido UNA vez en layouts/app.blade.php
-    para que esté disponible en cualquier página pública (hoy solo /productos la
-    usa, pero una futura página de detalle de producto puede abrirla igual).
+    para que esté disponible en cualquier página pública (hoy el catálogo y la
+    página de detalle de producto).
 
     No recibe datos por props: se queda vacío/oculto en el HTML y se rellena por
     completo en JS (ver initModalCarrito() en enlix.js) cuando algo dispara el

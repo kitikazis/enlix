@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductoGuardarRequest;
 use App\Models\Categoria;
+use App\Models\ImagenProducto;
+use App\Models\Marca;
 use App\Models\Producto;
 use App\Support\Producto as CatalogoProducto;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -42,6 +44,7 @@ class ProductosController extends Controller
         return view('admin.productos.index', [
             'productos' => $productos,
             'categorias' => Categoria::orderBy('nombre')->get(),
+            'marcas' => Marca::orderBy('nombre')->pluck('nombre'),
             'totalEliminados' => Producto::onlyTrashed()->count(),
         ]);
     }
@@ -66,10 +69,13 @@ class ProductosController extends Controller
             'referencia' => $producto->referencia,
             'categoria_id' => $producto->categoria_id,
             'categoria' => $producto->categoria?->nombre,
+            'marca' => $producto->marca?->nombre ?? '',
+            'meses_garantia' => $producto->meses_garantia ?? '',
             'descripcion' => $producto->descripcion,
             'especificaciones' => $producto->especificaciones ?? [],
             'imagen_url' => $producto->imagen_url,
             'tiene_imagen' => $producto->imagen !== null,
+            'galeria' => $producto->imagenes->map(fn (ImagenProducto $i) => $this->fotoGaleria($i))->all(),
             'precio' => number_format($producto->precio_centimos / 100, 2, '.', ''),
             'precio_comparacion' => $producto->precio_comparacion_centimos !== null
                 ? number_format($producto->precio_comparacion_centimos / 100, 2, '.', '')
@@ -149,6 +155,55 @@ class ProductosController extends Controller
         CatalogoProducto::limpiarCache();
 
         return $this->respuestaExito($producto->load('categoria'), 'Producto actualizado.', 200, $reemplazados);
+    }
+
+    /**
+     * Foto adicional de la galería. Va en su propia petición (y no en el
+     * guardado del modal) para que cada foto respete sola el límite de 2 MB
+     * sin que varias juntas superen el post_max_size del hosting.
+     */
+    public function agregarImagen(Request $request, Producto $producto): JsonResponse
+    {
+        $request->validate([
+            'imagen' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:min_width=200,min_height=200'],
+        ], [
+            'imagen.required' => 'Elige una imagen (JPG, PNG o WEBP · máx. 2 MB).',
+            'imagen.uploaded' => 'No se pudo subir la imagen. Debe pesar máx. 2 MB.',
+            'imagen.image' => 'El archivo debe ser una imagen JPG, PNG o WEBP.',
+            'imagen.mimes' => 'Formato no permitido. Usa JPG, PNG o WEBP.',
+            'imagen.max' => 'La imagen no puede pesar más de 2 MB.',
+            'imagen.dimensions' => 'La imagen debe medir al menos 200 × 200 px.',
+        ]);
+
+        $galeria = ImagenProducto::where('producto_id', $producto->id);
+
+        if ($galeria->count() >= Producto::MAX_FOTOS_GALERIA) {
+            throw ValidationException::withMessages([
+                'imagen' => 'Solo se pueden agregar '.Producto::MAX_FOTOS_GALERIA.' fotos adicionales.',
+            ]);
+        }
+
+        $imagen = $producto->imagenes()->create([
+            'ruta' => $this->procesarImagen($request->file('imagen')),
+            'orden' => (int) $galeria->max('orden') + 1,
+        ]);
+
+        return response()->json($this->fotoGaleria($imagen), 201);
+    }
+
+    public function eliminarImagenGaleria(Producto $producto, ImagenProducto $imagen): JsonResponse
+    {
+        abort_unless($imagen->producto_id === $producto->id, 404);
+
+        $imagen->delete();
+        $this->eliminarImagen($imagen->ruta);
+
+        return response()->json(['mensaje' => 'Foto eliminada.']);
+    }
+
+    private function fotoGaleria(ImagenProducto $imagen): array
+    {
+        return ['id' => $imagen->id, 'url' => $imagen->url, 'thumb_url' => $imagen->thumb_url];
     }
 
     /**
@@ -371,7 +426,23 @@ class ProductosController extends Controller
             'precio_comparacion_centimos' => filled($datos['precio_comparacion'] ?? null)
                 ? (int) bcmul((string) $datos['precio_comparacion'], '100')
                 : null,
+        ] : []) + ($request->has('marca') ? [
+            'marca_id' => $this->marcaId($datos['marca'] ?? null),
+        ] : []) + ($request->has('meses_garantia') ? [
+            'meses_garantia' => filled($datos['meses_garantia'] ?? null) ? (int) $datos['meses_garantia'] : null,
         ] : []);
+    }
+
+    /** La marca se escribe a mano en el modal: si es nueva, se crea al guardar. */
+    private function marcaId(?string $nombre): ?int
+    {
+        $nombre = trim((string) $nombre);
+
+        if ($nombre === '') {
+            return null;
+        }
+
+        return Marca::firstOrCreate(['slug' => Str::slug($nombre)], ['nombre' => $nombre])->id;
     }
 
     /**

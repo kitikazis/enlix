@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\PedidosController as AdminPedidosController;
 use App\Http\Controllers\Admin\ProductosController as AdminProductosController;
 use App\Http\Controllers\Admin\ReclamosController as AdminReclamosController;
 use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\IzipayController;
 use App\Http\Controllers\PageController;
@@ -42,6 +43,7 @@ Route::prefix('libro-de-reclamaciones')->name('libro-reclamaciones.')->group(fun
 
 // Tienda
 Route::get('/productos', [IzipayController::class, 'index'])->name('productos');
+Route::get('/productos/{producto:slug}', [ProductoController::class, 'show'])->name('productos.show');
 
 // Carrito (invitado, por cookie - ver CarritoService). El pago (Izipay) va
 // en /checkout, no aqui.
@@ -130,6 +132,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // como si "papelera" fuera un {producto} (id/slug) y nunca llegaria aqui.
         Route::get('/papelera', [AdminProductosController::class, 'papelera'])->name('papelera');
         Route::post('/', [AdminProductosController::class, 'store'])->name('store');
+        Route::post('/{producto}/imagenes', [AdminProductosController::class, 'agregarImagen'])->name('imagenes.store');
+        Route::delete('/{producto}/imagenes/{imagen}', [AdminProductosController::class, 'eliminarImagenGaleria'])->name('imagenes.destroy');
         Route::get('/{producto}', [AdminProductosController::class, 'show'])->name('show');
         Route::put('/{producto}', [AdminProductosController::class, 'update'])->name('update');
         Route::patch('/{producto}/alternar-activo', [AdminProductosController::class, 'alternarActivo'])->name('alternar-activo');

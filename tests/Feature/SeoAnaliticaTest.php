@@ -3,10 +3,14 @@
 namespace Tests\Feature;
 
 use App\Support\Catalogo;
+use App\Support\Producto;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SeoAnaliticaTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_el_sitemap_lista_las_paginas_publicas_y_todos_los_servicios(): void
     {
         $respuesta = $this->get('/sitemap.xml')
@@ -23,7 +27,7 @@ class SeoAnaliticaTest extends TestCase
 
         $xml = simplexml_load_string($respuesta->getContent());
         $this->assertNotFalse($xml, 'El sitemap no es XML válido');
-        $this->assertCount(7 + count(Catalogo::items()), $xml->url);
+        $this->assertCount(7 + count(Catalogo::items()) + count(Producto::items()), $xml->url);
     }
 
     public function test_robots_apunta_al_sitemap_y_excluye_admin_carrito_y_checkout(): void

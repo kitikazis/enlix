@@ -43,31 +43,48 @@
       ];
   }
 
-  // Oferta del día de /productos: Product + Offer para que Google pueda
-  // mostrar precio, stock y vigencia en los resultados.
-  if (! empty($oferta)) {
+  // Oferta del día de /productos o página de detalle: Product + Offer para
+  // que Google pueda mostrar precio y stock (y vigencia, en la oferta) en
+  // los resultados.
+  $_seo_item = $oferta ?? $productoDetalle ?? null;
+  if ($_seo_item) {
+      $_seo_url = ! empty($oferta) ? route('productos') : route('productos.show', $_seo_item->slug);
       $_seo_producto = [
           '@context'    => 'https://schema.org',
           '@type'       => 'Product',
-          'name'        => $oferta->nombre,
-          'image'       => $oferta->imagen_url,
-          'description' => $oferta->oferta_bajada ?: trim(strip_tags($oferta->descripcion)),
-          'sku'         => $oferta->referencia,
+          'name'        => $_seo_item->nombre,
+          'image'       => $_seo_item->imagen_url,
+          'description' => $metaDescription ?? trim(strip_tags($_seo_item->descripcion)),
+          'sku'         => $_seo_item->referencia,
           'offers'      => [
               '@type'           => 'Offer',
-              'url'             => route('productos'),
+              'url'             => $_seo_url,
               'priceCurrency'   => 'PEN',
-              'price'           => number_format($oferta->precio_centimos / 100, 2, '.', ''),
-              'priceValidUntil' => $oferta->oferta_termina_en->setTimezone('America/Lima')->toDateString(),
-              'availability'    => $oferta->stockDisponible() > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+              'price'           => number_format($_seo_item->precio_centimos / 100, 2, '.', ''),
+              'availability'    => $_seo_item->stockDisponible() > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
               'itemCondition'   => 'https://schema.org/NewCondition',
               'seller'          => ['@type' => 'Organization', '@id' => $_seo_empresa_id, 'name' => 'Enlix'],
           ],
       ];
-      if ($oferta->marca) {
-          $_seo_producto['brand'] = ['@type' => 'Brand', 'name' => $oferta->marca->nombre];
+      if (! empty($oferta)) {
+          $_seo_producto['offers']['priceValidUntil'] = $oferta->oferta_termina_en->setTimezone('America/Lima')->toDateString();
+      }
+      if ($_seo_item->marca) {
+          $_seo_producto['brand'] = ['@type' => 'Brand', 'name' => $_seo_item->marca->nombre];
       }
       $_seo_jsonld[] = $_seo_producto;
+  }
+
+  if (! empty($productoDetalle)) {
+      $_seo_jsonld[] = [
+          '@context'        => 'https://schema.org',
+          '@type'           => 'BreadcrumbList',
+          'itemListElement' => [
+              ['@type' => 'ListItem', 'position' => 1, 'name' => 'Inicio', 'item' => route('inicio')],
+              ['@type' => 'ListItem', 'position' => 2, 'name' => 'Productos', 'item' => route('productos')],
+              ['@type' => 'ListItem', 'position' => 3, 'name' => $productoDetalle->nombre, 'item' => route('productos.show', $productoDetalle->slug)],
+          ],
+      ];
   }
 
   if (isset($svc, $servicio_actual)) {

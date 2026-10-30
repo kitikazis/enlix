@@ -3,46 +3,6 @@
 @section('content')
 
 <style>
-  .prod-card {
-    background: #fff;
-    border: 1px solid var(--enlix-border);
-    border-radius: 8px;
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    transition: box-shadow .2s ease, transform .2s ease;
-  }
-  .prod-card:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, .08);
-    transform: translateY(-3px);
-  }
-  .prod-card-img {
-    width: calc(100% + 56px);
-    margin: -28px -28px 20px -28px;
-    height: 220px;
-    /* contain y no cover: la foto del producto se ve completa, sin cortar
-       la laptop/caja arriba y abajo. */
-    object-fit: contain;
-    padding: 16px;
-    border-radius: 8px 8px 0 0;
-    background: var(--enlix-bg-soft);
-  }
-  .prod-card-title { font-size: 20px; margin: 0 0 8px; color: var(--enlix-ink); }
-  .prod-card-desc  { color: var(--enlix-muted); font-size: 14px; line-height: 1.6; margin: 0; }
-  .prod-card-desc p { margin: 0 0 0.5em; }
-  .prod-card-desc p:last-child { margin-bottom: 0; }
-  .prod-card-list  { list-style: none; padding: 0; margin: 16px 0 20px; }
-  .prod-card-list li {
-    font-size: 14px; padding: 6px 0 6px 24px; position: relative; color: var(--enlix-ink);
-  }
-  .prod-card-list li::before {
-    content: '✓'; position: absolute; left: 0; color: var(--enlix-blue-900); font-weight: 700;
-  }
-  .prod-card-price { font-size: 34px; font-weight: 700; color: var(--enlix-ink); margin: auto 0 18px; }
-  .prod-card-price .currency { font-size: 18px; color: var(--enlix-muted); vertical-align: super; }
-  .prod-card-error { font-size: 13px; }
-
   /* ---------- Oferta del día (mobile-first) ---------- */
   /* La portada ocupa una sola pantalla: alto del viewport menos la navbar.
      Es min-height para que nunca recorte contenido; la foto absorbe el alto
@@ -186,6 +146,7 @@
     border-radius: 14px;
     box-shadow: 0 16px 40px rgba(0, 0, 0, .28);
   }
+  .oferta-figura a { position: absolute; inset: 0; }
   .oferta-figura img {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -199,22 +160,6 @@
   .oferta-detalle-nombre { font-size: clamp(1.5rem, 2vw + 1rem, 2rem); margin: 0 0 8px; }
   .oferta-detalle-desc { color: var(--enlix-text); }
   .oferta-detalle-desc p { margin: 0 0 .5em; }
-  .oferta-specs {
-    margin: 20px 0 0;
-    background: #fff;
-    border: 1px solid var(--enlix-border);
-    border-radius: 14px;
-    overflow: hidden;
-  }
-  .oferta-spec {
-    display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    gap: 12px;
-    padding: 12px 16px;
-    align-items: baseline;
-  }
-  .oferta-spec:nth-child(odd) { background: var(--enlix-bg-soft); }
-  .oferta-spec dt { min-width: 0; font-size: 14px; font-weight: 500; color: var(--enlix-muted); overflow-wrap: break-word; }
-  .oferta-spec dd { min-width: 0; margin: 0; font-weight: 700; color: var(--enlix-ink); overflow-wrap: break-word; }
 
   /* Comprar sin volver arriba: repite precio y tiempo restante de la portada. */
   .oferta-compra-card {
@@ -292,7 +237,6 @@
     .btn-oferta { min-height: 52px; }
     .oferta-detalle-grid { grid-template-columns: minmax(0, 1fr) 360px; column-gap: 56px; align-items: start; }
     .oferta-compra-card { position: sticky; top: 115px; }
-    .oferta-spec { padding: 13px 20px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .oferta-badge-dot { animation: none; }
@@ -321,7 +265,10 @@
 
         <div class="oferta-media">
           <figure class="oferta-figura">
-            <img src="{{ $oferta->imagen_url }}" alt="{{ $oferta->nombre }}" width="800" height="800" fetchpriority="high">
+            {{-- La ficha de la oferta está en esta misma página. --}}
+            <a href="#oferta-detalle" aria-label="Ver la ficha técnica de {{ $oferta->nombre }}">
+              <img src="{{ $oferta->imagen_url }}" alt="{{ $oferta->nombre }}" width="800" height="800" fetchpriority="high">
+            </a>
           </figure>
         </div>
 
@@ -472,39 +419,7 @@
     <div class="row g-4 justify-content-center">
       @foreach ($productos as $slug => $p)
         <div class="col-md-6 col-lg-4">
-          <div class="prod-card">
-            <img src="{{ $p['imagen_url'] }}" alt="{{ $p['nombre'] }}" class="prod-card-img" loading="lazy">
-            <h3 class="prod-card-title">{{ $p['nombre'] }}</h3>
-            {{-- descripcion ya pasa por HTMLPurifier al guardarse (ver
-                 Producto::descripcion() en el modelo, solo permite
-                 p/br/strong/b/em/i/u/ul/ol/li/a), por eso es seguro
-                 mostrarla como HTML en vez de texto escapado. --}}
-            <div class="prod-card-desc">{!! $p['descripcion'] !!}</div>
-
-            @if (! empty($p['features']))
-              <ul class="prod-card-list">
-                @foreach ($p['features'] as $f)
-                  <li>{{ $f }}</li>
-                @endforeach
-              </ul>
-            @endif
-
-            <div class="prod-card-price">
-              <span class="currency">S/</span> {{ number_format($p['precio_centimos'] / 100, 2) }}
-            </div>
-
-            @if ($p['stock_disponible'] > 0)
-              <button type="button"
-                      class="btn btn-primary-enlix w-100 btn-agregar-carrito"
-                      data-producto-id="{{ $p['id'] }}"
-                      data-imagen-url="{{ $p['imagen_url'] }}"
-                      @if ($p['precio_comparacion_centimos']) data-precio-comparacion-centimos="{{ $p['precio_comparacion_centimos'] }}" @endif>
-                Agregar al carrito
-              </button>
-            @else
-              <button type="button" class="btn btn-primary-enlix w-100" disabled>Agotado</button>
-            @endif
-          </div>
+          @include('partials.producto-card', ['p' => $p])
         </div>
       @endforeach
     </div>
@@ -513,13 +428,10 @@
 </section>
 @endif
 
+@include('partials.tienda-scripts')
+
 @push('scripts')
 <script nonce="{{ $cspNonce }}">
-  const CSRF_TOKEN = @json(csrf_token());
-  const URL_AGREGAR_CARRITO = @json(route('carrito.items.store'));
-  const URL_RESUMEN_CARRITO = @json(route('carrito.resumen'));
-  const URL_CHECKOUT = @json(route('checkout.index'));
-
   // Contador de la oferta del día. Cuenta los segundos que calculó el
   // servidor (no la hora del reloj del visitante, que puede estar mal) hacia
   // el vencimiento REAL: es el mismo para todos y no se reinicia al recargar.
@@ -562,149 +474,6 @@
     pintar();
     timer = setInterval(pintar, 1000);
   })();
-
-  // "Comprar ahora": agrega la oferta al carrito (si no estaba ya) y va
-  // directo al checkout SOLO con ese item (?items=), sin arrastrar lo que
-  // hubiera antes en el carrito. Hay dos botones (portada y ficha técnica);
-  // cada uno muestra el error en su propia zona.
-  document.querySelectorAll('[data-oferta-comprar]').forEach(function (btn) {
-    var error = btn.closest('[data-oferta-zona]').querySelector('[data-oferta-error]');
-    var textoOriginal = btn.textContent.trim();
-    var productoId = parseInt(btn.dataset.productoId, 10);
-
-    function irAlCheckout(itemId) {
-      window.location.href = URL_CHECKOUT + '?items=' + encodeURIComponent(itemId);
-    }
-
-    function fallar(mensaje) {
-      error.textContent = mensaje;
-      error.hidden = false;
-      btn.disabled = false;
-      btn.removeAttribute('aria-busy');
-      btn.textContent = textoOriginal;
-    }
-
-    function itemDeOferta(data) {
-      return (data.items || []).find(function (i) { return i.producto_id === productoId; });
-    }
-
-    btn.addEventListener('click', function () {
-      if (btn.disabled) return;
-
-      btn.disabled = true;
-      btn.setAttribute('aria-busy', 'true');
-      btn.textContent = 'Procesando…';
-      error.hidden = true;
-
-      fetchJsonEnlix('GET', URL_RESUMEN_CARRITO, null, CSRF_TOKEN).then(function (resumen) {
-        var existente = itemDeOferta(resumen);
-        if (existente) {
-          irAlCheckout(existente.id);
-          return;
-        }
-
-        return fetchJsonEnlix('POST', URL_AGREGAR_CARRITO, { producto_id: productoId, cantidad: 1 }, CSRF_TOKEN).then(function (data) {
-          if (!data.ok) {
-            fallar(data.mensaje || 'No se pudo agregar al carrito.');
-            return;
-          }
-          actualizarBadgeCarrito(data.cantidad_total);
-          var item = itemDeOferta(data);
-          if (item) {
-            irAlCheckout(item.id);
-          } else {
-            window.location.href = URL_CHECKOUT;
-          }
-        });
-      }).catch(function () {
-        refrescarBadgeCarrito();
-        fallar('No se pudo procesar. Revisa tu carrito e inténtalo de nuevo.');
-      });
-    });
-  });
-
-  document.querySelectorAll('.btn-agregar-carrito').forEach(function (btn) {
-    const textoOriginal = btn.textContent.trim();
-
-    btn.addEventListener('click', function () {
-      if (btn.disabled) return;
-
-      btn.disabled = true;
-      ocultarErrorCarrito(btn);
-
-      fetchJsonEnlix('POST', URL_AGREGAR_CARRITO, {
-        producto_id: parseInt(btn.dataset.productoId, 10),
-        cantidad: 1,
-      }, CSRF_TOKEN).then(function (data) {
-        if (!data.ok) {
-          mostrarErrorCarrito(btn, data.mensaje || 'No se pudo agregar al carrito.');
-          btn.disabled = false;
-          return;
-        }
-
-        actualizarBadgeCarrito(data.cantidad_total);
-
-        // El modal (ver initModalCarrito() en enlix.js) solo se abre si
-        // encontramos el item recien agregado en la respuesta del servidor
-        // - nunca antes de confirmar el OK.
-        var productoId = parseInt(btn.dataset.productoId, 10);
-        var item = data.items.find(function (i) { return i.producto_id === productoId; });
-        if (item) {
-          window.dispatchEvent(new CustomEvent('cart:added', {
-            detail: {
-              itemId: item.id,
-              nombre: item.nombre,
-              imagenUrl: btn.dataset.imagenUrl,
-              precioUnitarioCentimos: item.precio_unitario_centimos,
-              precioComparacionCentimos: btn.dataset.precioComparacionCentimos
-                ? parseInt(btn.dataset.precioComparacionCentimos, 10)
-                : null,
-              cantidad: item.cantidad,
-              stockDisponible: item.stock_disponible,
-              botonOrigen: btn,
-            },
-          }));
-        }
-
-        // Feedback de "agregado" durante 1.5s, como pide el diseño.
-        btn.textContent = '✓ Agregado';
-        setTimeout(function () {
-          btn.textContent = textoOriginal;
-          btn.disabled = false;
-        }, 1500);
-      }).catch(function () {
-        // La petición pudo haber llegado bien al servidor aunque la
-        // respuesta no se pudo leer como JSON (ver fetchJsonEnlix en
-        // enlix.js) - se refresca el contador real en vez de asumir que no
-        // se agregó nada.
-        refrescarBadgeCarrito();
-        mostrarErrorCarrito(btn, 'No se pudo confirmar el agregado. Revisa tu carrito antes de reintentar.');
-        btn.disabled = false;
-      });
-    });
-  });
-
-  function refrescarBadgeCarrito() {
-    fetchJsonEnlix('GET', URL_RESUMEN_CARRITO, null, CSRF_TOKEN)
-      .then(function (data) { actualizarBadgeCarrito(data.cantidad_total); })
-      .catch(function () {});
-  }
-
-  function mostrarErrorCarrito(btn, mensaje) {
-    const card = btn.closest('.prod-card');
-    let error = card.querySelector('.prod-card-error');
-    if (!error) {
-      error = document.createElement('p');
-      error.className = 'prod-card-error text-danger mt-2 mb-0';
-      card.appendChild(error);
-    }
-    error.textContent = mensaje;
-  }
-
-  function ocultarErrorCarrito(btn) {
-    const error = btn.closest('.prod-card').querySelector('.prod-card-error');
-    if (error) error.remove();
-  }
 </script>
 @endpush
 
