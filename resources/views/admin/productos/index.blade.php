@@ -416,6 +416,7 @@
                                     class="h-11 w-full rounded-nav border bg-card px-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:h-10 sm:text-sm"
                                     :class="errores.oferta_titular ? 'border-rechazado-text' : 'border-border'"
                                 >
+                                <p class="mt-1 text-xs text-text-caption">Va debajo del nombre del producto. El título grande de la portada es fijo: «¡Oferta, aprovecha ahora!».</p>
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.oferta_titular" x-text="errores.oferta_titular?.[0]"></p>
                             </div>
                             <div class="min-w-0">

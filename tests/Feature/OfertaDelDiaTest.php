@@ -204,6 +204,7 @@ class OfertaDelDiaTest extends TestCase
 
         $this->get(route('productos'))
             ->assertOk()
+            ->assertSee('aprovecha ahora!')
             ->assertSee('La potencia que buscas. Hoy es el momento.')
             ->assertSee('Oferta especial · 24 horas')
             ->assertSee('data-segundos="86400"', false)
@@ -213,6 +214,26 @@ class OfertaDelDiaTest extends TestCase
             ->assertSee('Imagen que impresiona')
             ->assertSee('data-producto-id="'.$producto->id.'"', false)
             ->assertSee('Más productos');
+    }
+
+    public function test_la_ficha_tecnica_muestra_todas_las_especificaciones_y_permite_comprar(): void
+    {
+        $producto = $this->crear(['especificaciones' => json_encode([
+            ['clave' => 'Pantalla', 'valor' => '10.95 pulgadas'],
+            ['clave' => 'Batería', 'valor' => '8000 mAh'],
+            ['clave' => 'Memoria RAM', 'valor' => '8 GB'],
+            ['clave' => 'Almacenamiento', 'valor' => '128 GB'],
+            ['clave' => 'Conectividad', 'valor' => '4G LTE'],
+        ])]);
+
+        $html = $this->get(route('productos'))
+            ->assertOk()
+            ->assertSee('Ficha técnica')
+            ->assertSee('4G LTE')
+            ->assertDontSee('Ver todas las especificaciones')
+            ->getContent();
+
+        $this->assertSame(2, substr_count($html, 'data-oferta-comprar data-producto-id="'.$producto->id.'"'));
     }
 
     public function test_la_oferta_no_se_repite_en_la_grilla_del_catalogo(): void

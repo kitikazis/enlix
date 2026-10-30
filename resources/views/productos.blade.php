@@ -44,11 +44,19 @@
   .prod-card-error { font-size: 13px; }
 
   /* ---------- Oferta del día (mobile-first) ---------- */
+  /* La portada ocupa una sola pantalla: alto del viewport menos la navbar.
+     Es min-height para que nunca recorte contenido; la foto absorbe el alto
+     que sobra (fila 1fr) y se encoge primero en pantallas bajas. */
   .oferta-hero {
+    --oferta-nav: 99px; /* alto de .enlix-navbar */
     position: relative;
     overflow: hidden;
-    padding: 32px 0 48px;
-    background: linear-gradient(180deg, var(--enlix-bg-soft) 0%, #fff 100%);
+    display: flex;
+    min-height: calc(100vh - var(--oferta-nav));
+    min-height: calc(100svh - var(--oferta-nav));
+    padding: 14px 0 30px; /* 30px: deja el botón de compra sobre el WhatsApp flotante */
+    background: linear-gradient(135deg, var(--enlix-blue-900) 0%, var(--enlix-blue-800) 100%);
+    color: #fff;
   }
   .oferta-hero::before {
     /* Círculo decorativo de fondo, como en el diseño. */
@@ -57,15 +65,19 @@
     width: 720px; height: 720px;
     top: -360px; right: -240px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(45, 116, 196, .10) 0%, rgba(45, 116, 196, 0) 70%);
+    background: radial-gradient(circle, rgba(201, 162, 74, .16) 0%, rgba(201, 162, 74, 0) 70%);
     pointer-events: none;
   }
+  .oferta-hero > .container { display: flex; }
   .oferta-grid {
     position: relative;
+    flex: 1;
+    min-width: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(130px, 1fr) auto;
     grid-template-areas: "intro" "media" "cuerpo";
-    gap: 24px;
+    gap: 12px;
   }
   .oferta-intro  { grid-area: intro; min-width: 0; }
   .oferta-media  { grid-area: media; min-width: 0; }
@@ -73,126 +85,153 @@
 
   .oferta-badge {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 14px;
-    border: 1px solid #C9DAF0;
+    padding: 4px 12px;
+    border: 1px solid rgba(255, 255, 255, .28);
     border-radius: 999px;
-    background: var(--enlix-blue-50);
-    color: var(--enlix-blue-600);
-    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    white-space: nowrap;
   }
   .oferta-badge-dot {
     width: 8px; height: 8px; border-radius: 50%;
-    background: var(--enlix-blue-600);
-    box-shadow: 0 0 0 0 rgba(30, 93, 168, .5);
+    background: var(--enlix-accent);
+    box-shadow: 0 0 0 0 rgba(201, 162, 74, .6);
     animation: oferta-pulso 2s infinite;
   }
   @keyframes oferta-pulso {
-    70%  { box-shadow: 0 0 0 8px rgba(30, 93, 168, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(30, 93, 168, 0); }
+    70%  { box-shadow: 0 0 0 8px rgba(201, 162, 74, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(201, 162, 74, 0); }
   }
   .oferta-titular {
-    margin: 16px 0 0;
-    font-size: clamp(2.125rem, 4vw + 1.25rem, 4rem);
+    margin: 8px 0 0;
+    color: #fff;
+    font-size: clamp(1.75rem, 8vw, 2.5rem);
     font-weight: 800;
     line-height: 1.08;
     letter-spacing: -0.03em;
     overflow-wrap: break-word;
   }
-  .oferta-bajada { color: var(--enlix-muted); font-size: 16px; max-width: 520px; margin: 0 0 20px; }
+  .oferta-titular-acento { display: block; color: var(--enlix-accent); }
 
-  .oferta-precio { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 4px; }
-  .oferta-precio-actual { font-family: var(--font-heading); font-size: 32px; font-weight: 800; color: var(--enlix-ink); line-height: 1.1; }
-  .oferta-precio-actual .moneda { font-size: 18px; color: var(--enlix-muted); margin-right: 2px; }
-  .oferta-precio-antes { color: var(--enlix-muted); text-decoration: line-through; font-size: 16px; }
+  .oferta-producto { color: #fff; font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0; }
+  .oferta-subtitulo { color: #E5C77A; font-size: 14px; font-weight: 600; line-height: 1.35; margin: 2px 0 0; }
+  /* Textos del admin muy largos no deben empujar el botón fuera de pantalla. */
+  .oferta-producto, .oferta-subtitulo { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .oferta-bajada { color: rgba(255, 255, 255, .8); font-size: 14px; line-height: 1.5; margin: 8px 0 0; }
+
+  /* Precio y contador comparten franja para ahorrar alto. */
+  .oferta-compra {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+    gap: 8px 16px;
+    margin-top: 10px;
+  }
+  .oferta-precio { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .oferta-precio-actual { font-family: var(--font-heading); font-size: 30px; font-weight: 800; color: #fff; line-height: 1.1; white-space: nowrap; }
+  .oferta-precio-actual .moneda { font-size: 17px; color: rgba(255, 255, 255, .75); margin-right: 2px; }
+  .oferta-precio-antes { color: rgba(255, 255, 255, .75); text-decoration: line-through; font-size: 15px; }
   .oferta-descuento {
     align-self: center;
     padding: 2px 10px; border-radius: 999px;
-    background: var(--enlix-blue-900); color: #fff;
+    background: var(--enlix-accent); color: var(--enlix-blue-900);
     font-size: 13px; font-weight: 700;
   }
-  .oferta-stock { font-size: 14px; font-weight: 600; color: var(--enlix-accent-ink); margin: 4px 0 0; }
+  .oferta-stock { font-size: 13px; font-weight: 600; color: #E5C77A; margin: 2px 0 0; }
 
-  .oferta-contador-label { font-weight: 700; color: var(--enlix-ink); font-size: 15px; margin: 24px 0 10px; }
-  .oferta-contador { display: flex; align-items: center; gap: 8px; }
-  .oferta-contador-sep { font-weight: 700; color: var(--enlix-muted); }
+  .oferta-contador-label { font-weight: 700; color: #fff; font-size: 12px; line-height: 1.3; margin: 0 0 4px; }
+  .oferta-contador { display: flex; align-items: center; gap: 4px; }
+  .oferta-contador-sep { font-weight: 700; color: rgba(255, 255, 255, .7); }
   .oferta-contador-caja {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-width: 72px; padding: 12px 8px 10px;
+    min-width: 48px; padding: 5px 4px 4px;
     background: #fff;
-    border: 1px solid var(--enlix-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(10, 37, 64, .05);
+    border-radius: 8px;
   }
   .oferta-contador-num {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 30px; font-weight: 700; line-height: 1; color: var(--enlix-ink);
+    font-size: 21px; font-weight: 700; line-height: 1; color: var(--enlix-ink);
     font-variant-numeric: tabular-nums;
   }
-  .oferta-contador-unidad { margin-top: 6px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--enlix-muted); }
-  .oferta-contador-nota { font-size: 13px; color: var(--enlix-muted); margin: 10px 0 0; }
+  .oferta-contador-unidad { margin-top: 2px; font-size: 10px; font-weight: 600; line-height: 1.2; color: var(--enlix-muted); }
+  .oferta-contador-nota { font-size: 12px; line-height: 1.35; color: rgba(255, 255, 255, .75); margin: 8px 0 0; }
 
-  .oferta-ctas { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 28px; }
+  /* En móvil el enlace queda a la izquierda: a la derecha va el WhatsApp flotante. */
+  .oferta-ctas { display: flex; flex-direction: column; align-items: stretch; margin-top: 10px; }
   .btn-oferta {
-    min-height: 52px;
-    padding: 12px 28px;
+    min-height: 48px;
+    padding: 10px 28px;
     border: 0; border-radius: 10px;
-    background: var(--enlix-blue-900); color: #fff;
+    background: var(--enlix-accent); color: var(--enlix-blue-900);
     font-weight: 700; font-size: 16px;
     transition: background-color .2s ease, transform .2s ease;
   }
-  .btn-oferta:hover:not(:disabled) { background: var(--enlix-blue-800); color: #fff; transform: translateY(-1px); }
+  .btn-oferta:hover:not(:disabled) { background: #E5C77A; color: var(--enlix-blue-900); transform: translateY(-1px); }
   .btn-oferta:disabled { opacity: .6; cursor: not-allowed; }
   .oferta-link {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-height: 44px; padding: 0 12px;
-    font-weight: 600; color: var(--enlix-blue-600); text-decoration: none;
+    display: inline-flex; align-items: center;
+    align-self: flex-start;
+    min-height: 44px;
+    font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 3px;
   }
-  .oferta-link:hover { color: var(--enlix-blue-800); text-decoration: underline; }
-  .oferta-error { font-size: 14px; margin: 8px 0 0; }
+  .oferta-link:hover { color: #E5C77A; }
+  .oferta-error { font-size: 14px; color: #FFC9C9; margin: 4px 0 0; }
 
-  .oferta-figura { position: relative; margin: 0; }
-  .oferta-figura img {
-    display: block; width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: contain;
-    filter: drop-shadow(0 24px 32px rgba(10, 37, 64, .18));
-  }
-  .oferta-figura figcaption {
-    position: absolute; right: 4%; bottom: 4%;
-    max-width: 80%;
-    padding: 10px 16px;
+  /* Tarjeta blanca: las fotos del catálogo traen fondo blanco. */
+  .oferta-figura {
+    position: relative;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
     background: #fff;
-    border: 1px solid var(--enlix-border);
-    border-radius: 10px;
-    box-shadow: 0 10px 24px rgba(10, 37, 64, .10);
-    color: var(--enlix-blue-600);
-    font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    overflow-wrap: break-word;
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .28);
+  }
+  .oferta-figura img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    padding: 8px;
+    object-fit: contain;
   }
 
   .oferta-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--enlix-blue-600); margin: 0 0 8px; }
+  .oferta-detalle { scroll-margin-top: 99px; /* alto de .enlix-navbar */ }
+  .oferta-detalle-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .oferta-detalle-nombre { font-size: clamp(1.5rem, 2vw + 1rem, 2rem); margin: 0 0 8px; }
-  .oferta-detalle-desc { color: var(--enlix-muted); max-width: 760px; }
+  .oferta-detalle-desc { color: var(--enlix-text); }
   .oferta-detalle-desc p { margin: 0 0 .5em; }
   .oferta-specs {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: 24px 0 0; padding: 0;
+    margin: 20px 0 0;
     background: #fff;
     border: 1px solid var(--enlix-border);
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(10, 37, 64, .05);
+    border-radius: 14px;
     overflow: hidden;
   }
-  .oferta-spec { padding: 18px 20px; min-width: 0; border-color: var(--enlix-border); border-style: solid; border-width: 0; }
-  .oferta-spec:nth-child(odd) { border-right-width: 1px; }
-  .oferta-spec:nth-child(n+3) { border-top-width: 1px; }
-  .oferta-spec dt { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--enlix-muted); margin-bottom: 6px; }
-  .oferta-spec dd { margin: 0; font-weight: 700; color: var(--enlix-ink); overflow-wrap: break-word; }
-  .oferta-specs-todas { margin-top: 16px; }
-  .oferta-specs-todas summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; color: var(--enlix-blue-600); }
-  .oferta-specs-tabla { width: 100%; max-width: 760px; font-size: 14px; }
-  .oferta-specs-tabla th, .oferta-specs-tabla td { padding: 10px 12px; border-bottom: 1px solid var(--enlix-border); vertical-align: top; overflow-wrap: anywhere; }
-  .oferta-specs-tabla th { width: 40%; color: var(--enlix-muted); font-weight: 600; }
+  .oferta-spec {
+    display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 12px;
+    padding: 12px 16px;
+    align-items: baseline;
+  }
+  .oferta-spec:nth-child(odd) { background: var(--enlix-bg-soft); }
+  .oferta-spec dt { min-width: 0; font-size: 14px; font-weight: 500; color: var(--enlix-muted); overflow-wrap: break-word; }
+  .oferta-spec dd { min-width: 0; margin: 0; font-weight: 700; color: var(--enlix-ink); overflow-wrap: break-word; }
+
+  /* Comprar sin volver arriba: repite precio y tiempo restante de la portada. */
+  .oferta-compra-card {
+    padding: 22px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--enlix-blue-900) 0%, var(--enlix-blue-800) 100%);
+    color: #fff;
+    box-shadow: 0 16px 40px rgba(10, 37, 64, .22);
+  }
+  .oferta-compra-etiqueta { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #E5C77A; margin: 0 0 6px; }
+  .oferta-restante { font-size: 14px; color: rgba(255, 255, 255, .8); margin: 10px 0 0; }
+  .oferta-restante strong {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .oferta-compra-card .btn-oferta { width: 100%; margin-top: 16px; }
 
   .oferta-beneficios { background: var(--enlix-bg-soft); }
   .oferta-beneficio {
@@ -206,26 +245,54 @@
   .oferta-beneficio h3 { font-size: 18px; margin: 0 0 6px; }
   .oferta-beneficio p:last-child { color: var(--enlix-muted); font-size: 15px; margin: 0; }
 
+  /* Móvil bajo: el subtítulo y el badge ceden su alto a la foto. */
+  @media (max-width: 991.98px) and (max-height: 720px) {
+    .oferta-badge, .oferta-subtitulo { display: none; }
+    .oferta-titular { margin-top: 0; }
+  }
+  /* Teléfonos de 320px: precio y contador siguen en una sola franja. */
+  @media (max-width: 359.98px) {
+    .oferta-hero { padding-top: 8px; }
+    .oferta-grid { grid-template-rows: auto minmax(100px, 1fr) auto; gap: 8px; }
+    .oferta-compra { flex-wrap: nowrap; column-gap: 8px; }
+    .oferta-precio-actual { font-size: 24px; }
+    .oferta-precio-actual .moneda { font-size: 14px; }
+    .oferta-contador-caja { min-width: 42px; }
+    .oferta-contador-num { font-size: 18px; }
+  }
   @media (min-width: 576px) {
-    .oferta-ctas { flex-direction: row; align-items: center; gap: 16px; }
-    .oferta-contador-caja { min-width: 84px; }
-    .oferta-contador-num { font-size: 34px; }
+    .oferta-titular-acento { display: inline; }
+    .oferta-ctas { flex-direction: row; align-items: center; gap: 20px; }
+    .oferta-link { align-self: auto; }
   }
   @media (min-width: 992px) {
-    .oferta-hero { padding: 72px 0 88px; }
+    .oferta-hero { padding: 20px 0 28px; }
     .oferta-grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-      grid-template-areas: "intro media" "cuerpo media";
-      grid-template-rows: auto 1fr;
-      column-gap: 48px; row-gap: 20px;
-      align-items: start;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      grid-template-areas: "intro intro" "cuerpo media";
+      column-gap: 48px; row-gap: 16px;
+      align-items: center;
+      align-content: center;
     }
-    .oferta-media { align-self: center; }
-    .oferta-bajada { font-size: 17px; }
-    .oferta-specs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .oferta-spec:nth-child(odd) { border-right-width: 0; }
-    .oferta-spec:nth-child(n+3) { border-top-width: 0; }
-    .oferta-spec:not(:last-child) { border-right-width: 1px; }
+    .oferta-intro { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 24px; }
+    .oferta-titular { margin: 0; font-size: clamp(2.25rem, min(4.1vw, 9vh), 4rem); }
+    .oferta-figura { width: 100%; height: auto; aspect-ratio: 1 / 1; max-height: calc(100vh - var(--oferta-nav) - 150px); max-height: calc(100svh - var(--oferta-nav) - 150px); }
+    .oferta-figura img { padding: 12px; }
+    .oferta-producto { font-size: 24px; }
+    .oferta-subtitulo { font-size: 16px; margin-top: 4px; }
+    .oferta-bajada { font-size: 15px; margin-top: 10px; }
+    .oferta-compra { margin-top: 16px; }
+    .oferta-precio-actual { font-size: 36px; }
+    .oferta-contador-caja { min-width: 60px; padding: 7px 6px 5px; }
+    .oferta-contador-num { font-size: 26px; }
+    .oferta-contador-label { font-size: 13px; }
+    .oferta-contador-nota { font-size: 13px; }
+    .oferta-ctas { margin-top: 14px; }
+    .btn-oferta { min-height: 52px; }
+    .oferta-detalle-grid { grid-template-columns: minmax(0, 1fr) 360px; column-gap: 56px; align-items: start; }
+    .oferta-compra-card { position: sticky; top: 115px; }
+    .oferta-spec { padding: 13px 20px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .oferta-badge-dot { animation: none; }
@@ -249,21 +316,96 @@
 
         <div class="oferta-intro">
           <span class="oferta-badge"><span class="oferta-badge-dot" aria-hidden="true"></span>Oferta especial · 24 horas</span>
-          <h1 id="oferta-titular" class="oferta-titular">{{ $oferta->oferta_titular ?: $oferta->nombre }}</h1>
+          <h1 id="oferta-titular" class="oferta-titular"><span class="oferta-titular-acento">¡Oferta,</span> aprovecha ahora!</h1>
         </div>
 
         <div class="oferta-media">
           <figure class="oferta-figura">
-            <img src="{{ $oferta->imagen_url }}" alt="{{ $oferta->nombre }}" width="1200" height="900" fetchpriority="high">
-            <figcaption>{{ $oferta->nombre }}</figcaption>
+            <img src="{{ $oferta->imagen_url }}" alt="{{ $oferta->nombre }}" width="800" height="800" fetchpriority="high">
           </figure>
         </div>
 
-        <div class="oferta-cuerpo">
+        <div class="oferta-cuerpo" data-oferta-zona>
+          <h2 class="oferta-producto">{{ $oferta->nombre }}</h2>
+          @if ($oferta->oferta_titular)
+            <p class="oferta-subtitulo">{{ $oferta->oferta_titular }}</p>
+          @endif
+          {{-- En móvil no cabe en la portada: se muestra abajo, en #oferta-detalle. --}}
           @if ($oferta->oferta_bajada)
-            <p class="oferta-bajada">{{ $oferta->oferta_bajada }}</p>
+            <p class="oferta-bajada d-none d-lg-block">{{ $oferta->oferta_bajada }}</p>
           @endif
 
+          <div class="oferta-compra">
+            <div>
+              <div class="oferta-precio">
+                <span class="oferta-precio-actual"><span class="moneda">S/</span>{{ number_format($oferta->precio_centimos / 100, 2) }}</span>
+                @if ($ofertaPrecioAntes)
+                  <span class="oferta-precio-antes"><span class="visually-hidden">Precio regular:</span> S/ {{ number_format($ofertaPrecioAntes / 100, 2) }}</span>
+                  @if ($ofertaDescuento > 0)
+                    <span class="oferta-descuento">-{{ $ofertaDescuento }}%</span>
+                  @endif
+                @endif
+              </div>
+              @if ($ofertaStock > 0 && $ofertaStock <= $oferta->umbral_stock_bajo)
+                <p class="oferta-stock">{{ $ofertaStock === 1 ? '¡Última unidad disponible!' : "¡Últimas {$ofertaStock} unidades!" }}</p>
+              @endif
+            </div>
+
+            <div data-oferta-contador data-segundos="{{ $ofertaSegundos }}">
+              <p class="oferta-contador-label" data-oferta-contador-label>La oferta termina en</p>
+              <div class="oferta-contador" role="timer" aria-label="Tiempo restante de la oferta">
+                <div class="oferta-contador-caja"><span class="oferta-contador-num" data-unidad="horas">{{ str_pad((string) intdiv($ofertaSegundos, 3600), 2, '0', STR_PAD_LEFT) }}</span><span class="oferta-contador-unidad">Horas</span></div>
+                <span class="oferta-contador-sep" aria-hidden="true">:</span>
+                <div class="oferta-contador-caja"><span class="oferta-contador-num" data-unidad="minutos">{{ str_pad((string) intdiv($ofertaSegundos % 3600, 60), 2, '0', STR_PAD_LEFT) }}</span><span class="oferta-contador-unidad">Min</span></div>
+                <span class="oferta-contador-sep" aria-hidden="true">:</span>
+                <div class="oferta-contador-caja"><span class="oferta-contador-num" data-unidad="segundos">{{ str_pad((string) ($ofertaSegundos % 60), 2, '0', STR_PAD_LEFT) }}</span><span class="oferta-contador-unidad">Seg</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="oferta-contador-nota">Válida hasta el {{ $ofertaVence->translatedFormat('j \d\e F') }} a las {{ $ofertaVence->format('H:i') }} (hora de Perú) o hasta agotar stock.</p>
+
+          <div class="oferta-ctas">
+            @if ($ofertaStock > 0)
+              <button type="button" class="btn-oferta" data-oferta-comprar data-producto-id="{{ $oferta->id }}">Comprar ahora</button>
+            @else
+              <button type="button" class="btn-oferta" disabled>Agotado</button>
+            @endif
+            <a href="#oferta-detalle" class="oferta-link">{{ $ofertaSpecs ? 'Ver especificaciones' : 'Ver detalles' }}</a>
+          </div>
+          <p class="oferta-error" data-oferta-error role="alert" hidden></p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="oferta-detalle" class="oferta-detalle section-pad-sm" aria-labelledby="oferta-detalle-nombre">
+    <div class="container">
+      <div class="oferta-detalle-grid">
+
+        <div>
+          <p class="oferta-eyebrow">Ficha técnica</p>
+          <h2 id="oferta-detalle-nombre" class="oferta-detalle-nombre">{{ $oferta->nombre }}</h2>
+          @if ($oferta->oferta_bajada)
+            <p class="oferta-detalle-desc d-lg-none">{{ $oferta->oferta_bajada }}</p>
+          @endif
+          {{-- descripcion ya viene saneada por HTMLPurifier (ver Producto::descripcion()). --}}
+          <div class="oferta-detalle-desc">{!! $oferta->descripcion !!}</div>
+
+          @if ($ofertaSpecs)
+            <dl class="oferta-specs">
+              @foreach ($ofertaSpecs as $spec)
+                <div class="oferta-spec">
+                  <dt>{{ $spec['clave'] }}</dt>
+                  <dd>{{ $spec['valor'] }}</dd>
+                </div>
+              @endforeach
+            </dl>
+          @endif
+        </div>
+
+        <aside class="oferta-compra-card" data-oferta-zona aria-label="Comprar {{ $oferta->nombre }}">
+          <p class="oferta-compra-etiqueta">Precio de oferta</p>
           <div class="oferta-precio">
             <span class="oferta-precio-actual"><span class="moneda">S/</span>{{ number_format($oferta->precio_centimos / 100, 2) }}</span>
             @if ($ofertaPrecioAntes)
@@ -276,64 +418,16 @@
           @if ($ofertaStock > 0 && $ofertaStock <= $oferta->umbral_stock_bajo)
             <p class="oferta-stock">{{ $ofertaStock === 1 ? '¡Última unidad disponible!' : "¡Últimas {$ofertaStock} unidades!" }}</p>
           @endif
-
-          <div data-oferta-contador data-segundos="{{ $ofertaSegundos }}">
-            <p class="oferta-contador-label" data-oferta-contador-label>La oferta termina en</p>
-            <div class="oferta-contador" role="timer" aria-label="Tiempo restante de la oferta">
-              <div class="oferta-contador-caja"><span class="oferta-contador-num" data-unidad="horas">{{ str_pad((string) intdiv($ofertaSegundos, 3600), 2, '0', STR_PAD_LEFT) }}</span><span class="oferta-contador-unidad">Horas</span></div>
-              <span class="oferta-contador-sep" aria-hidden="true">:</span>
-              <div class="oferta-contador-caja"><span class="oferta-contador-num" data-unidad="minutos">{{ str_pad((string) intdiv($ofertaSegundos % 3600, 60), 2, '0', STR_PAD_LEFT) }}</span><span class="oferta-contador-unidad">Minutos</span></div>
-              <span class="oferta-contador-sep" aria-hidden="true">:</span>
-              <div class="oferta-contador-caja"><span class="oferta-contador-num" data-unidad="segundos">{{ str_pad((string) ($ofertaSegundos % 60), 2, '0', STR_PAD_LEFT) }}</span><span class="oferta-contador-unidad">Segundos</span></div>
-            </div>
-            <p class="oferta-contador-nota">Válida hasta el {{ $ofertaVence->translatedFormat('j \d\e F') }} a las {{ $ofertaVence->format('H:i') }} (hora de Perú) o hasta agotar stock.</p>
-          </div>
-
-          <div class="oferta-ctas">
-            @if ($ofertaStock > 0)
-              <button type="button" class="btn-oferta" data-oferta-comprar data-producto-id="{{ $oferta->id }}">Comprar ahora</button>
-            @else
-              <button type="button" class="btn-oferta" disabled>Agotado</button>
-            @endif
-            <a href="#oferta-detalle" class="oferta-link">{{ $ofertaSpecs ? 'Ver especificaciones' : 'Ver detalles' }}</a>
-          </div>
-          <p class="oferta-error text-danger" data-oferta-error role="alert" hidden></p>
-        </div>
+          <p class="oferta-restante">Termina en <strong data-oferta-restante>{{ sprintf('%02d:%02d:%02d', intdiv($ofertaSegundos, 3600), intdiv($ofertaSegundos % 3600, 60), $ofertaSegundos % 60) }}</strong></p>
+          @if ($ofertaStock > 0)
+            <button type="button" class="btn-oferta" data-oferta-comprar data-producto-id="{{ $oferta->id }}">Comprar ahora</button>
+          @else
+            <button type="button" class="btn-oferta" disabled>Agotado</button>
+          @endif
+          <p class="oferta-error" data-oferta-error role="alert" hidden></p>
+        </aside>
 
       </div>
-    </div>
-  </section>
-
-  <section id="oferta-detalle" class="section-pad-sm" aria-labelledby="oferta-detalle-nombre" style="scroll-margin-top: 80px;">
-    <div class="container">
-      <p class="oferta-eyebrow">El protagonista de la oferta</p>
-      <h2 id="oferta-detalle-nombre" class="oferta-detalle-nombre">{{ $oferta->nombre }}</h2>
-      {{-- descripcion ya viene saneada por HTMLPurifier (ver Producto::descripcion()). --}}
-      <div class="oferta-detalle-desc">{!! $oferta->descripcion !!}</div>
-
-      @if ($ofertaSpecs)
-        <dl class="oferta-specs">
-          @foreach (array_slice($ofertaSpecs, 0, 4) as $spec)
-            <div class="oferta-spec">
-              <dt>{{ $spec['clave'] }}</dt>
-              <dd>{{ $spec['valor'] }}</dd>
-            </div>
-          @endforeach
-        </dl>
-
-        @if (count($ofertaSpecs) > 4)
-          <details class="oferta-specs-todas">
-            <summary>Ver todas las especificaciones ({{ count($ofertaSpecs) }})</summary>
-            <table class="oferta-specs-tabla">
-              <tbody>
-                @foreach ($ofertaSpecs as $spec)
-                  <tr><th scope="row">{{ $spec['clave'] }}</th><td>{{ $spec['valor'] }}</td></tr>
-                @endforeach
-              </tbody>
-            </table>
-          </details>
-        @endif
-      @endif
     </div>
   </section>
 
@@ -439,6 +533,7 @@
       minutos: contador.querySelector('[data-unidad="minutos"]'),
       segundos: contador.querySelector('[data-unidad="segundos"]'),
     };
+    var restanteTexto = document.querySelector('[data-oferta-restante]');
     var dos = function (n) { return String(n).padStart(2, '0'); };
     var timer;
 
@@ -447,15 +542,17 @@
       cajas.horas.textContent = dos(Math.floor(restante / 3600));
       cajas.minutos.textContent = dos(Math.floor((restante % 3600) / 60));
       cajas.segundos.textContent = dos(restante % 60);
+      if (restanteTexto) {
+        restanteTexto.textContent = cajas.horas.textContent + ':' + cajas.minutos.textContent + ':' + cajas.segundos.textContent;
+      }
 
       if (restante === 0) {
         clearInterval(timer);
         contador.querySelector('[data-oferta-contador-label]').textContent = 'La oferta terminó';
-        var comprar = document.querySelector('[data-oferta-comprar]');
-        if (comprar) {
+        document.querySelectorAll('[data-oferta-comprar]').forEach(function (comprar) {
           comprar.disabled = true;
           comprar.textContent = 'Oferta finalizada';
-        }
+        });
         // Unos segundos de margen para que el servidor ya la dé por vencida
         // al recargar y muestre el catálogo normal (o la oferta nueva).
         setTimeout(function () { window.location.reload(); }, 3000);
@@ -468,12 +565,10 @@
 
   // "Comprar ahora": agrega la oferta al carrito (si no estaba ya) y va
   // directo al checkout SOLO con ese item (?items=), sin arrastrar lo que
-  // hubiera antes en el carrito.
-  (function () {
-    var btn = document.querySelector('[data-oferta-comprar]');
-    if (!btn) return;
-
-    var error = document.querySelector('[data-oferta-error]');
+  // hubiera antes en el carrito. Hay dos botones (portada y ficha técnica);
+  // cada uno muestra el error en su propia zona.
+  document.querySelectorAll('[data-oferta-comprar]').forEach(function (btn) {
+    var error = btn.closest('[data-oferta-zona]').querySelector('[data-oferta-error]');
     var textoOriginal = btn.textContent.trim();
     var productoId = parseInt(btn.dataset.productoId, 10);
 
@@ -526,7 +621,7 @@
         fallar('No se pudo procesar. Revisa tu carrito e inténtalo de nuevo.');
       });
     });
-  })();
+  });
 
   document.querySelectorAll('.btn-agregar-carrito').forEach(function (btn) {
     const textoOriginal = btn.textContent.trim();
