@@ -76,7 +76,7 @@
                 caption="Productos del catálogo"
                 scroll="fill"
                 body-id="tabla-productos-cuerpo"
-                :columns="['Imagen', 'Producto', 'Referencia', 'Categoría', 'Especificaciones', 'Estado', ['label' => 'Acciones', 'sr' => true]]"
+                :columns="['Imagen', 'Producto', 'Referencia', 'Categoría', ['label' => 'Specs', 'class' => 'lg:max-xl:hidden'], 'Estado', ['label' => 'Acciones', 'sr' => true]]"
             >
                 @forelse ($productos as $producto)
                     @include('admin.productos._fila', ['producto' => $producto])
@@ -443,7 +443,7 @@
                                 <p class="mt-1 text-xs text-rechazado-text" x-show="errores.precio_comparacion" x-text="errores.precio_comparacion?.[0]"></p>
                                 <p class="mt-1 text-xs text-text-caption" x-show="!errores.precio_comparacion">Se muestra tachado junto al precio de venta.</p>
                             </div>
-                            <p class="text-xs text-text-caption">La imagen, el precio de venta y la descripción salen de la pestaña General y Descripción; las 4 primeras filas de Especificaciones se muestran como fichas.</p>
+                            <p class="text-xs text-text-caption">La imagen, el precio de venta y la descripción salen de la pestaña General y Descripción; todas las filas de Especificaciones se muestran en la ficha técnica.</p>
                         </section>
 
                         <section class="flex flex-col gap-3 border-t border-border pt-5">

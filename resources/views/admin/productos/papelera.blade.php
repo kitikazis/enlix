@@ -25,7 +25,7 @@
                 @foreach ($productos as $producto)
                     <tr id="fila-papelera-{{ $producto->id }}">
                         <td data-dl="title" class="font-medium text-text-primary">{{ $producto->nombre }}</td>
-                        <td data-label="Referencia" class="whitespace-nowrap font-mono text-xs text-text-secondary">{{ $producto->referencia }}</td>
+                        <td data-label="Referencia" class="font-mono text-xs text-text-secondary"><span class="block break-words lg:max-w-40">{{ $producto->referencia }}</span></td>
                         <td data-label="Categoría" class="text-text-secondary">{{ $producto->categoria?->nombre ?? 'Sin categoría' }}</td>
                         <td data-label="Eliminado" class="whitespace-nowrap tabular-nums text-text-secondary">hace {{ $producto->deleted_at->locale('es')->diffForHumans(null, true) }}</td>
                         <td data-dl="actions" data-align="right" class="whitespace-nowrap">

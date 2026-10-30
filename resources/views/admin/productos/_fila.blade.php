@@ -26,21 +26,24 @@
         </button>
     </td>
     <td data-dl="title" class="min-w-0 font-medium text-text-primary">
-        <span class="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-2">
+        {{-- Etiquetas debajo del nombre: al lado lo aplastaban a una palabra por línea. --}}
+        <span class="flex min-w-0 flex-col gap-1 lg:min-w-36">
             <span class="break-words">{{ $producto->nombre }}</span>
             @if ($producto->esPrueba())
-                <x-admin.badge tone="prueba" :dot="false" class="self-start lg:self-auto">Prueba</x-admin.badge>
+                <x-admin.badge tone="prueba" :dot="false" class="self-start">Prueba</x-admin.badge>
             @endif
             @if ($producto->tieneOfertaVigente())
-                <x-admin.badge tone="info" class="self-start whitespace-nowrap lg:self-auto" title="Oferta del día en /productos">
+                <x-admin.badge tone="info" class="self-start whitespace-nowrap" title="Oferta del día en /productos">
                     Oferta · vence {{ $producto->oferta_termina_en->setTimezone('America/Lima')->format('d/m H:i') }}
                 </x-admin.badge>
             @endif
         </span>
     </td>
-    <td data-label="Referencia" class="whitespace-nowrap font-mono text-xs text-text-secondary">{{ $producto->referencia }}</td>
+    {{-- La referencia puede ser muy larga: se parte en líneas para no empujar las acciones fuera de la tabla. --}}
+    <td data-label="Referencia" class="font-mono text-xs text-text-secondary"><span class="block break-words lg:max-w-40">{{ $producto->referencia }}</span></td>
     <td data-label="Categoría" class="text-text-secondary">{{ $producto->categoria?->nombre ?? 'Sin categoría' }}</td>
-    <td data-label="Especificaciones">
+    {{-- Entre 1024 y 1279px es la columna que cede: sin ella las acciones entran sin scroll. --}}
+    <td data-label="Especificaciones" class="lg:max-xl:hidden">
         @if ($totalEspecs > 0)
             <span class="count-badge">{{ $totalEspecs }}</span>
         @else

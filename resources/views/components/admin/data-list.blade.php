@@ -10,6 +10,7 @@
         ese dato va dentro de otra columna)
 
     columns: ['Fecha', ['label' => 'Monto', 'align' => 'right'], ['label' => 'Acciones', 'sr' => true]]
+             'class' agrega clases al <th> (ej. ocultar la columna en un rango de anchos).
     scroll: null (sin alto fijo) | 'y' (alto máximo + header fijo) | 'fill'
             (ocupa el alto de una x-admin.card fill).
 --}}
@@ -22,7 +23,7 @@
             <tr>
                 @foreach ($columns as $columna)
                     @php $columna = is_array($columna) ? $columna : ['label' => $columna]; @endphp
-                    <th scope="col" @if (($columna['align'] ?? null) === 'right') data-align="right" @endif>
+                    <th scope="col" @if (($columna['align'] ?? null) === 'right') data-align="right" @endif @if ($columna['class'] ?? null) class="{{ $columna['class'] }}" @endif>
                         @if ($columna['sr'] ?? false)
                             <span class="sr-only">{{ $columna['label'] }}</span>
                         @else
