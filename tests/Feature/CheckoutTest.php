@@ -765,4 +765,95 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, $pedido->costo_envio_centimos);
         $this->assertSame(10000, $pedido->total_centimos);
     }
+
+    public function test_el_checkout_carga_el_formulario_completo_de_izipay_en_la_pagina(): void
+    {
+        $sessionId = $this->carritoConItem($this->producto());
+
+        $this->withCookie('carrito_session', $sessionId)->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('kr-language="es-PE"', false)
+            ->assertSee("formulario.className = 'kr-smart-form'", false)
+            ->assertSee('ext/neon.js', false)
+            ->assertDontSee('ext/classic.js', false)
+            ->assertDontSee('kr-popin', false);
+    }
+
+    /** Krypton no acepta callback: si vuelve, el botón queda en "Procesando..." y el formulario no abre. */
+    public function test_set_form_token_no_recibe_callback(): void
+    {
+        $sessionId = $this->carritoConItem($this->producto());
+
+        $this->withCookie('carrito_session', $sessionId)->get(route('checkout.index'))
+            ->assertSee('KR.setFormToken(formToken).then(', false);
+    }
+
+    /** @dataProvider nombresInvalidos */
+    public function test_rechaza_nombres_sin_letras_con_mensaje_en_espanol(array $datos, string $campo, string $mensaje): void
+    {
+        $this->carritoConItem($this->producto());
+        $this->fakeFormToken();
+
+        $this->postJson(route('checkout.crear'), $this->datosCliente($datos))
+            ->assertStatus(422)
+            ->assertJsonPath("errors.{$campo}.0", $mensaje);
+
+        $this->assertSame(0, Pedido::count());
+    }
+
+    public static function nombresInvalidos(): array
+    {
+        return [
+            'nombre numerico' => [['first_name' => '123'], 'first_name', 'Escribe tu nombre real, solo con letras.'],
+            'apellido numerico' => [['last_name' => '123'], 'last_name', 'Escribe tu apellido real, solo con letras.'],
+            'telefono corto' => [['telefono' => '123123'], 'telefono', 'Escribe un teléfono válido, de al menos 9 dígitos.'],
+            'correo invalido' => [['email' => 'correo-malo'], 'email', 'Revisa tu correo electrónico: no parece válido.'],
+        ];
+    }
+
+    public function test_el_campo_de_documento_arranca_con_el_largo_del_dni(): void
+    {
+        $sessionId = $this->carritoConItem($this->producto());
+
+        $this->withCookie('carrito_session', $sessionId)->get(route('checkout.index'))
+            ->assertSee('id="f_numero_documento" maxlength="8" inputmode="numeric"', false);
+    }
+
+    /** @dataProvider dnisInvalidos */
+    public function test_el_dni_debe_tener_exactamente_8_digitos(string $dni): void
+    {
+        $sessionId = $this->carritoConItem($this->producto());
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente(['numero_documento' => $dni]))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.numero_documento.0', 'El DNI debe tener 8 dígitos.');
+
+        $this->assertSame(0, Pedido::count());
+    }
+
+    public static function dnisInvalidos(): array
+    {
+        return [
+            '7 digitos' => ['1234567'],
+            '9 digitos' => ['123456789'],
+            'con letras' => ['1234567A'],
+        ];
+    }
+
+    public function test_acepta_nombres_con_tildes_apostrofes_y_telefono_con_espacios(): void
+    {
+        $sessionId = $this->carritoConItem($this->producto());
+        $this->fakeFormToken();
+
+        $this->withCredentials()->withCookie('carrito_session', $sessionId)
+            ->postJson(route('checkout.crear'), $this->datosCliente([
+                'first_name' => 'María José',
+                'last_name' => "O'Brien-Ñahui",
+                'telefono' => '+51 999 888 777',
+            ]))->assertOk();
+
+        $this->assertSame(1, Pedido::count());
+    }
 }

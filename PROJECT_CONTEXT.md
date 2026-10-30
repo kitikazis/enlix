@@ -179,7 +179,8 @@ Sin cambios respecto a antes: guard `web` estándar, **sin roles/permisos ni Pol
 ## 8. INTEGRACIÓN IZIPAY — ESTADO REAL (verificado con dinero real en producción)
 
 - **Confirmado funcionando end-to-end**: checkout → formToken → PopIn (Krypton, español) → captura → depósito real en la cuenta del comercio (probado con S/1.00, capturado y conciliado).
-- **Yape/Plin/QR**: el código ya envía `identityType`/`identityCode`/`country` (patrón del ejemplo oficial `izipay-pe/PopIn-PaymentForm-Laravel`), pero **no está confirmado si estos medios están activados** en la cuenta de comercio — pendiente de respuesta de soporte Izipay.
+- **Formulario**: el checkout usa `kr-smart-form` en la página (no PopIn): muestra sola cualquier medio que Izipay active en la cuenta, sin cambiar código.
+- **Yape/Plin/QR**: **no activos** en modo TEST (el smart form y la barra de pruebas de Izipay solo ofrecen tarjetas, verificado 2026-10-30). El cliente Krypton V4 tampoco contiene la palabra "yape", y la guía oficial de Yape usa otra integración (SDK Web, `LoadForm`). Falta que Izipay confirme si es posible en esta integración; en producción no se comprobó.
 - **Comisión real**: no confirmada por documentación pública; pendiente de respuesta de soporte Izipay.
 - **`metodo_pago`**: ni `pagos` ni `pedidos` distinguen tarjeta/Yape/Plin todavía (ver Problemas §11).
 - **Modo de captura**: confirmado en Back Office como automático, 0 días (captura la misma tarde/noche).

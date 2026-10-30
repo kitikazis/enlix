@@ -23,10 +23,12 @@ class CheckoutCrearRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'max:60'],
-            'last_name' => ['required', 'string', 'max:60'],
+            // Con letras: un nombre como "123" no pasa el antifraude de Izipay
+            // ni sirve para emitir la boleta.
+            'first_name' => ['required', 'string', 'max:60', 'regex:/^\p{L}[\p{L}\s.\'-]*$/u'],
+            'last_name' => ['required', 'string', 'max:60', 'regex:/^\p{L}[\p{L}\s.\'-]*$/u'],
             'email' => ['required', 'email:rfc'],
-            'telefono' => ['required', 'string', 'regex:/^[0-9+ ]{6,20}$/'],
+            'telefono' => ['required', 'string', 'regex:/^\+?[0-9 ]{9,20}$/'],
             'tipo_documento' => ['required', 'in:DNI,RUC,CE'],
             // 8 digitos para DNI, 11 para RUC - CE no tiene formato fijo, no se valida.
             'numero_documento' => ['required', 'string', 'max:15', function ($attribute, $value, $fail) {
@@ -65,6 +67,20 @@ class CheckoutCrearRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'first_name.required' => 'Escribe tu nombre.',
+            'first_name.regex' => 'Escribe tu nombre real, solo con letras.',
+            'first_name.max' => 'El nombre no puede pasar de 60 caracteres.',
+            'last_name.required' => 'Escribe tu apellido.',
+            'last_name.regex' => 'Escribe tu apellido real, solo con letras.',
+            'last_name.max' => 'El apellido no puede pasar de 60 caracteres.',
+            'email.required' => 'Escribe tu correo electrónico.',
+            'email.email' => 'Revisa tu correo electrónico: no parece válido.',
+            'telefono.required' => 'Escribe tu teléfono.',
+            'telefono.regex' => 'Escribe un teléfono válido, de al menos 9 dígitos.',
+            'numero_documento.required' => 'Escribe tu número de documento.',
+            'numero_documento.max' => 'El número de documento no puede pasar de 15 caracteres.',
+            'direccion.required_if' => 'Escribe la dirección de envío.',
+            'distrito.required_if' => 'Escribe el distrito de envío.',
             'terminos.accepted' => 'Debes aceptar los términos y condiciones para continuar.',
             'acepta_privacidad.accepted' => 'Debes aceptar la política de privacidad para continuar.',
         ];

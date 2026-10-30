@@ -44,7 +44,30 @@
   @keyframes pagoResultadoIconoIn { from { transform: scale(0); } to { transform: scale(1); } }
   @keyframes pagoResultadoSpin { to { transform: rotate(360deg); } }
 
-  #izipay-popin-wrapper { display: flex; justify-content: center; margin-top: 16px; }
+  /* Mientras no hay formToken no se muestra nada del formulario de Izipay. */
+  #checkout-pago { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--enlix-border); }
+  #checkout-pago.is-activo { display: block; }
+  #checkout-pago h2 { font-size: 16px; margin: 0 0 4px; }
+  .checkout-pago-nota { margin: 0 0 16px; font-size: 13px; color: var(--enlix-muted); }
+  /* Tema de Izipay a los colores de Enlix. Con #id porque neon-reset carga
+     después de este bloque; los campos de tarjeta son iframes de Izipay. */
+  #izipay-formulario .kr-smart-form,
+  #izipay-formulario .kr-smart-form-wrapper,
+  #izipay-formulario .kr-embedded { width: 100%; max-width: none; font-family: var(--font-body); }
+  #izipay-formulario .kr-payment-button {
+    min-height: 48px;
+    background: var(--enlix-blue-800) !important; /* Izipay lo fija con su color */
+    border-color: var(--enlix-blue-800) !important;
+    border-radius: var(--radius-sm);
+    color: #fff !important;
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  #izipay-formulario .kr-payment-button:hover { background: var(--enlix-blue-900) !important; border-color: var(--enlix-blue-900) !important; }
+  .checkout-resumen.is-pagando { position: static; }
+  #checkout-datos:disabled { opacity: .65; }
+  .checkout-error { margin: 12px 0 0; font-size: 13px; color: #9b1c1c; }
 </style>
 
 <section class="section-pad">
@@ -59,26 +82,27 @@
 
     <div class="row g-4">
       <div class="col-lg-7">
-        <div class="checkout-col-form">
+        {{-- Se deshabilita al pasar al pago: el pedido ya se creó con estos datos. --}}
+        <fieldset class="checkout-col-form" id="checkout-datos">
 
           <div class="checkout-seccion">
             <h2>1. Datos de contacto</h2>
             <div class="row g-3">
               <div class="col-sm-6">
-                <label class="form-label">Nombre</label>
+                <label class="form-label" for="f_first_name">Nombre</label>
                 <input type="text" class="form-control" id="f_first_name" autocomplete="given-name">
               </div>
               <div class="col-sm-6">
-                <label class="form-label">Apellido</label>
+                <label class="form-label" for="f_last_name">Apellido</label>
                 <input type="text" class="form-control" id="f_last_name" autocomplete="family-name">
               </div>
               <div class="col-12">
-                <label class="form-label">Correo electrónico</label>
-                <input type="email" class="form-control" id="f_email" autocomplete="email">
+                <label class="form-label" for="f_email">Correo electrónico</label>
+                <input type="email" class="form-control" id="f_email" autocomplete="email" inputmode="email">
               </div>
               <div class="col-12">
-                <label class="form-label">Teléfono</label>
-                <input type="text" class="form-control" id="f_telefono" placeholder="+51 999 999 999" autocomplete="tel">
+                <label class="form-label" for="f_telefono">Teléfono</label>
+                <input type="tel" class="form-control" id="f_telefono" placeholder="+51 999 999 999" autocomplete="tel" inputmode="tel">
               </div>
             </div>
           </div>
@@ -87,7 +111,7 @@
             <h2>2. Documento</h2>
             <div class="row g-3">
               <div class="col-sm-6">
-                <label class="form-label">Tipo de documento</label>
+                <label class="form-label" for="f_tipo_documento">Tipo de documento</label>
                 <select class="form-select" id="f_tipo_documento">
                   <option value="DNI">DNI</option>
                   <option value="RUC">RUC</option>
@@ -95,8 +119,8 @@
                 </select>
               </div>
               <div class="col-sm-6">
-                <label class="form-label" id="label_numero_documento">Número de DNI</label>
-                <input type="text" class="form-control" id="f_numero_documento" maxlength="15">
+                <label class="form-label" id="label_numero_documento" for="f_numero_documento">Número de DNI</label>
+                <input type="text" class="form-control" id="f_numero_documento" maxlength="8" inputmode="numeric" autocomplete="off">
               </div>
             </div>
           </div>
@@ -105,39 +129,37 @@
             <h2>3. Entrega</h2>
             <div class="row g-3">
               <div class="col-12">
-                <select class="form-select" id="f_metodo_entrega">
+                <select class="form-select" id="f_metodo_entrega" aria-label="Método de entrega">
                   <option value="recojo">Recojo en tienda</option>
                   <option value="envio">Envío a domicilio</option>
                 </select>
               </div>
               <div id="grupo_envio" style="display: none;" class="row g-3">
                 <div class="col-12">
-                  <label class="form-label">Dirección</label>
-                  <input type="text" class="form-control" id="f_direccion">
+                  <label class="form-label" for="f_direccion">Dirección</label>
+                  <input type="text" class="form-control" id="f_direccion" autocomplete="street-address">
                 </div>
                 <div class="col-sm-6">
-                  <label class="form-label">Distrito</label>
+                  <label class="form-label" for="f_distrito">Distrito</label>
                   <input type="text" class="form-control" id="f_distrito">
                 </div>
                 <div class="col-sm-6">
-                  <label class="form-label">Ciudad</label>
+                  <label class="form-label" for="f_ciudad">Ciudad</label>
                   <input type="text" class="form-control" id="f_ciudad">
                 </div>
                 <div class="col-12">
-                  <label class="form-label">Referencia (opcional)</label>
+                  <label class="form-label" for="f_referencia">Referencia (opcional)</label>
                   <input type="text" class="form-control" id="f_referencia">
                 </div>
               </div>
             </div>
           </div>
 
-          <div id="checkout-error" class="text-danger mb-3" style="font-size: 13px; display: none;"></div>
-
-        </div>
+        </fieldset>
       </div>
 
       <div class="col-lg-5">
-        <div class="checkout-resumen">
+        <div class="checkout-resumen" id="checkout-resumen">
           <h2>Resumen del pedido</h2>
 
           @foreach ($resumen['items'] as $item)
@@ -166,18 +188,22 @@
             </label>
           </div>
 
-          <button type="button" class="btn btn-primary-enlix w-100 mt-2" id="btnContinuar">Continuar al pago</button>
+          <p id="checkout-error" class="checkout-error" role="alert" hidden></p>
 
-          {{-- Vacío a propósito: el kr-embedded/kr-popin de Krypton se
-               inyecta recién por JS cuando hay formToken (ver abrirPopin()).
-               Si el <div class="kr-embedded" kr-popin> vive en el HTML desde
-               el principio, Krypton lo renderiza inline (botón "PAY" en
-               inglés) antes de que exista un pago que iniciar, duplicando el
-               botón "Continuar al pago" y confundiendo al usuario. --}}
-          <div id="izipay-popin-wrapper"></div>
+          <button type="button" class="btn btn-primary-enlix w-100 mt-3" id="btnContinuar">Continuar al pago</button>
+
+          <div id="checkout-pago" aria-labelledby="checkout-pago-titulo">
+            <h2 id="checkout-pago-titulo" tabindex="-1">Elige cómo pagar</h2>
+            <p class="checkout-pago-nota">Tus datos quedaron registrados en el pedido.</p>
+            {{-- Vacío a propósito: el kr-smart-form se inyecta recién por JS
+                 cuando hay formToken (ver mostrarFormularioPago()). Si vive en
+                 el HTML desde el principio, Krypton lo renderiza antes de que
+                 exista un pago que iniciar. --}}
+            <div id="izipay-formulario"></div>
+          </div>
 
           <p class="text-center mt-3 mb-0" style="font-size: 12.5px; color: var(--enlix-muted);">
-            🔒 Pago seguro procesado por Izipay. No almacenamos los datos de tu tarjeta.
+            🔒 Pago seguro procesado por Izipay. No almacenamos tus datos de pago.
           </p>
         </div>
       </div>
@@ -190,10 +216,10 @@
 <script
   src="{{ $izipay_js_client_url }}"
   kr-public-key="{{ $izipay_public_key }}"
-  kr-language="es-Es"
+  kr-language="es-PE"
   nonce="{{ $cspNonce }}"></script>
-<link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.css">
-<script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.js" nonce="{{ $cspNonce }}"></script>
+<link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/neon-reset.min.css">
+<script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/neon.js" nonce="{{ $cspNonce }}"></script>
 @endif
 
 @push('scripts')
@@ -201,11 +227,11 @@
   const CSRF_TOKEN = @json(csrf_token());
   const URL_CREAR_PEDIDO = @json(route('checkout.crear'));
   const URL_VALIDAR = @json(route('checkout.validar'));
+  const URL_RESUMEN_CARRITO = @json(route('carrito.resumen'));
   // Ids de los items que el cliente dejó marcados en /carrito (ver checkbox
   // de selección); null = todo el carrito. Viajan tal cual al POST de abajo.
   const ITEMS_SELECCIONADOS = @json(isset($items_seleccionados) ? implode(',', $items_seleccionados) : null);
 
-  let intentoEnviado = false;
   const btnContinuar = document.getElementById('btnContinuar');
   const btnContinuarTextoOriginal = btnContinuar.textContent;
 
@@ -217,16 +243,39 @@
   const selMetodoEntrega = document.getElementById('f_metodo_entrega');
   const grupoEnvio = document.getElementById('grupo_envio');
 
+  // Mismos largos que CheckoutCrearRequest. El CE no tiene formato fijo.
+  const DOCUMENTOS = {
+    DNI: { etiqueta: 'Número de DNI', maximo: 8, soloNumeros: true },
+    RUC: { etiqueta: 'Número de RUC', maximo: 11, soloNumeros: true },
+    CE: { etiqueta: 'Número de carné de extranjería', maximo: 15, soloNumeros: false },
+  };
+  const inputDocumento = document.getElementById('f_numero_documento');
+
+  // maxlength no alcanza: no filtra letras ni lo que se pegue en el campo.
+  function normalizarNumeroDocumento() {
+    const documento = DOCUMENTOS[selTipoDocumento.value];
+    const valor = documento.soloNumeros ? inputDocumento.value.replace(/\D/g, '') : inputDocumento.value;
+    inputDocumento.value = valor.slice(0, documento.maximo);
+  }
+
   function actualizarLabelDocumento() {
-    const etiquetas = { DNI: 'Número de DNI', RUC: 'Número de RUC', CE: 'Número de carné de extranjería' };
-    labelNumeroDocumento.textContent = etiquetas[selTipoDocumento.value] || 'Número de documento';
+    const documento = DOCUMENTOS[selTipoDocumento.value];
+    labelNumeroDocumento.textContent = documento.etiqueta;
+    inputDocumento.maxLength = documento.maximo;
+    inputDocumento.inputMode = documento.soloNumeros ? 'numeric' : 'text';
+    normalizarNumeroDocumento();
   }
 
   function sincronizarEntrega() {
     grupoEnvio.style.display = selMetodoEntrega.value === 'envio' ? 'flex' : 'none';
   }
 
-  selTipoDocumento.addEventListener('change', actualizarLabelDocumento);
+  selTipoDocumento.addEventListener('change', function () {
+    // Vaciar y no recortar: un RUC cortado a 8 dígitos parecería un DNI válido.
+    inputDocumento.value = '';
+    actualizarLabelDocumento();
+  });
+  inputDocumento.addEventListener('input', normalizarNumeroDocumento);
   selMetodoEntrega.addEventListener('change', sincronizarEntrega);
   actualizarLabelDocumento();
   sincronizarEntrega();
@@ -278,7 +327,7 @@
           || 'No se pudo iniciar el pago.';
         return mostrarErrorCheckout(mensaje);
       }
-      abrirPopin(data.form_token);
+      mostrarFormularioPago(data.form_token);
     }).catch(function () {
       restaurarBotonContinuar();
       mostrarErrorCheckout('Error de conexión. Intenta nuevamente.');
@@ -290,49 +339,45 @@
     btnContinuar.textContent = btnContinuarTextoOriginal;
   }
 
-  function abrirPopin(formToken) {
+  // El pedido ya existe y el carrito ya se vació (ver CheckoutController::crear):
+  // "Continuar" no debe volver a usarse, se reintenta en el propio formulario.
+  function mostrarFormularioPago(formToken) {
     if (typeof KR === 'undefined') {
       restaurarBotonContinuar();
       return mostrarResultado('error', 'No se pudo cargar la pasarela de pago. Recarga la página.');
     }
 
-    intentoEnviado = false;
+    // kr-smart-form muestra todos los medios activos en la cuenta de Izipay;
+    // kr-card-form-expanded deja la tarjeta abierta sin un clic extra.
+    const formulario = document.createElement('div');
+    formulario.className = 'kr-smart-form';
+    formulario.setAttribute('kr-card-form-expanded', '');
+    document.getElementById('izipay-formulario').replaceChildren(formulario);
 
-    // Recién aquí se crean los campos reales que Krypton necesita en el DOM
-    // (ver comentario en el HTML): antes de este punto no había ningún pago
-    // que mostrar, así que no había razón para que el botón nativo existiera.
-    const wrapper = document.getElementById('izipay-popin-wrapper');
-    wrapper.innerHTML = '';
-    const popin = document.createElement('div');
-    popin.className = 'kr-embedded';
-    popin.id = 'izipay-popin';
-    popin.setAttribute('kr-popin', '');
-    popin.innerHTML =
-      '<div class="kr-pan"></div>' +
-      '<div class="kr-expiry"></div>' +
-      '<div class="kr-security-code"></div>' +
-      '<button class="kr-payment-button"></button>' +
-      '<div class="kr-form-error"></div>';
-    wrapper.appendChild(popin);
+    // setFormToken es asíncrono y solo recibe el token: no acepta callback.
+    KR.setFormToken(formToken).then(function () {
+      btnContinuar.hidden = true;
+      document.getElementById('checkout-datos').disabled = true;
+      document.getElementById('f_terminos').disabled = true;
+      document.getElementById('f_privacidad').disabled = true;
+      document.getElementById('checkout-resumen').classList.add('is-pagando');
 
-    KR.setFormToken(formToken, function () {
-      restaurarBotonContinuar();
-      if (typeof KR.openPopin === 'function') {
-        return KR.openPopin();
-      }
-      const btnPago = document.querySelector('#izipay-popin .kr-payment-button');
-      if (btnPago) {
-        btnPago.click();
-      } else {
-        mostrarResultado('error', 'No se pudo abrir el formulario de pago. Recarga la página e intenta de nuevo.');
-      }
+      const panel = document.getElementById('checkout-pago');
+      panel.classList.add('is-activo');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // El servidor ya sacó del carrito lo que entró al pedido.
+      fetchJsonEnlix('GET', URL_RESUMEN_CARRITO, null, CSRF_TOKEN)
+        .then(function (data) { actualizarBadgeCarrito(data.cantidad_total); })
+        .catch(function () {});
+    }).catch(function () {
+      btnContinuar.hidden = true;
+      mostrarResultado('error', 'No se pudo abrir el formulario de pago. Escríbenos por WhatsApp para completar tu compra.');
     });
   }
 
   if (typeof KR !== 'undefined') {
     KR.onSubmit(function (paymentResponse) {
-      intentoEnviado = true;
-
       fetchJsonEnlix('POST', URL_VALIDAR, {
         'kr-answer': paymentResponse.rawClientAnswer,
         'kr-hash': paymentResponse.hash,
@@ -343,25 +388,15 @@
       return false;
     });
 
-    KR.onError(function () {
-      mostrarResultado('error', 'No se pudo procesar el pago. Intenta con otra tarjeta.');
-    });
-
-    if (typeof KR.onPopinClosed === 'function') {
-      KR.onPopinClosed(function () {
-        if (!intentoEnviado) {
-          mostrarResultado('info', 'Cerraste el formulario de pago sin completarlo. Puedes intentarlo de nuevo cuando quieras.');
-        }
-      });
-    }
+    // Tarjeta rechazada o campos inválidos: el propio formulario lo muestra
+    // y deja reintentar, aquí no hace falta un KR.onError.
   }
 
   function resolverResultado(data) {
-    cerrarPopin();
+    quitarFormularioPago();
 
     if (data.ok) {
       mostrarResultado('ok', data.mensaje);
-      actualizarBadgeCarrito(0);
     } else if (data.pendiente) {
       mostrarResultado('pendiente', data.mensaje);
     } else {
@@ -370,14 +405,14 @@
   }
 
   function errorConexion() {
-    cerrarPopin();
-    mostrarResultado('error', 'Error de conexión al procesar el pago.');
+    quitarFormularioPago();
+    mostrarResultado('error', 'Error de conexión al confirmar el pago. Revisa tu correo antes de reintentar: el cobro pudo haberse realizado.');
   }
 
-  function cerrarPopin() {
-    if (typeof KR !== 'undefined' && typeof KR.closePopin === 'function') {
-      KR.closePopin();
-    }
+  // El pago ya se intentó: no debe quedar un formulario que invite a pagar otra vez.
+  function quitarFormularioPago() {
+    document.getElementById('checkout-pago').classList.remove('is-activo');
+    KR.removeForms();
   }
 
   function mostrarResultado(tipo, mensaje) {
@@ -406,12 +441,12 @@
   function mostrarErrorCheckout(mensaje) {
     const e = document.getElementById('checkout-error');
     e.textContent = mensaje;
-    e.style.display = 'block';
+    e.hidden = false;
     e.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function ocultarErrorCheckout() {
-    document.getElementById('checkout-error').style.display = 'none';
+    document.getElementById('checkout-error').hidden = true;
   }
 </script>
 @endpush
