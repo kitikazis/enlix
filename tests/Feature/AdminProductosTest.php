@@ -785,4 +785,52 @@ class AdminProductosTest extends TestCase
             $response->getContent()
         );
     }
+
+    /** HTML solo de la fila: los productos sembrados por las migraciones no se mezclan. */
+    private function filaConStock(int $stock, int $reservado = 0): string
+    {
+        $producto = Producto::create([
+            'categoria_id' => $this->categoria()->id,
+            'slug' => 'stock-'.uniqid(),
+            'referencia' => 'STOCK-'.uniqid(),
+            'nombre' => 'Producto con stock',
+            'descripcion' => '<p>Descripción.</p>',
+            'precio_centimos' => 10000,
+            'stock' => $stock,
+            'stock_reservado' => $reservado,
+            'umbral_stock_bajo' => 3,
+        ]);
+
+        return view('admin.productos._fila', ['producto' => $producto])->render();
+    }
+
+    public function test_la_tabla_tiene_la_columna_stock(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('admin.productos.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['Categoría', 'Stock', 'Specs']);
+    }
+
+    public function test_la_fila_muestra_el_stock_disponible_descontando_lo_reservado(): void
+    {
+        $fila = $this->filaConStock(12, reservado: 2);
+
+        $this->assertMatchesRegularExpression('/>\s*10\s*</', $fila);
+        $this->assertStringContainsString('2 reserv.', $fila);
+    }
+
+    public function test_la_fila_avisa_cuando_el_stock_esta_bajo(): void
+    {
+        $this->assertStringContainsString('3 · Bajo', $this->filaConStock(3));
+        $this->assertStringNotContainsString('Bajo', $this->filaConStock(4));
+    }
+
+    public function test_la_fila_marca_agotado_aunque_el_stock_bruto_este_todo_reservado(): void
+    {
+        $fila = $this->filaConStock(2, reservado: 2);
+
+        $this->assertStringContainsString('Agotado', $fila);
+        $this->assertStringContainsString('2 reserv.', $fila);
+    }
 }

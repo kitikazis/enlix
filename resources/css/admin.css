@@ -551,6 +551,12 @@ html[data-modo='prueba'] {
             padding: 0 0.625rem;
         }
 
+        @media (max-width: 1279.98px) {
+            .row-actions .btn-sm {
+                padding: 0 0.375rem;
+            }
+        }
+
         .data-list tbody tr:last-child td {
             border-bottom: 0;
         }

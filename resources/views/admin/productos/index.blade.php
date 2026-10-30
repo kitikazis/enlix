@@ -76,13 +76,13 @@
                 caption="Productos del catálogo"
                 scroll="fill"
                 body-id="tabla-productos-cuerpo"
-                :columns="['Imagen', 'Producto', 'Referencia', 'Categoría', ['label' => 'Specs', 'class' => 'lg:max-xl:hidden'], 'Estado', ['label' => 'Acciones', 'sr' => true]]"
+                :columns="['Imagen', 'Producto', 'Referencia', 'Categoría', 'Stock', ['label' => 'Specs', 'class' => 'lg:max-[1360px]:hidden'], 'Estado', ['label' => 'Acciones', 'sr' => true]]"
             >
                 @forelse ($productos as $producto)
                     @include('admin.productos._fila', ['producto' => $producto])
                 @empty
                     <tr id="fila-vacia">
-                        <td colspan="7">
+                        <td colspan="8">
                             <x-admin.empty-state icon="productos" title="No hay productos todavía" description="Crea el primero para que aparezca en la tienda.">
                                 <button type="button" @click="abrirCrear()" class="btn btn-primary btn-sm">
                                     <x-admin.icon name="mas-simple" class="h-4 w-4" />
@@ -93,7 +93,7 @@
                     </tr>
                 @endforelse
                 <tr id="fila-sin-resultados" x-show="sinResultados" x-cloak>
-                    <td colspan="7">
+                    <td colspan="8">
                         <x-admin.empty-state icon="buscar" title="Ningún producto coincide" description="Prueba con otro nombre, referencia o categoría.">
                             <button type="button" @click="busqueda = ''; filtroCategoria = ''; filtrar()" class="btn btn-secondary btn-sm">Limpiar filtros</button>
                         </x-admin.empty-state>

@@ -7,6 +7,7 @@
 --}}
 @php
     $totalEspecs = count($producto->especificaciones ?? []);
+    $stockDisponible = $producto->stockDisponible();
     $resumen = [
         'imagen' => $producto->imagen_thumb_url,
         'nombre' => $producto->nombre,
@@ -34,7 +35,7 @@
             @endif
             @if ($producto->tieneOfertaVigente())
                 <x-admin.badge tone="info" class="self-start whitespace-nowrap" title="Oferta del día en /productos">
-                    Oferta · vence {{ $producto->oferta_termina_en->setTimezone('America/Lima')->format('d/m H:i') }}
+                    Oferta · <span class="max-2xl:hidden">vence</span> {{ $producto->oferta_termina_en->setTimezone('America/Lima')->format('d/m H:i') }}
                 </x-admin.badge>
             @endif
         </span>
@@ -42,8 +43,25 @@
     {{-- La referencia puede ser muy larga: se parte en líneas para no empujar las acciones fuera de la tabla. --}}
     <td data-label="Referencia" class="font-mono text-xs text-text-secondary"><span class="block break-words lg:max-w-40">{{ $producto->referencia }}</span></td>
     <td data-label="Categoría" class="text-text-secondary">{{ $producto->categoria?->nombre ?? 'Sin categoría' }}</td>
-    {{-- Entre 1024 y 1279px es la columna que cede: sin ella las acciones entran sin scroll. --}}
-    <td data-label="Especificaciones" class="lg:max-xl:hidden">
+    {{-- Disponible para vender (lo mismo que ve la tienda), no el stock bruto. Sin
+         etiquetas a propósito: con ellas la columna empujaba las acciones fuera de la tabla. --}}
+    <td data-label="Stock" class="whitespace-nowrap">
+        {{-- Un solo hijo: en la tarjeta móvil cada hijo del <td> es un item del flex. --}}
+        <span class="block text-right lg:text-left">
+            @if ($stockDisponible <= 0)
+                <span class="font-medium text-rechazado-text">Agotado</span>
+            @elseif ($stockDisponible <= $producto->umbral_stock_bajo)
+                <span class="font-medium tabular-nums text-pendiente-text">{{ $stockDisponible }} · Bajo</span>
+            @else
+                <span class="font-medium tabular-nums text-text-primary">{{ $stockDisponible }}</span>
+            @endif
+            @if ($producto->stock_reservado > 0)
+                <span class="block text-xs text-text-caption" title="Apartadas por pedidos pendientes de pago">{{ $producto->stock_reservado }} reserv.</span>
+            @endif
+        </span>
+    </td>
+    {{-- Hasta 1360px es la columna que cede: sin ella las acciones entran sin scroll. --}}
+    <td data-label="Especificaciones" class="lg:max-[1360px]:hidden">
         @if ($totalEspecs > 0)
             <span class="count-badge">{{ $totalEspecs }}</span>
         @else
